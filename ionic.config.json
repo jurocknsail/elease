@@ -1,0 +1,7 @@
+{
+  "name": "landlord-assistant",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
