@@ -9,20 +9,20 @@
 <ion-content [fullscreen]="true">
 
 
-  <ion-card *ngFor="let locataire of locataires">
+  <ion-card *ngFor="let locataire of locataires" href="">
     <ion-card-header>
       <ion-card-title>{{ locataire.name }}</ion-card-title>
       <ion-card-subtitle>{{ locataire.description }}</ion-card-subtitle>
     </ion-card-header>
   
     <ion-card-content>
-        <ion-list [inset]="true">
-          <ion-item *ngFor="let bail of locataire.bails">
-            <ion-label>{{ bail.name }} - {{ bail.description }}</ion-label>
-          </ion-item>
-        </ion-list>
+      <ion-list>
+        <ion-item *ngFor="let bail of locataire.bails">
+          <ion-label>{{ bail.name }}</ion-label>
+        </ion-item>
+      </ion-list>
     </ion-card-content>
-
+    
   </ion-card>
 
 </ion-content>
