@@ -6,7 +6,7 @@ import { locataires } from '../locataire';
   templateUrl: 'tab-list.page.html',
   styleUrls: ['tab-list.page.scss']
 })
-export class Tab2Page {
+export class TabListPage {
   locataires = [...locataires];
   constructor() {}
 

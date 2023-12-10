@@ -2,19 +2,16 @@ import { IonicModule } from '@ionic/angular';
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Tab3Page } from './tab-send.page';
-import { ExploreContainerComponentModule } from '../explore-container/explore-container.module';
-
-import { Tab3PageRoutingModule } from './tab-send-routing.module';
+import { TabSendPage } from './tab-send.page';
+import { TabSendPageRoutingModule } from './tab-send-routing.module';
 
 @NgModule({
   imports: [
     IonicModule,
     CommonModule,
     FormsModule,
-    ExploreContainerComponentModule,
-    Tab3PageRoutingModule
+    TabSendPageRoutingModule
   ],
-  declarations: [Tab3Page]
+  declarations: [TabSendPage]
 })
-export class Tab3PageModule {}
+export class TabSendPageModule {}

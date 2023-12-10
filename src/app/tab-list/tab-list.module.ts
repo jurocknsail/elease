@@ -2,19 +2,17 @@ import { IonicModule } from '@ionic/angular';
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Tab2Page } from './tab-list.page';
-import { ExploreContainerComponentModule } from '../explore-container/explore-container.module';
+import { TabListPage } from './tab-list.page';
 
-import { Tab2PageRoutingModule } from './tab-list-routing.module';
+import { TabListPageRoutingModule } from './tab-list-routing.module';
 
 @NgModule({
   imports: [
     IonicModule,
     CommonModule,
     FormsModule,
-    ExploreContainerComponentModule,
-    Tab2PageRoutingModule
+    TabListPageRoutingModule
   ],
-  declarations: [Tab2Page]
+  declarations: [TabListPage]
 })
-export class Tab2PageModule {}
+export class TabListPageModule {}

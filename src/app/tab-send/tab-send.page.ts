@@ -5,7 +5,7 @@ import { Component } from '@angular/core';
   templateUrl: 'tab-send.page.html',
   styleUrls: ['tab-send.page.scss']
 })
-export class Tab3Page {
+export class TabSendPage {
 
   constructor() {}
 
