@@ -16,7 +16,6 @@ export class TabListPage implements OnInit {
 
  ngOnInit(){
      this.locatairesService.getJSON().subscribe(data => {
-          console.log(data);
           this.locataires = data;
       });
  }
