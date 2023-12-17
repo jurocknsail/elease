@@ -1,17 +1,48 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>Détails</ion-title>
+  <ion-toolbar color="light">
+    <ion-title>{{ locataire.name }}</ion-title>
+    <ion-buttons slot="primary">
+      <ion-button>
+        <ion-icon slot="icon-only" name="create"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
   <ion-header collapse="condense">
     <ion-toolbar>
-      <ion-title size="large">Détails</ion-title>
+      <ion-title size="large">{{ locataire.name }}</ion-title>
     </ion-toolbar>
   </ion-header>
+  <div class="ion-padding">{{ locataire.description }}</div>
 
-  <p> {{ locataire.name }} </p>
+  <ion-accordion-group value="1">
+    <ion-accordion value="{{ bail.id }}" *ngFor="let bail of locataire.bails">
+      <ion-item slot="header" color="light">
+        <ion-label>{{ bail.name }}</ion-label>
+      </ion-item>
+      <div class="ion-padding" slot="content">
+        <ion-list>
+          <ion-item>
+            <ion-input label="Dernière MAJ" value="{{ bail.lastUpdate | date }}"[disabled]="true"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input label="Date de Renouvellement" value="{{ bail.renewalDate | date }}"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input label="Indexation" value="{{ bail.indexing }}"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input label="Loyer" value="{{ bail.price | currency }}"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input label="Email" value="{{ bail.email }}"></ion-input>
+          </ion-item>
+        </ion-list>
+      </div>
+    </ion-accordion>
+  </ion-accordion-group>
 
 </ion-content>
 
