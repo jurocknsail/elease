@@ -12,11 +12,11 @@ export class TabListPage implements OnInit {
   locataires: Locataire [] = [];
   constructor(
       private locatairesService : LocataireService 
-  ) { }
+  ) { 
+    this.locataires = this.locatairesService.getLocataires();
+  }
 
  ngOnInit(){
-     this.locatairesService.getJSON().subscribe(data => {
-          this.locataires = data;
-      });
+     
  }
 }

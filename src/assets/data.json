@@ -7,18 +7,33 @@
         {
             "id": 1,
             "name": "Local",
-            "description": "Local Agence."
+            "description": "Local Agence.",
+            "lastUpdate": 1702738206,
+            "renewalDate": 1702738206,
+            "indexing": 1,
+            "price": 2000,
+            "email" : "john.doe@gmail.com"
         },
         {
             "id": 2,
             "name": "Garage",
-            "description": "Garage Agence."
+            "description": "Garage Agence.",
+            "lastUpdate": 1702738206,
+            "renewalDate": 1702738206,
+            "indexing": 1,
+            "price": 600,
+            "email" : "john.doe@gmail.com"
         }
       ]
     },
     {
       "id": 2,
       "name": "Perrine",
-      "description": "Salle de Pilates."
+      "description": "Salle de Pilates.",
+      "lastUpdate": 1702738206,
+      "renewalDate": 1702738206,
+      "indexing": 1,
+      "price": 2000,
+      "email" : "johana.doe@gmail.com"
     }
 ]

@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Locataire } from './locataire';
 
 
 @Injectable({
@@ -8,10 +8,26 @@ import { Observable } from 'rxjs';
 })
 export class LocataireService {
 
-  constructor(private http: HttpClient) {
+  locataires: Locataire [] = [];
+  
+  constructor(private http: HttpClient) {}
+
+  private getJSON() {
+      return this.http.get<Locataire[]>("./assets/data.json");
   }
 
-  public getJSON(): Observable<any> {
-      return this.http.get("./assets/data.json");
+  public loadLocataires () {
+    this.getJSON().subscribe(data => {
+      this.locataires = data;
+    });
   }
+
+  public getLocataires (): Locataire [] {
+    return this.locataires;
+  }
+
+  public getLocataire(id: number): Locataire | undefined {
+    return this.getLocataires().find((locataire) => locataire.id === id);
+  }
+  
 }
