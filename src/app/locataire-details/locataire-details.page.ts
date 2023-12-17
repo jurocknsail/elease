@@ -23,7 +23,6 @@ export class LocataireDetailsPage implements OnInit {
     const locataireIdFromRoute = Number(routeParams.get('locataireId'));
 
     // Find the product that correspond with the id provided in route.
-    console.log(locataireIdFromRoute);
     this.locataire = this.locataireService.getLocataire(locataireIdFromRoute);
   }
 
