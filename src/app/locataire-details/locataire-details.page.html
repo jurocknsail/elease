@@ -28,16 +28,26 @@
             <ion-input label="Dernière MAJ" value="{{ bail.lastUpdate | date }}"[disabled]="true"></ion-input>
           </ion-item>
           <ion-item>
-            <ion-input label="Date de Renouvellement" value="{{ bail.renewalDate | date }}"></ion-input>
+            <ion-input label="Date de Renouvellement" value="{{ bail.renewalDate | date }}" type="date"></ion-input>
           </ion-item>
           <ion-item>
-            <ion-input label="Indexation" value="{{ bail.indexing }}"></ion-input>
+            <ion-input label="Indexation" type="number" [(ngModel)]="bail.indexing"></ion-input>
           </ion-item>
           <ion-item>
-            <ion-input label="Loyer" value="{{ bail.price | currency }}"></ion-input>
+            <ion-input label="Loyer" type="number" [(ngModel)]="bail.price" ></ion-input>
           </ion-item>
           <ion-item>
-            <ion-input label="Email" value="{{ bail.email }}"></ion-input>
+            <ion-input
+              type="email"
+              value="{{ bail.email }}"
+              fill="solid"
+              label="Email"
+              labelPlacement="floating"
+              helperText="Enter a valid email"
+              errorText="Invalid email"
+              [(ngModel)]="bail.email"
+              email
+            ></ion-input>
           </ion-item>
         </ion-list>
       </div>
