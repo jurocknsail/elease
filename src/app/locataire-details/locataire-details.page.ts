@@ -23,13 +23,6 @@ export class LocataireDetailsPage implements OnInit {
   ) {}
 
   onSubmit(): void {
-
-    if (this.bailsForm.valid){
-      // code
-      // Process checkout data here
-      console.warn('Your order has been submitted', this.bailsForm.value);
-      // this.checkoutForm.reset();
-    }
     
   }
   
@@ -58,10 +51,10 @@ export class LocataireDetailsPage implements OnInit {
   addBail(bail: Bail): void {
 
     const bailForm = this.formBuilder.group({
-      lastUpdate: bail.lastUpdate,
-      renewalDate: bail.renewalDate,
-      indexing: bail.indexing,
-      price: bail.price,
+      lastUpdate: [bail.lastUpdate,[Validators.required]],
+      renewalDate: [bail.renewalDate,[Validators.required]],
+      indexing: [bail.indexing,[Validators.required]],
+      price: [bail.price,[Validators.required]],
       email: [bail.email, [Validators.required, Validators.email]],
     });
     this.bails.push(bailForm);

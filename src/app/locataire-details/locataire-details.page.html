@@ -27,19 +27,19 @@
             <form [formGroupName]=i (ngSubmit)="onSubmit()">
               <ion-list>
                 <ion-item>
-                  <ion-input label="Dernière MAJ" formControlName="lastUpdate"></ion-input>
+                  <ion-input label="Dernière MAJ : " formControlName="lastUpdate" type="date"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input label="Date de Renouvellement" formControlName="renewalDate"></ion-input>
+                  <ion-input label="Date de Renouvellement : " formControlName="renewalDate" type="date"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input label="Indexation" formControlName="indexing"></ion-input>
+                  <ion-input label="Indexation : " formControlName="indexing" type="number"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input label="Loyer" formControlName="price"></ion-input>
+                  <ion-input label="Loyer : " formControlName="price" type="number"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input type="email" formControlName="email"></ion-input>
+                  <ion-input label="Email : " formControlName="email" type="email"></ion-input>
                 </ion-item>
               </ion-list>
               <ion-button color="success" type="submit" [disabled]="!bailForm.valid">Submit</ion-button>
