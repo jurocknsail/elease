@@ -40,7 +40,27 @@
             "indexing": 1,
             "price": 2000,
             "email" : "johana.doe@gmail.com"
-        }
+        },
+        {
+          "id": 1,
+          "name": "Local",
+          "description": "Salle de Sport",
+          "lastUpdate": "2023-11-29",
+          "renewalDate": "2023-11-29",
+          "indexing": 1,
+          "price": 2000,
+          "email" : "johana.doe@gmail.com"
+      },
+      {
+        "id": 1,
+        "name": "Local",
+        "description": "Salle de Sport",
+        "lastUpdate": "2023-11-29",
+        "renewalDate": "2023-11-29",
+        "indexing": 1,
+        "price": 2000,
+        "email" : "johana.doe@gmail.com"
+    }
       ]
     }
 ]

@@ -8,4 +8,16 @@
 
 <ion-content [fullscreen]="true">
  
+  <ion-list [inset]="true" lines="none">
+    <ion-item-group *ngFor="let locataire of locataires">
+      <ion-item-divider >
+        <ion-label>{{ locataire.name }}</ion-label>
+        <ion-button>Check All</ion-button>
+      </ion-item-divider>
+        <ion-item *ngFor="let bail of locataire.bails">
+          <ion-checkbox slot="start" aria-label="Toggle selection" labelPlacement="end">{{ bail.name }}</ion-checkbox>
+        </ion-item>
+    </ion-item-group>
+  </ion-list>
+
 </ion-content>
