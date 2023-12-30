@@ -9,6 +9,12 @@
 <ion-content [fullscreen]="true">
 
 
+  <ion-fab slot="fixed" vertical="bottom" horizontal="center" [edge]="false">
+    <ion-fab-button>
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
   <ion-card *ngFor="let locataire of locataires" [routerLink]="['/locataire-details', locataire.id]" color="light">
     <ion-card-header>
       <ion-card-title>{{ locataire.name }}</ion-card-title>
@@ -24,5 +30,6 @@
     </ion-card-content>
     
   </ion-card>
+
 
 </ion-content>
