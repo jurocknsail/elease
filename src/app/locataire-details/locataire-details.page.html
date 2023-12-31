@@ -1,6 +1,10 @@
+
 <ion-header [translucent]="true">
-  <ion-toolbar color="light">
-    <ion-title>{{ locataire.name }}</ion-title>
+  <ion-toolbar>
+    <ion-title>
+      Baux pour {{ locataire.name }}
+    </ion-title>
+    
     <ion-buttons slot="primary">
       <ion-button>
         <ion-icon slot="icon-only" name="create" color="warning"></ion-icon>
@@ -11,22 +15,10 @@
 
 <ion-content [fullscreen]="true">
 
-  <ion-fab slot="fixed" vertical="bottom" horizontal="center" edge="false">
-    <ion-fab-button>
-      <ion-icon name="add"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
-
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">{{ locataire.name }}</ion-title>
-    </ion-toolbar>
-  </ion-header>
-  <div class="ion-padding">{{ locataire.description }}</div>
-    <ion-accordion-group>
+    <ion-accordion-group expand="inset">
       <div [formGroup]="bailsForm">
         <ng-container formArrayName="bails">
-        <ion-accordion *ngFor="let bailForm of bails.controls; let i = index">
+        <ion-accordion toggleIconSlot="end" *ngFor="let bailForm of bails.controls; let i = index">
           <ion-item slot="header" color="light">
             <ion-label>{{ locataire.bails[i].name }}</ion-label>
           </ion-item>
@@ -53,6 +45,36 @@
             </form>
           </div>
         </ion-accordion>
+
+
+        <ion-accordion toggleIcon="add" toggleIconSlot="end">
+          <ion-item slot="header" color="success">
+            <ion-label></ion-label>
+          </ion-item>
+          <div class="ion-padding" slot="content">
+            <form (ngSubmit)="onSubmit()">
+              <ion-list>
+                <ion-item>
+                  <ion-input label="Dernière MAJ : "  type="date"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input label="Date de Renouvellement : "  type="date"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input label="Indexation : " type="number"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input label="Loyer : "  type="number"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input label="Email : "  type="email"></ion-input>
+                </ion-item>
+              </ion-list>
+              <ion-button color="success" type="submit" [disabled]="!bailsForm.valid">Ajouter</ion-button>
+            </form>
+          </div>
+        </ion-accordion>
+
         </ng-container>
         </div>
       </ion-accordion-group>

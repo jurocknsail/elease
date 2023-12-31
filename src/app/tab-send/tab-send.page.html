@@ -12,12 +12,18 @@
     <ion-item-group *ngFor="let locataire of locataires">
       <ion-item-divider >
         <ion-label>{{ locataire.name }}</ion-label>
-        <ion-button>Check All</ion-button>
+        <!-- <ion-button>Check All</ion-button> -->
       </ion-item-divider>
         <ion-item *ngFor="let bail of locataire.bails">
-          <ion-checkbox slot="start" aria-label="Toggle selection" labelPlacement="end">{{ bail.name }}</ion-checkbox>
+          <ion-checkbox checked="true" slot="start" aria-label="Toggle selection" labelPlacement="end">{{ bail.name }} - {{ bail.email }}</ion-checkbox>
         </ion-item>
     </ion-item-group>
   </ion-list>
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="center">
+    <ion-fab-button>
+      <ion-icon name="mail-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
 
 </ion-content>
