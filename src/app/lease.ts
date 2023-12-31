@@ -1,4 +1,4 @@
-export interface Bail {
+export interface Lease {
     id: number;
     name: string;
     description: string;
@@ -6,6 +6,5 @@ export interface Bail {
     renewalDate: number;
     indexing: number;
     price: number;
-    email : string;
   }
   

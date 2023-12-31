@@ -2,8 +2,10 @@
     {
       "id": 1,
       "name": "Aggimo",
+      "email" : "john.doe@gmail.com",
+      "phone" : "0611223344",
       "description": "Agence immobilière.",
-      "bails": [
+      "leases": [
         {
             "id": 1,
             "name": "Local",
@@ -11,8 +13,7 @@
             "lastUpdate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
-            "price": 2000,
-            "email" : "john.doe@gmail.com"
+            "price": 2000
         },
         {
             "id": 2,
@@ -21,16 +22,17 @@
             "lastUpdate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
-            "price": 600,
-            "email" : "john.doe@gmail.com"
+            "price": 600
         }
       ]
     },
     {
       "id": 2,
       "name": "Perrine",
+      "email" : "johana.doe@gmail.com",
+      "phone" : "0611223344",
       "description": "Salle de Pilates.",
-      "bails": [
+      "leases": [
         {
             "id": 1,
             "name": "Local",
@@ -38,29 +40,8 @@
             "lastUpdate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
-            "price": 2000,
-            "email" : "johana.doe@gmail.com"
-        },
-        {
-          "id": 1,
-          "name": "Local",
-          "description": "Salle de Sport",
-          "lastUpdate": "2023-11-29",
-          "renewalDate": "2023-11-29",
-          "indexing": 1,
-          "price": 2000,
-          "email" : "johana.doe@gmail.com"
-      },
-      {
-        "id": 1,
-        "name": "Local",
-        "description": "Salle de Sport",
-        "lastUpdate": "2023-11-29",
-        "renewalDate": "2023-11-29",
-        "indexing": 1,
-        "price": 2000,
-        "email" : "johana.doe@gmail.com"
-    }
+            "price": 2000
+        }
       ]
     }
 ]

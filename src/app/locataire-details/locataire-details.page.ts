@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { LocataireService } from '../locataire.service';
+import { LeaseholderService } from '../leaseholder.service';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Bail } from '../bail';
+import { Lease } from '../lease';
 
 
 @Component({
@@ -12,13 +12,13 @@ import { Bail } from '../bail';
 })
 export class LocataireDetailsPage implements OnInit {
   
-  locataire: any | undefined;
+  leaseholder: any | undefined;
 
-  bailsForm!: FormGroup;
+  leaseForm!: FormGroup;
 
   constructor(
     private route: ActivatedRoute,
-    private locataireService: LocataireService,
+    private leaseholderService: LeaseholderService,
     private formBuilder: FormBuilder,
   ) {}
 
@@ -29,35 +29,34 @@ export class LocataireDetailsPage implements OnInit {
   ngOnInit() {
     // First get the product id from the current route.
     const routeParams = this.route.snapshot.paramMap;
-    const locataireIdFromRoute = Number(routeParams.get('locataireId'));
+    const leaseholderIdFromRoute = Number(routeParams.get('locataireId'));
 
     // Find the product that correspond with the id provided in route.
-    this.locataire = this.locataireService.getLocataire(locataireIdFromRoute);
+    this.leaseholder = this.leaseholderService.getLeaseholder(leaseholderIdFromRoute);
 
-    this.bailsForm = this.formBuilder.group({
-      bails: this.formBuilder.array([])
+    this.leaseForm = this.formBuilder.group({
+      leases: this.formBuilder.array([])
     });
 
-    this.locataire.bails.forEach((bail: Bail) => {
-      this.addBail(bail);
+    this.leaseholder.leases.forEach((lease: Lease) => {
+      this.addLease(lease);
     });
 
   }
 
-  get bails (): FormArray {
-    return this.bailsForm.controls["bails"] as FormArray;
+  get leases (): FormArray {
+    return this.leaseForm.controls["leases"] as FormArray;
   }
 
-  addBail(bail: Bail): void {
+  addLease(lease: Lease): void {
 
-    const bailForm = this.formBuilder.group({
-      lastUpdate: [bail.lastUpdate,[Validators.required]],
-      renewalDate: [bail.renewalDate,[Validators.required]],
-      indexing: [bail.indexing,[Validators.required]],
-      price: [bail.price,[Validators.required]],
-      email: [bail.email, [Validators.required, Validators.email]],
+    const leaseForm = this.formBuilder.group({
+      lastUpdate: [lease.lastUpdate,[Validators.required]],
+      renewalDate: [lease.renewalDate,[Validators.required]],
+      indexing: [lease.indexing,[Validators.required]],
+      price: [lease.price,[Validators.required]],
     });
-    this.bails.push(bailForm);
+    this.leases.push(leaseForm);
 
   }
 

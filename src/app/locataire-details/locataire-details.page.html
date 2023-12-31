@@ -2,7 +2,7 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
-      Baux pour {{ locataire.name }}
+      Détails pour {{ leaseholder.name }}
     </ion-title>
     
     <ion-buttons slot="primary">
@@ -16,11 +16,11 @@
 <ion-content [fullscreen]="true">
 
     <ion-accordion-group expand="inset">
-      <div [formGroup]="bailsForm">
-        <ng-container formArrayName="bails">
-        <ion-accordion toggleIconSlot="end" *ngFor="let bailForm of bails.controls; let i = index">
+      <div [formGroup]="leaseForm">
+        <ng-container formArrayName="leases">
+        <ion-accordion toggleIconSlot="end" *ngFor="let leaseForm of leases.controls; let i = index">
           <ion-item slot="header" color="light">
-            <ion-label>{{ locataire.bails[i].name }}</ion-label>
+            <ion-label>{{ leaseholder.leases[i].name }}</ion-label>
           </ion-item>
           <div class="ion-padding" slot="content">
             <form [formGroupName]=i (ngSubmit)="onSubmit()">
@@ -37,11 +37,8 @@
                 <ion-item>
                   <ion-input label="Loyer : " formControlName="price" type="number"></ion-input>
                 </ion-item>
-                <ion-item>
-                  <ion-input label="Email : " formControlName="email" type="email"></ion-input>
-                </ion-item>
               </ion-list>
-              <ion-button color="success" type="submit" [disabled]="!bailForm.valid">Submit</ion-button>
+              <ion-button color="success" type="submit" [disabled]="!leaseForm.valid">Submit</ion-button>
             </form>
           </div>
         </ion-accordion>
@@ -66,11 +63,8 @@
                 <ion-item>
                   <ion-input label="Loyer : "  type="number"></ion-input>
                 </ion-item>
-                <ion-item>
-                  <ion-input label="Email : "  type="email"></ion-input>
-                </ion-item>
               </ion-list>
-              <ion-button color="success" type="submit" [disabled]="!bailsForm.valid">Ajouter</ion-button>
+              <ion-button color="success" type="submit" [disabled]="!leaseForm.valid">Ajouter</ion-button>
             </form>
           </div>
         </ion-accordion>

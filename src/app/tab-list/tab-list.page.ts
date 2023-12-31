@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { LocataireService } from '../locataire.service';
-import { Locataire } from '../locataire';
+import { LeaseholderService } from '../leaseholder.service';
+import { Leaseholder } from '../leaseholder';
 
 @Component({
   selector: 'app-tab-list',
@@ -9,12 +9,12 @@ import { Locataire } from '../locataire';
 })
 export class TabListPage implements OnInit {
   
-  locataires: Locataire [] = [];
+  leaseholders: Leaseholder [] = [];
   constructor(
-      private locatairesService : LocataireService 
+      private leaseholderService : LeaseholderService 
   ) { }
 
  ngOnInit(){
-     this.locataires = this.locatairesService.getLocataires();
+     this.leaseholders = this.leaseholderService.getLeaseholders();
  }
 }

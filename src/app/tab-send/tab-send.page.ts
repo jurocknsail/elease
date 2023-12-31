@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { LocataireService } from '../locataire.service';
-import { Locataire } from '../locataire';
+import { LeaseholderService } from '../leaseholder.service';
+import { Leaseholder } from '../leaseholder';
 
 @Component({
   selector: 'app-tab-send',
@@ -8,16 +8,16 @@ import { Locataire } from '../locataire';
   styleUrls: ['tab-send.page.scss']
 })
 export class TabSendPage implements OnInit {
-  locataires: Locataire[] | undefined;
+  leaseholders: Leaseholder[] | undefined;
 
   constructor(
-    private locataireService: LocataireService,
+    private leaseholderService: LeaseholderService,
   ) {}
 
   ngOnInit() {
 
     // Find the product that correspond with the id provided in route.
-    this.locataires = this.locataireService.getLocataires();
+    this.leaseholders = this.leaseholderService.getLeaseholders();
    
   }
 }
