@@ -8,7 +8,7 @@
 
 <ion-content [fullscreen]="true">
 
-  <ion-card *ngFor="let leaseholder of leaseholders" [routerLink]="['/locataire-details', leaseholder.id]" color="light">
+  <ion-card *ngFor="let leaseholder of leaseholders" [routerLink]="['/leaseholder-details', leaseholder.id]" color="light">
     <ion-card-header>
       <ion-card-title>{{ leaseholder.name }}</ion-card-title>
       <ion-card-subtitle>{{ leaseholder.description }}</ion-card-subtitle>

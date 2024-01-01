@@ -4,9 +4,9 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { IonicModule } from '@ionic/angular';
 
-import { LocataireDetailsPageRoutingModule } from './locataire-details-routing.module';
+import { LeaseholderDetailsPageRoutingModule } from './leaseholder-details-routing.module';
 
-import { LocataireDetailsPage, } from './locataire-details.page';
+import {LeaseholderDetailsPage, } from './leaseholder-details.page';
 import {MatSelectModule} from '@angular/material/select';
 import {MatInputModule} from '@angular/material/input';
 import {MatFormFieldModule} from '@angular/material/form-field';
@@ -17,9 +17,9 @@ import {MatFormFieldModule} from '@angular/material/form-field';
     FormsModule,
     ReactiveFormsModule,
     IonicModule,
-    LocataireDetailsPageRoutingModule,
+    LeaseholderDetailsPageRoutingModule,
     MatFormFieldModule, MatInputModule, MatSelectModule
   ],
-  declarations: [LocataireDetailsPage]
+  declarations: [LeaseholderDetailsPage]
 })
-export class LocataireDetailsPageModule {}
+export class LeaseholderDetailsPageModule {}

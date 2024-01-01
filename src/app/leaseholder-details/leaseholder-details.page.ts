@@ -6,11 +6,11 @@ import { Lease } from '../lease';
 
 
 @Component({
-  selector: 'app-locataire-details',
-  templateUrl: './locataire-details.page.html',
-  styleUrls: ['./locataire-details.page.scss'],
+  selector: 'app-leaseholder-details',
+  templateUrl: './leaseholder-details.page.html',
+  styleUrls: ['./leaseholder-details.page.scss'],
 })
-export class LocataireDetailsPage implements OnInit {
+export class LeaseholderDetailsPage implements OnInit {
   
   leaseholder: any | undefined;
 
@@ -29,7 +29,7 @@ export class LocataireDetailsPage implements OnInit {
   ngOnInit() {
     // First get the product id from the current route.
     const routeParams = this.route.snapshot.paramMap;
-    const leaseholderIdFromRoute = Number(routeParams.get('locataireId'));
+    const leaseholderIdFromRoute = Number(routeParams.get('leaseholderId'));
 
     // Find the product that correspond with the id provided in route.
     this.leaseholder = this.leaseholderService.getLeaseholder(leaseholderIdFromRoute);

@@ -7,8 +7,8 @@ const routes: Routes = [
     loadChildren: () => import('./tabs/tabs.module').then(m => m.TabsPageModule)
   },
   {
-    path: 'locataire-details/:locataireId',
-    loadChildren: () => import('./locataire-details/locataire-details.module').then(m => m.LocataireDetailsPageModule)
+    path: 'leaseholder-details/:leaseholderId',
+    loadChildren: () => import('./leaseholder-details/leaseholder-details.module').then(m => m.LeaseholderDetailsPageModule)
   }
 ];
 @NgModule({
