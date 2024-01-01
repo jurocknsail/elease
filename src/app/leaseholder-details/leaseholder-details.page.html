@@ -1,23 +1,33 @@
-
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
       Détails pour {{ leaseholder.name }}
     </ion-title>
-    
-    <ion-buttons slot="primary">
-      <ion-button>
-        <ion-icon slot="icon-only" name="create" color="warning"></ion-icon>
-      </ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
 
-    <ion-accordion-group expand="inset">
-      <div [formGroup]="leaseForm">
-        <ng-container formArrayName="leases">
+  <form [formGroup]="leaseholderForm" (ngSubmit)="onSubmit()">
+    <ion-list>
+      <ion-item>
+        <ion-input labelPlacement="floating" label="Nom" formControlName="name" type="string"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input labelPlacement="floating" label="Description" formControlName="description" type="string"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input labelPlacement="floating" label="Téléphone" formControlName="phone" type="string"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input labelPlacement="floating" label="Email" formControlName="email" type="email"></ion-input>
+      </ion-item>
+    </ion-list>
+  </form>
+
+  <ion-accordion-group expand="inset">
+    <div [formGroup]="leaseForm">
+      <ng-container formArrayName="leases">
         <ion-accordion toggleIconSlot="end" *ngFor="let leaseForm of leases.controls; let i = index">
           <ion-item slot="header" color="light">
             <ion-label>{{ leaseholder.leases[i].name }}</ion-label>
@@ -26,19 +36,18 @@
             <form [formGroupName]=i (ngSubmit)="onSubmit()">
               <ion-list>
                 <ion-item>
-                  <ion-input label="Dernière MAJ : " formControlName="lastUpdate" type="date"></ion-input>
+                  <ion-input labelPlacement="floating" label="Dernière MAJ" formControlName="lastUpdate" type="date"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input label="Date de Renouvellement : " formControlName="renewalDate" type="date"></ion-input>
+                  <ion-input labelPlacement="floating" label="Date de Renouvellement" formControlName="renewalDate" type="date"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input label="Indexation : " formControlName="indexing" type="number"></ion-input>
+                  <ion-input labelPlacement="floating" label="Indexation" formControlName="indexing" type="number"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input label="Loyer : " formControlName="price" type="number"></ion-input>
+                  <ion-input labelPlacement="floating" label="Loyer" formControlName="price" type="number"></ion-input>
                 </ion-item>
               </ion-list>
-              <ion-button color="success" type="submit" [disabled]="!leaseForm.valid">Submit</ion-button>
             </form>
           </div>
         </ion-accordion>
@@ -52,16 +61,16 @@
             <form (ngSubmit)="onSubmit()">
               <ion-list>
                 <ion-item>
-                  <ion-input label="Dernière MAJ : "  type="date"></ion-input>
+                  <ion-input labelPlacement="floating" label="Nom" type="string"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input label="Date de Renouvellement : "  type="date"></ion-input>
+                  <ion-input labelPlacement="floating" label="Date de Renouvellement" type="date"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input label="Indexation : " type="number"></ion-input>
+                  <ion-input labelPlacement="floating" label="Indexation" type="number"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input label="Loyer : "  type="number"></ion-input>
+                  <ion-input labelPlacement="floating" label="Loyer" type="number"></ion-input>
                 </ion-item>
               </ion-list>
               <ion-button color="success" type="submit" [disabled]="!leaseForm.valid">Ajouter</ion-button>
@@ -69,8 +78,14 @@
           </div>
         </ion-accordion>
 
-        </ng-container>
-        </div>
-      </ion-accordion-group>
-      
+      </ng-container>
+    </div>
+  </ion-accordion-group>
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button *ngIf="leaseForm.dirty || leaseholderForm.dirty" color="success" type="submit" [disabled]="!leaseForm.valid || !leaseholderForm.valid">
+      <ion-icon name="save"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
 </ion-content>

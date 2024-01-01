@@ -13,7 +13,7 @@ import { Lease } from '../lease';
 export class LeaseholderDetailsPage implements OnInit {
   
   leaseholder: any | undefined;
-
+  leaseholderForm!: FormGroup;
   leaseForm!: FormGroup;
 
   constructor(
@@ -22,18 +22,28 @@ export class LeaseholderDetailsPage implements OnInit {
     private formBuilder: FormBuilder,
   ) {}
 
+  
   onSubmit(): void {
     
   }
   
   ngOnInit() {
-    // First get the product id from the current route.
+    // First get the leaseholder id from the current route.
     const routeParams = this.route.snapshot.paramMap;
     const leaseholderIdFromRoute = Number(routeParams.get('leaseholderId'));
 
-    // Find the product that correspond with the id provided in route.
+    // Find the leaseholder that correspond with the id provided in route.
     this.leaseholder = this.leaseholderService.getLeaseholder(leaseholderIdFromRoute);
 
+    // Manage leaseholder form
+    this.leaseholderForm = this.formBuilder.group({
+        name: [this.leaseholder.name,[Validators.required]],
+        description: [this.leaseholder.description,[Validators.required]],
+        phone: [this.leaseholder.phone,[Validators.required]],
+        email: [this.leaseholder.email,[Validators.required, Validators.email]],
+    });
+
+    // Manage leases forms
     this.leaseForm = this.formBuilder.group({
       leases: this.formBuilder.array([])
     });
