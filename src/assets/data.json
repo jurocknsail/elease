@@ -10,7 +10,7 @@
             "id": 1,
             "name": "Local",
             "description": "Local Agence.",
-            "lastUpdate": "2023-11-29",
+            "lastSendDate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
             "price": 2000
@@ -19,7 +19,7 @@
             "id": 2,
             "name": "Garage",
             "description": "Garage Agence.",
-            "lastUpdate": "2023-11-29",
+            "lastSendDate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
             "price": 600
@@ -37,7 +37,7 @@
             "id": 1,
             "name": "Local",
             "description": "Salle de Sport",
-            "lastUpdate": "2023-11-29",
+            "lastSendDate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
             "price": 2000

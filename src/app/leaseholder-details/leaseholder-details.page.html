@@ -3,12 +3,17 @@
     <ion-title>
       Détails pour {{ leaseholder.name }}
     </ion-title>
+    <ion-buttons slot="primary">
+      <ion-button (click)="onEdit()" >
+        <ion-icon slot="icon-only" name="create" color="warning"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
 
-  <form [formGroup]="leaseholderForm" (ngSubmit)="onSubmit()">
+  <form [formGroup]="leaseholderForm">
     <ion-list>
       <ion-item>
         <ion-input labelPlacement="floating" label="Nom" formControlName="name" type="string"></ion-input>
@@ -25,18 +30,18 @@
     </ion-list>
   </form>
 
-  <ion-accordion-group expand="inset">
+  <ion-accordion-group #accordionGroup expand="inset">
     <div [formGroup]="leaseForm">
       <ng-container formArrayName="leases">
-        <ion-accordion toggleIconSlot="end" *ngFor="let leaseForm of leases.controls; let i = index">
+        <ion-accordion value="{{i}}" toggleIconSlot="end" *ngFor="let leaseForm of leases.controls; let i = index">
           <ion-item slot="header" color="light">
             <ion-label>{{ leaseholder.leases[i].name }}</ion-label>
           </ion-item>
           <div class="ion-padding" slot="content">
-            <form [formGroupName]=i (ngSubmit)="onSubmit()">
+            <form [formGroupName]=i>
               <ion-list>
                 <ion-item>
-                  <ion-input labelPlacement="floating" label="Dernière MAJ" formControlName="lastUpdate" type="date"></ion-input>
+                  <ion-input labelPlacement="floating" label="Dernier Envoi" formControlName="lastSendDate" type="date"></ion-input>
                 </ion-item>
                 <ion-item>
                   <ion-input labelPlacement="floating" label="Date de Renouvellement" formControlName="renewalDate" type="date"></ion-input>
@@ -58,22 +63,22 @@
             <ion-label></ion-label>
           </ion-item>
           <div class="ion-padding" slot="content">
-            <form (ngSubmit)="onSubmit()">
+            <form [formGroup]="newLeaseForm" (ngSubmit)="onAdd()">
               <ion-list>
                 <ion-item>
-                  <ion-input labelPlacement="floating" label="Nom" type="string"></ion-input>
+                  <ion-input formControlName="name" labelPlacement="floating" label="Nom" type="string"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input labelPlacement="floating" label="Date de Renouvellement" type="date"></ion-input>
+                  <ion-input formControlName="renewalDate"  labelPlacement="floating" label="Date de Renouvellement" type="date"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input labelPlacement="floating" label="Indexation" type="number"></ion-input>
+                  <ion-input formControlName="indexing"  labelPlacement="floating" label="Indexation" type="number"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input labelPlacement="floating" label="Loyer" type="number"></ion-input>
+                  <ion-input formControlName="price" labelPlacement="floating" label="Loyer" type="number"></ion-input>
                 </ion-item>
               </ion-list>
-              <ion-button color="success" type="submit" [disabled]="!leaseForm.valid">Ajouter</ion-button>
+              <ion-button color="success" type="submit" [disabled]="!newLeaseForm.valid">Ajouter</ion-button>
             </form>
           </div>
         </ion-accordion>
@@ -83,7 +88,7 @@
   </ion-accordion-group>
 
   <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-    <ion-fab-button *ngIf="leaseForm.dirty || leaseholderForm.dirty" color="success" type="submit" [disabled]="!leaseForm.valid || !leaseholderForm.valid">
+    <ion-fab-button (click)="onSave()" *ngIf="leaseForm.dirty || leaseholderForm.dirty" color="success" type="submit" [disabled]="!leaseForm.valid || !leaseholderForm.valid">
       <ion-icon name="save"></ion-icon>
     </ion-fab-button>
   </ion-fab>
