@@ -4,6 +4,7 @@ import { LeaseholderService } from '../leaseholder.service';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Lease, LeaseClass } from '../lease';
 import { IonAccordionGroup } from '@ionic/angular';
+import { StorageService } from '../storage-service.service';
 
 
 @Component({
@@ -29,6 +30,7 @@ export class LeaseholderDetailsPage implements OnInit {
     private route: ActivatedRoute,
     private leaseholderService: LeaseholderService,
     private formBuilder: FormBuilder,
+    private storageService: StorageService
   ) { }
 
   ngOnInit() {
@@ -37,6 +39,7 @@ export class LeaseholderDetailsPage implements OnInit {
     const leaseholderIdFromRoute = Number(routeParams.get('leaseholderId'));
 
     // Find the leaseholder that correspond with the id provided in route.
+    //Resolve LeaseHolder from local storage
     this.leaseholder = this.leaseholderService.getLeaseholder(leaseholderIdFromRoute);
 
     // Manage leaseholder form
@@ -95,6 +98,8 @@ export class LeaseholderDetailsPage implements OnInit {
       this.newLeaseForm.controls["price"].value,
     );
     this.leaseholderService.addLeaseToHolder(this.leaseholder.id, addedLease);
+    //update the local storage with new data
+    this.storageService.set("data", this.leaseholderService.getLeaseholders());
 
     // Add corresponding form
     this.addLease(addedLease);
