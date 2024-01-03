@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { LeaseholderService } from '../leaseholder.service';
+import { StorageService } from '../storage-service.service';
 import { Leaseholder } from '../leaseholder';
 
 @Component({
@@ -11,13 +11,13 @@ export class TabSendPage implements OnInit {
   leaseholders: Leaseholder[] | undefined;
 
   constructor(
-    private leaseholderService: LeaseholderService,
+    private storageService: StorageService
   ) {}
 
   ngOnInit() {
 
     // Find the product that correspond with the id provided in route.
-    this.leaseholders = this.leaseholderService.getLeaseholders();
+    this.leaseholders = this.storageService.getLeaseholders();
    
   }
 }

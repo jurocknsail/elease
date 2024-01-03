@@ -1,5 +1,4 @@
 import { Component } from '@angular/core';
-import { LeaseholderService } from './leaseholder.service';
 import { StorageService } from './storage-service.service';
 
 @Component({
@@ -8,7 +7,7 @@ import { StorageService } from './storage-service.service';
   styleUrls: ['app.component.scss'],
 })
 export class AppComponent {
-  constructor(private leaseholderService:LeaseholderService, private storageService:StorageService) {
-    this.leaseholderService.loadLeaseholders();
+  constructor(private storageService:StorageService) {
+    this.storageService.loadLeaseholders();
   }
 }
