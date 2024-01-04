@@ -17,5 +17,16 @@ export class TabListPage implements OnInit {
   async ngOnInit(){
     await this.storageService.loadLeaseholders();
     this.leaseholders = this.storageService.getLeaseholders();
+
+    if(this.leaseholders == undefined) {
+      this.storageService.getJson().subscribe(data => {
+        this.leaseholders = data;
+        this.storageService.set("data", this.leaseholders);
+        console.log("No local data, assets data loaded and stored : " + JSON.stringify(this.leaseholders));
+      });
+    } else {
+      console.log("Local data loaded : " + JSON.stringify(this.leaseholders));
+    }
+
  }
 }

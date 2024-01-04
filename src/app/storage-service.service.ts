@@ -9,10 +9,14 @@ import { Lease } from './lease';
 })
 export class StorageService {
   private _storage: Storage | null = null;
-  private leasholders: Leaseholder [] = [];
+  private leaseholders: Leaseholder [] = [];
 
   constructor(private storage: Storage, private http: HttpClient) {
     this.init();
+  }
+
+  public getJson () {
+    return this.http.get<Leaseholder[]>("./assets/data.json");
   }
 
   //Init
@@ -34,23 +38,11 @@ export class StorageService {
 
   // Load lease holders from local storage
   public async loadLeaseholders () {
-
-    this.leasholders = await this.get("data");
-    
-    if(this.leasholders == undefined) {
-      this.http.get<Leaseholder[]>("./assets/data.json").subscribe(data => {
-        this.leasholders = data;
-        this.set("data", this.leasholders);
-        console.log("No local data, assets data loaded and stored : " + JSON.stringify(this.leasholders));
-      });
-    } else {
-      console.log("Local data loaded : " + JSON.stringify(this.leasholders));
-    }
-
+    this.leaseholders = await this.get("data");
   }
 
   public getLeaseholders (): Leaseholder [] {
-    return this.leasholders;
+    return this.leaseholders;
   }
 
   public getLeaseholder(id: number): Leaseholder | undefined {
@@ -59,7 +51,7 @@ export class StorageService {
 
   public addLeaseToHolder (holderId:number, addedLease:Lease): void{
     this.getLeaseholder(holderId)?.leases.push(addedLease);
-    this.set("data", this.leasholders);
+    this.set("data", this.leaseholders);
   }
 
 }
