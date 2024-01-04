@@ -45,12 +45,21 @@ export class StorageService {
     return this.leaseholders;
   }
 
+  public setLeaseholders(leaseholders: Leaseholder[]){
+    this.leaseholders = leaseholders;
+  }
+
   public getLeaseholder(id: number): Leaseholder | undefined {
     return this.getLeaseholders().find((leaseholder) => leaseholder.id === id);
   }
 
   public addLeaseToHolder (holderId:number, addedLease:Lease): void{
     this.getLeaseholder(holderId)?.leases.push(addedLease);
+    this.set("data", this.leaseholders);
+  }
+
+  public addLeaseHolder (leaseholder: Leaseholder) {
+    this.getLeaseholders().push(leaseholder);
     this.set("data", this.leaseholders);
   }
 

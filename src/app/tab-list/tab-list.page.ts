@@ -33,6 +33,7 @@ export class TabListPage implements OnInit {
       this.storageService.getJson().subscribe(data => {
         this.leaseholders = data;
         this.storageService.set("data", this.leaseholders);
+        this.storageService.setLeaseholders(this.leaseholders);
         console.log("No local data, assets data loaded and stored : " + JSON.stringify(this.leaseholders));
       });
     } else {
@@ -60,7 +61,7 @@ export class TabListPage implements OnInit {
   onSubmit() {
     const emptyLeases: Lease[] = [];
     const leaseHolder = new LeaseHolderClass(
-      this.leaseholders.length,
+      this.leaseholders.length+1,
       this.newLeaseHolderForm.controls["name"].value,
       this.newLeaseHolderForm.controls["description"].value,
       this.newLeaseHolderForm.controls["email"].value,
@@ -68,7 +69,7 @@ export class TabListPage implements OnInit {
       emptyLeases,
     );
 
-    this.storageService.getLeaseholders().push(leaseHolder);
+    this.storageService.addLeaseHolder(leaseHolder);
   }
 
 
