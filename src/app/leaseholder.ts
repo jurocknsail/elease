@@ -9,7 +9,7 @@ export interface Leaseholder {
   leases: Lease[];
 }
 
-class LeaseHolderClass implements Leaseholder {
+export class LeaseHolderClass implements Leaseholder {
 
   public id: number;
   public name: string;
