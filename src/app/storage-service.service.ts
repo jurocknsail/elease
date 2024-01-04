@@ -34,7 +34,9 @@ export class StorageService {
 
   // Load lease holders from local storage
   public async loadLeaseholders () {
+
     this.leasholders = await this.get("data");
+    
     if(this.leasholders == undefined) {
       this.http.get<Leaseholder[]>("./assets/data.json").subscribe(data => {
         this.leasholders = data;
