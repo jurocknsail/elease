@@ -15,8 +15,7 @@ export class TabListPage implements OnInit {
   ) { }
 
   async ngOnInit(){
-
+    await this.storageService.loadLeaseholders();
     this.leaseholders = this.storageService.getLeaseholders();
-
  }
 }
