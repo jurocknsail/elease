@@ -20,21 +20,8 @@ export class TabSendPage implements OnInit {
   }
 
   async ngOnInit() {
-
-    await this.storageService.loadLeaseholders();
-    this.leaseholders = this.storageService.getLeaseholders();
-
-    if (this.leaseholders == undefined) {
-      this.storageService.getJson().subscribe(data => {
-        this.leaseholders = data;
-        this.storageService.set("data", this.leaseholders);
-        this.storageService.setLeaseholders(this.leaseholders);
-        console.log("No local data, assets data loaded and stored : " + JSON.stringify(this.leaseholders));
-      });
-    } else {
-      console.log("Local data loaded : " + JSON.stringify(this.leaseholders));
-    }
-   
+    await this.storageService.getData();
+    this.leaseholders = this.storageService.getLeaseholders(); 
   }
 
   generatePdf() {
@@ -45,7 +32,6 @@ export class TabSendPage implements OnInit {
        ],
     };
     pdfMake.createPdf(docDefinition).open();
-
   }
 
 }

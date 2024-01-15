@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Storage } from '@ionic/storage-angular';
 import { Leaseholder } from './leaseholder';
 import { Lease } from './lease';
+import { tap } from 'rxjs/operators';
+import { Observable, firstValueFrom } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -10,14 +12,37 @@ import { Lease } from './lease';
 export class StorageService {
   private _storage: Storage | null = null;
   private leaseholders: Leaseholder [] = [];
+  private dataLoaded!: Observable<any>;
 
   constructor(private storage: Storage, private http: HttpClient) {
     this.init();
   }
 
-  public getJson () {
-    return this.http.get<Leaseholder[]>("./assets/data.json");
+  private loadData() {
+    return this.http.get<Leaseholder[]>('/assets/data.json')
+      .pipe(
+        tap(data => {
+          this.leaseholders = data;
+        })
+      );
   }
+
+  async getData() {
+
+    await this.loadLeaseholders();
+    this.leaseholders = this.getLeaseholders();
+
+    if (this.leaseholders == undefined) {
+      this.dataLoaded = this.loadData();
+      await firstValueFrom(this.dataLoaded);
+      console.log("No local data, assets data loaded and stored : " + JSON.stringify(this.leaseholders));
+    } else {
+      console.log("Local data loaded : " + JSON.stringify(this.leaseholders));
+    }
+
+  }
+
+
 
   //Init
   async init() {

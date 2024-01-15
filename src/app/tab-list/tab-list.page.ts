@@ -26,19 +26,8 @@ export class TabListPage implements OnInit {
   ) { }
 
   async ngOnInit() {
-    await this.storageService.loadLeaseholders();
+    await this.storageService.getData(); 
     this.leaseholders = this.storageService.getLeaseholders();
-
-    if (this.leaseholders == undefined) {
-      this.storageService.getJson().subscribe(data => {
-        this.leaseholders = data;
-        this.storageService.set("data", this.leaseholders);
-        this.storageService.setLeaseholders(this.leaseholders);
-        console.log("No local data, assets data loaded and stored : " + JSON.stringify(this.leaseholders));
-      });
-    } else {
-      console.log("Local data loaded : " + JSON.stringify(this.leaseholders));
-    }
 
     // Manage new lease form
     this.newLeaseHolderForm = this.formBuilder.group({
@@ -70,6 +59,7 @@ export class TabListPage implements OnInit {
     );
 
     this.storageService.addLeaseHolder(leaseHolder);
+    this.leaseholders = this.storageService.getLeaseholders();
   }
 
 
