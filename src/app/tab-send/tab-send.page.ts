@@ -34,4 +34,8 @@ export class TabSendPage implements OnInit {
     pdfMake.createPdf(docDefinition).open();
   }
 
+  sendEmail() {
+    
+  }
+
 }
