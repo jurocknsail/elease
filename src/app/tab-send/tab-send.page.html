@@ -7,6 +7,10 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
+
+
+  <ion-datetime presentation="month-year" [preferWheel]="true"></ion-datetime>
+
  
   <ion-list [inset]="true" lines="none">
     <ion-item-group *ngFor="let leaseholder of leaseholders">
