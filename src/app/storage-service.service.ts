@@ -35,9 +35,9 @@ export class StorageService {
     if (this.leaseholders == undefined) {
       this.dataLoaded = this.loadData();
       await firstValueFrom(this.dataLoaded);
-      console.log("No local data, assets data loaded and stored : " + JSON.stringify(this.leaseholders));
+      //console.log("No local data, assets data loaded and stored : " + JSON.stringify(this.leaseholders));
     } else {
-      console.log("Local data loaded : " + JSON.stringify(this.leaseholders));
+      //console.log("Local data loaded : " + JSON.stringify(this.leaseholders));
     }
 
   }

@@ -9,20 +9,26 @@
         {
             "id": 1,
             "name": "Local",
+            "lot": 1,
+            "address": "41 chemin des Bagnols, 13600 La Ciotat",
             "description": "Local Agence.",
             "lastSendDate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
-            "price": 2000
+            "price": 2000,
+            "isSelected": true
         },
         {
             "id": 2,
             "name": "Garage",
+            "lot": 2,
+            "address": "41 chemin des Bagnols, 13600 La Ciotat",
             "description": "Garage Agence.",
             "lastSendDate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
-            "price": 600
+            "price": 600,
+            "isSelected": true
         }
       ]
     },
@@ -36,11 +42,14 @@
         {
             "id": 1,
             "name": "Local",
+            "lot": 1,
+            "address": "41 chemin des Bagnols, 13600 La Ciotat",
             "description": "Salle de Sport",
             "lastSendDate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
-            "price": 2000
+            "price": 2000,
+            "isSelected": true
         }
       ]
     }

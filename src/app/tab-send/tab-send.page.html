@@ -14,7 +14,7 @@
         <ion-label>{{ leaseholder.name }} - {{ leaseholder.email }}</ion-label>
       </ion-item-divider>
         <ion-item *ngFor="let lease of leaseholder.leases">
-          <ion-checkbox checked="true" slot="start" aria-label="Toggle selection" labelPlacement="end">{{ lease.name }}</ion-checkbox>
+          <ion-checkbox [(ngModel)]="lease.isSelected" slot="start" aria-label="Toggle selection" labelPlacement="end">{{ lease.name }}</ion-checkbox>
         </ion-item>
     </ion-item-group>
   </ion-list>

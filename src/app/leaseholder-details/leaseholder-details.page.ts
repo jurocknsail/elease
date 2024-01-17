@@ -60,6 +60,8 @@ export class LeaseholderDetailsPage implements OnInit {
     // Manage new lease form
     this.newLeaseForm = this.formBuilder.group({
       name: ["", [Validators.required]],
+      lot: ["", [Validators.required]],
+      address: ["", [Validators.required]],
       renewalDate: ["", [Validators.required]],
       indexing: ["", [Validators.required]],
       price: ["", [Validators.required]],
@@ -94,6 +96,8 @@ export class LeaseholderDetailsPage implements OnInit {
     let addedLease = new LeaseClass(
       this.leases.length + 1,
       this.newLeaseForm.controls["name"].value,
+      this.newLeaseForm.controls["lot"].value,
+      this.newLeaseForm.controls["address"].value,
       "",
       0,
       this.newLeaseForm.controls["renewalDate"].value,
@@ -134,12 +138,15 @@ export class LeaseholderDetailsPage implements OnInit {
   // Helper to add lease forms
   private addLease(lease: Lease): void {
     const leaseForm = this.formBuilder.group({
+      address: [lease.address],
+      lot: [lease.lot],
       lastSendDate: [lease.lastSendDate],
       renewalDate: [lease.renewalDate, [Validators.required]],
       indexing: [lease.indexing, [Validators.required]],
       price: [lease.price, [Validators.required]],
     });
     this.leases.push(leaseForm);
+    this.toogleEdit(false);
   }
 
 }
