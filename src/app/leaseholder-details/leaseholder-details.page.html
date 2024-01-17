@@ -4,8 +4,8 @@
       Détails pour {{ leaseholder.name }}
     </ion-title>
     <ion-buttons slot="primary">
-      <ion-button (click)="onEdit()" >
-        <ion-icon slot="icon-only" name="create" color="warning"></ion-icon>
+      <ion-button #editButton (click)="onEdit()" >
+        <ion-icon slot="icon-only" name="create" color="success"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
@@ -88,7 +88,7 @@
   </ion-accordion-group>
 
   <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-    <ion-fab-button (click)="onSave()" *ngIf="leaseForm.dirty || leaseholderForm.dirty" color="success" type="submit" [disabled]="!leaseForm.valid || !leaseholderForm.valid">
+    <ion-fab-button (click)="onSave()" *ngIf="isEditing || leaseForm.dirty || leaseholderForm.dirty" color="success" type="submit" [disabled]="!leaseForm.valid || !leaseholderForm.valid">
       <ion-icon name="save"></ion-icon>
     </ion-fab-button>
   </ion-fab>

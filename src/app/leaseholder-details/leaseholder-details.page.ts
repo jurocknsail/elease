@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Lease, LeaseClass } from '../lease';
-import { IonAccordionGroup } from '@ionic/angular';
+import { IonAccordionGroup, IonButton } from '@ionic/angular';
 import { StorageService } from '../storage-service.service';
 
 
@@ -16,14 +16,14 @@ export class LeaseholderDetailsPage implements OnInit {
   @ViewChild('accordionGroup', { static: true })
   accordionGroup!: IonAccordionGroup;
 
-  onEdit() {
-    throw new Error('Method not implemented.');
-  }
+  @ViewChild('editButton', { static: true })
+  editButton!: IonButton;
 
   leaseholder: any | undefined;
   leaseholderForm!: FormGroup;
   leaseForm!: FormGroup;
   newLeaseForm!: FormGroup;
+  isEditing = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -32,6 +32,7 @@ export class LeaseholderDetailsPage implements OnInit {
   ) { }
 
   ngOnInit() {
+
     // First get the leaseholder id from the current route.
     const routeParams = this.route.snapshot.paramMap;
     const leaseholderIdFromRoute = Number(routeParams.get('leaseholderId'));
@@ -64,6 +65,8 @@ export class LeaseholderDetailsPage implements OnInit {
       price: ["", [Validators.required]],
     });
 
+    this.toogleEdit(false);
+
   }
 
   // Getter for leases forms
@@ -71,15 +74,17 @@ export class LeaseholderDetailsPage implements OnInit {
     return this.leaseForm.controls["leases"] as FormArray;
   }
 
-  // Helper to add lease forms
-  addLease(lease: Lease): void {
-    const leaseForm = this.formBuilder.group({
-      lastSendDate: [lease.lastSendDate],
-      renewalDate: [lease.renewalDate, [Validators.required]],
-      indexing: [lease.indexing, [Validators.required]],
-      price: [lease.price, [Validators.required]],
-    });
-    this.leases.push(leaseForm);
+  onEdit() {
+    this.isEditing = !this.isEditing!;
+    this.toogleEdit(this.isEditing);
+    this.editButton.disabled = true;
+  }
+
+  // On edit lease/leaseholder form save
+  onSave(): void {
+    this.isEditing = !this.isEditing!;
+    this.toogleEdit(this.isEditing);
+    this.editButton.disabled = false;
   }
 
   // On ADD form Submit actions
@@ -101,17 +106,40 @@ export class LeaseholderDetailsPage implements OnInit {
     this.addLease(addedLease);
 
     // Expand it
-    let toogleAccordionId:string = `${this.leases.length-1}`;
-    console.log(toogleAccordionId);
-    this.accordionGroup.value=toogleAccordionId;
-  
+    let toogleAccordionId: string = `${this.leases.length - 1}`;
+    this.accordionGroup.value = toogleAccordionId;
+
     // Clear the form
     this.newLeaseForm.reset();
   }
 
-  // On edit lease/leaseholder form save
-  onSave(): void {
-    console.log("Saving lease/leaseholder.")
+  private toogleEdit(edit: boolean) {
+    if (edit) {
+      Object.keys(this.leaseholderForm.controls).forEach(key => {
+        this.leaseholderForm.get(key)?.enable();
+      });
+      Object.keys(this.leases.controls).forEach(key => {
+        this.leases.get(key)?.enable();
+      });
+    } else {
+      Object.keys(this.leaseholderForm.controls).forEach(key => {
+        this.leaseholderForm.get(key)?.disable();
+      });
+      Object.keys(this.leases.controls).forEach(key => {
+        this.leases.get(key)?.disable();
+      });
+    }
+  }
+
+  // Helper to add lease forms
+  private addLease(lease: Lease): void {
+    const leaseForm = this.formBuilder.group({
+      lastSendDate: [lease.lastSendDate],
+      renewalDate: [lease.renewalDate, [Validators.required]],
+      indexing: [lease.indexing, [Validators.required]],
+      price: [lease.price, [Validators.required]],
+    });
+    this.leases.push(leaseForm);
   }
 
 }
