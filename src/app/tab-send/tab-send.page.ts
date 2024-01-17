@@ -5,6 +5,7 @@ import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 (<any>pdfMake).vfs = pdfFonts.pdfMake.vfs;
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
+import { UpperCasePipe } from '@angular/common';
 
 @Component({
   selector: 'app-tab-send',
@@ -13,11 +14,13 @@ import { TDocumentDefinitions } from 'pdfmake/interfaces';
 })
 export class TabSendPage implements OnInit {
   leaseholders: Leaseholder[] | undefined;
-  count = 0;
+  now: Date;
 
   constructor(
     private storageService: StorageService
-  ) { }
+  ) {
+    this.now = new Date();
+   }
 
   async ngOnInit() {
     await this.storageService.getData();
@@ -29,7 +32,11 @@ export class TabSendPage implements OnInit {
       leaseholder.leases.forEach(lease => {
 
         if (lease.isSelected) {
-          this.count = this.count + 1;
+
+          let priceHT = lease.price;
+          let priceTVA = lease.price * 0.2;
+          let priceTTC = lease.price + priceTVA;
+
           const docDefinition: TDocumentDefinitions = {
             content: [
               {
@@ -41,29 +48,27 @@ export class TabSendPage implements OnInit {
               },
               {
                 alignment: 'right',
-                text:
-                  `CABINET AGIMMO
-                  ESPACE LA CHARINE
-                  41,CHEMIN DES BAGNOLS
-                  13600 LA CIOTAT`
+                text: lease.name.toUpperCase() + "\n" + lease.address.toUpperCase() + "\n"
               },
               {
                 alignment: 'left',
                 text:
                   `LA CIOTAT,
-                  Le 25 novembre 2023
-                  \n
-                  FACTURE DU LOYER N°`+ this.count + `
+                  Le 25/`+ this.now.getMonth()+1 +"/"+ this.now.getFullYear() +
+                  `\n
+                  FACTURE DU LOYER N°`+ lease.lot + `
                   \n
                   Établie par la SCI LA CHARINE`
               },
               {
                 alignment: 'justify',
-                text: [{ text: 'Période du 01/12/2023 au 31/12/2023', bold: true },
+                text: [{ text: 'Période du 01/' + this.now.getMonth()+2 + '/'+ this.now.getFullYear() +' au 31/'+ this.now.getMonth()+2 + '/' + this.now.getFullYear() , bold: true },
                   `
                   Monsieur,
                   Nous vous prions de recevoir ci-dessous le détail de votre facture concernant le local sis : 
-                  41, chemin des Bagnols, LA CHARINE, 13600 LA CIOTAT.
+                  ` 
+                  + lease.address +
+                  `
                   \n
                   `]
               },
@@ -71,24 +76,23 @@ export class TabSendPage implements OnInit {
                 columns: [
                   {
                     text:
-                      `Date : 
-                      01/12/2023`
+                      "Date : \n01/" + this.now.getMonth()+2 +"/"+ this.now.getFullYear()
                   },
                   {
                     text:
                       `Libellé
-                      Appel de loyer Dec 23
-                      T.V.A. 20%.
+                      Appel de loyer ` + this.now.getMonth()+2  +"/"+ this.now.getFullYear() +
+                      `\nT.V.A. 20%.
                       \nTotal TTC ..................................`
                   },
                   {
                     text: [
-                      `Montant
-                      1300,00
-                      260,00
-                      --------------
-                      `,
-                      { text: '1560,00', bold: true }
+                      "Montant\n" 
+                       + lease.price.toFixed(2) + "\n" 
+                       + priceTVA.toFixed(2)+ "\n"
+                       + "--------------\n"
+                      ,
+                      { text: priceTTC.toFixed(2) , bold: true }
                     ]
                   }
                 ]
