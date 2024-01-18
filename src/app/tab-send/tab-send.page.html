@@ -8,8 +8,19 @@
 
 <ion-content [fullscreen]="true">
 
-
-  <ion-datetime presentation="month-year" [preferWheel]="true"></ion-datetime>
+  <br>
+  <ion-item>
+    <ion-label>Date d'envoi par défaut</ion-label>
+    <ion-datetime-button datetime="datetime"></ion-datetime-button>
+  </ion-item>
+  
+  <ion-modal [keepContentsMounted]="true">
+    <ng-template>
+      <ion-datetime (ionChange)="setDate($event)" value="{{ defaultSendDate  | date:'YYYY-MM-dd'}}" presentation="date" [showDefaultButtons]="true" id="datetime">
+        <span slot="title">Date d'envoi</span>
+      </ion-datetime>
+    </ng-template>
+  </ion-modal>
 
  
   <ion-list [inset]="true" lines="none">

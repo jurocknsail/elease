@@ -5,7 +5,7 @@ import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 (<any>pdfMake).vfs = pdfFonts.pdfMake.vfs;
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
-import { UpperCasePipe } from '@angular/common';
+import { DatetimeCustomEvent } from '@ionic/angular';
 
 @Component({
   selector: 'app-tab-send',
@@ -15,16 +15,25 @@ import { UpperCasePipe } from '@angular/common';
 export class TabSendPage implements OnInit {
   leaseholders: Leaseholder[] | undefined;
   now: Date;
+  defaultSendDate: Date;
 
   constructor(
     private storageService: StorageService
   ) {
     this.now = new Date();
-   }
+    this.defaultSendDate = new Date(this.now.getFullYear() + "-" + this.now.getMonth() + 1 + "-25");
+  }
 
   async ngOnInit() {
     await this.storageService.getData();
     this.leaseholders = this.storageService.getLeaseholders();
+  }
+
+  setDate(event: DatetimeCustomEvent) {
+    if (event.detail.value != undefined) {
+      let newDateAsString: string = event.detail.value as string;
+      this.defaultSendDate = new Date(newDateAsString);
+    }
   }
 
   generatePdf() {
@@ -33,7 +42,6 @@ export class TabSendPage implements OnInit {
 
         if (lease.isSelected) {
 
-          let priceHT = lease.price;
           let priceTVA = lease.price * 0.2;
           let priceTTC = lease.price + priceTVA;
 
@@ -54,7 +62,7 @@ export class TabSendPage implements OnInit {
                 alignment: 'left',
                 text:
                   `LA CIOTAT,
-                  Le 25/`+ this.now.getMonth()+1 +"/"+ this.now.getFullYear() +
+                  Le `+ this.defaultSendDate.toLocaleDateString() +
                   `\n
                   FACTURE DU LOYER N°`+ lease.lot + `
                   \n
@@ -62,13 +70,13 @@ export class TabSendPage implements OnInit {
               },
               {
                 alignment: 'justify',
-                text: [{ text: 'Période du 01/' + this.now.getMonth()+2 + '/'+ this.now.getFullYear() +' au 31/'+ this.now.getMonth()+2 + '/' + this.now.getFullYear() , bold: true },
-                  `
+                text: [{ text: 'Période du 01/' + this.now.getMonth() + 2 + '/' + this.now.getFullYear() + ' au 31/' + this.now.getMonth() + 2 + '/' + this.now.getFullYear(), bold: true },
+                `
                   Monsieur,
                   Nous vous prions de recevoir ci-dessous le détail de votre facture concernant le local sis : 
-                  ` 
-                  + lease.address +
                   `
+                + lease.address +
+                `
                   \n
                   `]
               },
@@ -76,23 +84,23 @@ export class TabSendPage implements OnInit {
                 columns: [
                   {
                     text:
-                      "Date : \n01/" + this.now.getMonth()+2 +"/"+ this.now.getFullYear()
+                      "Date : \n01/" + this.now.getMonth() + 2 + "/" + this.now.getFullYear()
                   },
                   {
                     text:
                       `Libellé
-                      Appel de loyer ` + this.now.getMonth()+2  +"/"+ this.now.getFullYear() +
+                      Appel de loyer ` + this.now.getMonth() + 2 + "/" + this.now.getFullYear() +
                       `\nT.V.A. 20%.
                       \nTotal TTC ..................................`
                   },
                   {
                     text: [
-                      "Montant\n" 
-                       + lease.price.toFixed(2) + "\n" 
-                       + priceTVA.toFixed(2)+ "\n"
-                       + "--------------\n"
+                      "Montant\n"
+                      + lease.price.toFixed(2) + "\n"
+                      + priceTVA.toFixed(2) + "\n"
+                      + "--------------\n"
                       ,
-                      { text: priceTTC.toFixed(2) , bold: true }
+                      { text: priceTTC.toFixed(2), bold: true }
                     ]
                   }
                 ]
@@ -102,11 +110,11 @@ export class TabSendPage implements OnInit {
                 text: [
                   { text: "\n\nConditions de règlement :", italics: true },
                   {
-                    text: 
-                    `\nEn application de la loi n° 92.1482 Du 31/12/92, le règlement anticipé ne donnera pas lieu à escompte. 
+                    text:
+                      `\nEn application de la loi n° 92.1482 Du 31/12/92, le règlement anticipé ne donnera pas lieu à escompte. 
                     En cas de réglement après échéance, il sera fait applications des dispositions légales après mise en demeure. 
                     SCI LA CHARINE au capital de 2000 euros, inscrite au RCS de MARSEILLE sous le n° 507 834 117.
-                    \n`, 
+                    \n`,
                     italics: true
                   },
                 ]
