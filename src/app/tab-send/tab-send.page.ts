@@ -7,6 +7,7 @@ import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { DatetimeCustomEvent } from '@ionic/angular';
 import { formatDate } from '@angular/common';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 @Component({
   selector: 'app-tab-send',
@@ -28,6 +29,13 @@ export class TabSendPage implements OnInit {
   async ngOnInit() {
     await this.storageService.getData();
     this.leaseholders = this.storageService.getLeaseholders();
+    async () => {
+      await Filesystem.mkdir({
+        path: 'elease_pdfs',
+        directory: Directory.Documents,
+        recursive: false,
+      });
+    }
   }
 
   setDate(event: DatetimeCustomEvent) {
@@ -136,6 +144,14 @@ export class TabSendPage implements OnInit {
           };
           pdfMake.createPdf(docDefinition).getBlob ( blob => {
             window.open(URL.createObjectURL(blob), "_blank");
+            async () => {
+              await Filesystem.writeFile({
+                path: 'elease_pdfs/' + formatDate(this.now,'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name,
+                data: blob,
+                directory: Directory.Documents,
+                encoding: Encoding.UTF8,
+              });
+            };
           });
         }
       });
