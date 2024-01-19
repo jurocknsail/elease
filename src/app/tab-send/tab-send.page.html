@@ -24,7 +24,7 @@
 
  
   <ion-list [inset]="true" lines="none">
-    <ion-item-group *ngFor="let leaseholder of parent.leaseholders">
+    <ion-item-group *ngFor="let leaseholder of storageService.getLeaseholders()">
       <ion-item-divider >
         <ion-label>{{ leaseholder.name }} - {{ leaseholder.email }}</ion-label>
       </ion-item-divider>

@@ -21,14 +21,11 @@ export class TabListPage implements OnInit {
   newLeaseHolderForm!: FormGroup;
 
   constructor(
-    private storageService: StorageService,
+    public storageService: StorageService,
     private formBuilder: FormBuilder,
-    public parent: TabsPage
   ) { }
 
   async ngOnInit() {
-
-    await this.parent.ngOnInit();
 
     // Manage new lease form
     this.newLeaseHolderForm = this.formBuilder.group({
@@ -51,7 +48,7 @@ export class TabListPage implements OnInit {
   onSubmit() {
     const emptyLeases: Lease[] = [];
     const leaseHolder = new LeaseHolderClass(
-      this.parent.leaseholders.length+1,
+      this.storageService.getLeaseholders().length+1,
       this.newLeaseHolderForm.controls["name"].value,
       this.newLeaseHolderForm.controls["description"].value,
       this.newLeaseHolderForm.controls["email"].value,
@@ -60,7 +57,6 @@ export class TabListPage implements OnInit {
     );
 
     this.storageService.addLeaseHolder(leaseHolder);
-    this.parent.leaseholders = this.storageService.getLeaseholders();
   }
 
 

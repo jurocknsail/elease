@@ -38,7 +38,6 @@ export class LeaseholderDetailsPage implements OnInit {
     const leaseholderIdFromRoute = Number(routeParams.get('leaseholderId'));
 
     // Find the leaseholder that correspond with the id provided in route.
-    //TODO Resolve LeaseHolder from local storage
     this.leaseholder = this.storageService.getLeaseholder(leaseholderIdFromRoute);
 
     // Manage leaseholder form

@@ -8,14 +8,10 @@ import { StorageService } from '../storage-service.service';
   styleUrls: ['tabs.page.scss']
 })
 export class TabsPage {
-  leaseholders: Leaseholder[] = [];
 
   constructor(
-    private storageService: StorageService
   ) {}
 
   async ngOnInit() {
-    await this.storageService.getData();
-    this.leaseholders = this.storageService.getLeaseholders();
   }
 }

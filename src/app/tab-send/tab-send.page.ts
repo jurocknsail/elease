@@ -20,7 +20,7 @@ export class TabSendPage implements OnInit {
   defaultSendDate: Date;
 
   constructor(
-    public parent: TabsPage
+    public storageService: StorageService,
   ) {
     this.now = new Date();
     this.defaultSendDate = new Date(this.now.getFullYear() + "-" + this.now.getMonth() + 1 + "-25");
@@ -28,7 +28,6 @@ export class TabSendPage implements OnInit {
 
   async ngOnInit() {
 
-    await this.parent.ngOnInit();
     async () => {
       await Filesystem.mkdir({
         path: 'elease_pdfs',
@@ -47,7 +46,7 @@ export class TabSendPage implements OnInit {
   }
 
   generatePdf() {
-    this.parent.leaseholders?.forEach(leaseholder => {
+    this.storageService.getLeaseholders().forEach(leaseholder => {
       leaseholder.leases.forEach(lease => {
 
         if (lease.isSelected) {

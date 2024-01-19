@@ -7,7 +7,11 @@ import { StorageService } from './storage-service.service';
   styleUrls: ['app.component.scss'],
 })
 export class AppComponent {
-  constructor(private storageService:StorageService) {
-    //this.storageService.loadLeaseholders();
+  constructor(
+    private storageService: StorageService
+  ) {}
+
+  async ngOnInit() {
+    await this.storageService.getData();
   }
 }
