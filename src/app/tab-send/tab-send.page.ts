@@ -7,7 +7,7 @@ import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { DatetimeCustomEvent } from '@ionic/angular';
 import { formatDate } from '@angular/common';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Filesystem, Directory, Encoding, GetUriOptions } from '@capacitor/filesystem';
 import { TabsPage } from '../tabs/tabs.page';
 
 @Component({
@@ -28,14 +28,27 @@ export class TabSendPage implements OnInit {
 
   async ngOnInit() {
 
-    async () => {
+    if(! await this.checkFileExists({ path: '/elease_pdfs', directory: Directory.Documents })) {
       await Filesystem.mkdir({
-        path: 'elease_pdfs',
+        path: '/elease_pdfs',
         directory: Directory.Documents,
         recursive: false,
       });
-    }
+    } 
 
+  }
+
+  async checkFileExists(getUriOptions: GetUriOptions): Promise<boolean> {
+    try {
+      await Filesystem.stat(getUriOptions);
+      return true;
+    } catch (checkDirException) {
+      if (checkDirException instanceof Error && checkDirException.message === 'File does not exist') {
+        return false;
+      } else {
+        throw checkDirException;
+      }
+    }
   }
 
   setDate(event: DatetimeCustomEvent) {
@@ -142,17 +155,22 @@ export class TabSendPage implements OnInit {
               }
             ],
           };
-          pdfMake.createPdf(docDefinition).getBlob ( blob => {
+          const pdf = pdfMake.createPdf(docDefinition);
+          
+          pdf.getBlob ( blob => {
             window.open(URL.createObjectURL(blob), "_blank");
-            async () => {
-              await Filesystem.writeFile({
-                path: 'elease_pdfs/' + formatDate(this.now,'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name,
-                data: blob,
-                directory: Directory.Documents,
-                encoding: Encoding.UTF8,
-              });
-            };
           });
+
+          pdf.getBase64 (data => {
+            Filesystem.writeFile({
+              path: '/elease_pdfs/' + formatDate(this.now,'dd_MM_yyyy', "en-GB") + "/" + formatDate(this.now,'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name + ".pdf",
+              data: data,
+              directory: Directory.Documents,
+              recursive: true
+            });
+            
+          });
+
         }
       });
     })
