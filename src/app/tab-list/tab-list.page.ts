@@ -6,6 +6,7 @@ import { OverlayEventDetail } from '@ionic/core/components';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { LeaseholderDetailsPage } from '../leaseholder-details/leaseholder-details.page';
 import { Lease } from '../lease';
+import { TabsPage } from '../tabs/tabs.page';
 @Component({
   selector: 'app-tab-list',
   templateUrl: 'tab-list.page.html',
@@ -15,7 +16,6 @@ export class TabListPage implements OnInit {
 
   @ViewChild(IonModal) modal: IonModal | undefined;
 
-  leaseholders: Leaseholder[] = [];
   message = 'This modal example uses triggers to automatically open a modal when the button is clicked.';
   name: string | undefined;
   newLeaseHolderForm!: FormGroup;
@@ -23,11 +23,12 @@ export class TabListPage implements OnInit {
   constructor(
     private storageService: StorageService,
     private formBuilder: FormBuilder,
+    public parent: TabsPage
   ) { }
 
   async ngOnInit() {
-    await this.storageService.getData(); 
-    this.leaseholders = this.storageService.getLeaseholders();
+
+    await this.parent.ngOnInit();
 
     // Manage new lease form
     this.newLeaseHolderForm = this.formBuilder.group({
@@ -50,7 +51,7 @@ export class TabListPage implements OnInit {
   onSubmit() {
     const emptyLeases: Lease[] = [];
     const leaseHolder = new LeaseHolderClass(
-      this.leaseholders.length+1,
+      this.parent.leaseholders.length+1,
       this.newLeaseHolderForm.controls["name"].value,
       this.newLeaseHolderForm.controls["description"].value,
       this.newLeaseHolderForm.controls["email"].value,
@@ -59,7 +60,7 @@ export class TabListPage implements OnInit {
     );
 
     this.storageService.addLeaseHolder(leaseHolder);
-    this.leaseholders = this.storageService.getLeaseholders();
+    this.parent.leaseholders = this.storageService.getLeaseholders();
   }
 
 

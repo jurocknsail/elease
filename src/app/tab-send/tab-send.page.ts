@@ -8,6 +8,7 @@ import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { DatetimeCustomEvent } from '@ionic/angular';
 import { formatDate } from '@angular/common';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { TabsPage } from '../tabs/tabs.page';
 
 @Component({
   selector: 'app-tab-send',
@@ -15,20 +16,19 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
   styleUrls: ['tab-send.page.scss']
 })
 export class TabSendPage implements OnInit {
-  leaseholders: Leaseholder[] | undefined;
   now: Date;
   defaultSendDate: Date;
 
   constructor(
-    private storageService: StorageService
+    public parent: TabsPage
   ) {
     this.now = new Date();
     this.defaultSendDate = new Date(this.now.getFullYear() + "-" + this.now.getMonth() + 1 + "-25");
   }
 
   async ngOnInit() {
-    await this.storageService.getData();
-    this.leaseholders = this.storageService.getLeaseholders();
+
+    await this.parent.ngOnInit();
     async () => {
       await Filesystem.mkdir({
         path: 'elease_pdfs',
@@ -36,6 +36,7 @@ export class TabSendPage implements OnInit {
         recursive: false,
       });
     }
+
   }
 
   setDate(event: DatetimeCustomEvent) {
@@ -46,7 +47,7 @@ export class TabSendPage implements OnInit {
   }
 
   generatePdf() {
-    this.leaseholders?.forEach(leaseholder => {
+    this.parent.leaseholders?.forEach(leaseholder => {
       leaseholder.leases.forEach(lease => {
 
         if (lease.isSelected) {

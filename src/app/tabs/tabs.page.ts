@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { Leaseholder } from '../leaseholder';
+import { StorageService } from '../storage-service.service';
 
 @Component({
   selector: 'app-tabs',
@@ -6,7 +8,14 @@ import { Component } from '@angular/core';
   styleUrls: ['tabs.page.scss']
 })
 export class TabsPage {
+  leaseholders: Leaseholder[] = [];
 
-  constructor() {}
+  constructor(
+    private storageService: StorageService
+  ) {}
 
+  async ngOnInit() {
+    await this.storageService.getData();
+    this.leaseholders = this.storageService.getLeaseholders();
+  }
 }
