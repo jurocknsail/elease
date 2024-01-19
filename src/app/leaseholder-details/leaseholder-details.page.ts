@@ -86,6 +86,13 @@ export class LeaseholderDetailsPage implements OnInit {
     this.isEditing = !this.isEditing!;
     this.toogleEdit(this.isEditing);
     this.editButton.disabled = false;
+
+    this.leaseholder.name = this.leaseholderForm.controls["name"].value,
+    this.leaseholder.description = this.leaseholderForm.controls["description"].value,
+    this.leaseholder.email = this.leaseholderForm.controls["email"].value,
+    this.leaseholder.phone = this.leaseholderForm.controls["phone"].value,
+
+    this.storageService.updateLeaseHolder(this.leaseholder);
   }
 
   // On ADD form Submit actions

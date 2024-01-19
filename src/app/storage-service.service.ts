@@ -10,7 +10,7 @@ import { Observable, firstValueFrom } from 'rxjs';
   providedIn: 'root'
 })
 export class StorageService {
-  
+
   private _storage: Storage | null = null;
   private leaseholders: Leaseholder[] = [];
   private dataLoaded!: Observable<any>;
@@ -81,6 +81,21 @@ export class StorageService {
 
   public addLeaseHolder(leaseholder: Leaseholder) {
     this.getLeaseholders().push(leaseholder);
+    this.set("data", this.leaseholders);
+  }
+
+  public updateLeaseHolder(leaseholder: Leaseholder) {
+
+    let lh = this.getLeaseholder(leaseholder.id);
+    if(lh != null) {
+      lh.description = leaseholder.description;
+      lh.email = leaseholder.email;
+      lh.id = leaseholder.id;
+      lh.name = leaseholder.name;
+      lh.phone = leaseholder.phone;
+      lh.leases = leaseholder.leases;
+    }
+
     this.set("data", this.leaseholders);
   }
 
