@@ -72,7 +72,7 @@ export class TabSendPage implements OnInit {
               },
               {
                 alignment: 'right',
-                text: lease.name.toUpperCase() + "\n" + lease.address.toUpperCase() + "\n"
+                text: leaseholder.name.toUpperCase() + "\n" + lease.address.toUpperCase() + "\n"
               },
               {
                 alignment: 'left',
@@ -91,7 +91,7 @@ export class TabSendPage implements OnInit {
                   Monsieur,
                   Nous vous prions de recevoir ci-dessous le détail de votre facture concernant le local sis : 
                   `
-                + lease.address +
+                +lease.name + ", " + lease.address +
                 `
                   \n
                   `]
