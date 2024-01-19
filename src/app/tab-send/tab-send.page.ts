@@ -6,6 +6,7 @@ import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 (<any>pdfMake).vfs = pdfFonts.pdfMake.vfs;
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { DatetimeCustomEvent } from '@ionic/angular';
+import { formatDate } from '@angular/common';
 
 @Component({
   selector: 'app-tab-send',
@@ -46,6 +47,12 @@ export class TabSendPage implements OnInit {
           let priceTTC = lease.price + priceTVA;
 
           const docDefinition: TDocumentDefinitions = {
+            info: {
+              title: formatDate(this.now,'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name,
+              author: 'SCI LA CHARINE',
+              subject: 'Appel de Loyer',
+              keywords: 'LOYER ' + lease.name,
+            },
             content: [
               {
                 alignment: 'left',
@@ -127,30 +134,12 @@ export class TabSendPage implements OnInit {
               }
             ],
           };
-          const doc = pdfMake.createPdf(docDefinition);
-          doc.getBase64((data) => {
-            this.showDocument(data, "application/pdf");
+          pdfMake.createPdf(docDefinition).getBlob ( blob => {
+            window.open(URL.createObjectURL(blob), "_blank");
           });
         }
       });
     })
-  }
-
-  base64ToArrayBuffer(_base64Str: string) {
-    var binaryString = window.atob(_base64Str);
-    var binaryLen = binaryString.length;
-    var bytes = new Uint8Array(binaryLen);
-    for (var i = 0; i < binaryLen; i++) {
-      var ascii = binaryString.charCodeAt(i);
-      bytes[i] = ascii;
-    }
-    return bytes;
-  }
-
-  showDocument(_base64Str: any, _contentType: any) {
-    var byte = this.base64ToArrayBuffer(_base64Str);
-    var blob = new Blob([byte], { type: _contentType });
-    window.open(URL.createObjectURL(blob), "_blank");
   }
 
   sendEmail() { }
