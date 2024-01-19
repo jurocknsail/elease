@@ -127,10 +127,30 @@ export class TabSendPage implements OnInit {
               }
             ],
           };
-          pdfMake.createPdf(docDefinition).open();
+          const doc = pdfMake.createPdf(docDefinition);
+          doc.getBase64((data) => {
+            this.showDocument(data, "application/pdf");
+          });
         }
       });
     })
+  }
+
+  base64ToArrayBuffer(_base64Str: string) {
+    var binaryString = window.atob(_base64Str);
+    var binaryLen = binaryString.length;
+    var bytes = new Uint8Array(binaryLen);
+    for (var i = 0; i < binaryLen; i++) {
+      var ascii = binaryString.charCodeAt(i);
+      bytes[i] = ascii;
+    }
+    return bytes;
+  }
+
+  showDocument(_base64Str: any, _contentType: any) {
+    var byte = this.base64ToArrayBuffer(_base64Str);
+    var blob = new Blob([byte], { type: _contentType });
+    window.open(URL.createObjectURL(blob), "_blank");
   }
 
   sendEmail() { }
