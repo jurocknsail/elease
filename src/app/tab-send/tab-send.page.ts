@@ -8,8 +8,9 @@ import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { DatetimeCustomEvent } from '@ionic/angular';
 import { formatDate } from '@angular/common';
 import { Filesystem, Directory, Encoding, GetUriOptions } from '@capacitor/filesystem';
-import { TabsPage } from '../tabs/tabs.page';
+import { Lease } from '../lease';
 
+const USER_DATA_FOLDER = '/elease_pdfs/';
 @Component({
   selector: 'app-tab-send',
   templateUrl: 'tab-send.page.html',
@@ -28,13 +29,13 @@ export class TabSendPage implements OnInit {
 
   async ngOnInit() {
 
-    if(! await this.checkFileExists({ path: '/elease_pdfs', directory: Directory.Documents })) {
+    if (! await this.checkFileExists({ path: USER_DATA_FOLDER, directory: Directory.Documents })) {
       await Filesystem.mkdir({
-        path: '/elease_pdfs',
+        path: USER_DATA_FOLDER,
         directory: Directory.Documents,
         recursive: false,
       });
-    } 
+    }
 
   }
 
@@ -69,7 +70,7 @@ export class TabSendPage implements OnInit {
 
           const docDefinition: TDocumentDefinitions = {
             info: {
-              title: formatDate(this.now,'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name,
+              title: formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name,
               author: 'SCI LA CHARINE',
               subject: 'Appel de Loyer',
               keywords: 'LOYER ' + lease.name,
@@ -90,7 +91,7 @@ export class TabSendPage implements OnInit {
                 alignment: 'left',
                 text:
                   `LA CIOTAT,
-                  Le `+ this.defaultSendDate.toLocaleDateString() +
+                  Le `+ formatDate(this.defaultSendDate.toLocaleDateString(), 'dd/MM/yyyy', "en-GB") +
                   `\n
                   FACTURE DU LOYER N°`+ lease.lot + `
                   \n
@@ -103,7 +104,7 @@ export class TabSendPage implements OnInit {
                   Monsieur,
                   Nous vous prions de recevoir ci-dessous le détail de votre facture concernant le local sis : 
                   `
-                +lease.name + ", " + lease.address +
+                + lease.name + ", " + lease.address +
                 `
                   \n
                   `]
@@ -156,24 +157,43 @@ export class TabSendPage implements OnInit {
             ],
           };
           const pdf = pdfMake.createPdf(docDefinition);
-          
-          pdf.getBlob ( blob => {
+
+          // Open PDF in tab when using web browser
+          pdf.getBlob(blob => {
             window.open(URL.createObjectURL(blob), "_blank");
           });
 
-          pdf.getBase64 (data => {
-            Filesystem.writeFile({
-              path: '/elease_pdfs/' + formatDate(this.now,'dd_MM_yyyy', "en-GB") + "/" + formatDate(this.now,'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name + ".pdf",
-              data: data,
-              directory: Directory.Documents,
-              recursive: true
-            });
-            
+          // Save PDF when using in Android App 
+          pdf.getBase64(data => {
+            this.writePDF(data, leaseholder, lease);
           });
 
         }
       });
     })
+  }
+
+  async writePDF(data: string, leaseholder: Leaseholder, lease: Lease) {
+    let filePath = USER_DATA_FOLDER + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "/" + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name + ".pdf";
+    if (! await this.checkFileExists({ path: filePath, directory: Directory.Documents })) {
+      Filesystem.writeFile({
+        path: filePath,
+        data: data,
+        directory: Directory.Documents,
+        recursive: true
+      });
+    } else {
+      await Filesystem.deleteFile({
+        path: filePath,
+        directory: Directory.Documents
+      });
+      Filesystem.writeFile({
+        path: filePath,
+        data: data,
+        directory: Directory.Documents,
+        recursive: true
+      });
+    }
   }
 
   sendEmail() { }
