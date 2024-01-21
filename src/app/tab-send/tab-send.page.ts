@@ -91,7 +91,7 @@ export class TabSendPage implements OnInit {
                 alignment: 'left',
                 text:
                   `LA CIOTAT,
-                  Le `+ formatDate(this.defaultSendDate.toLocaleDateString(), 'dd/MM/yyyy', "en-GB") +
+                  Le `+ formatDate(this.defaultSendDate, 'dd/MM/yyyy', "en-GB") +
                   `\n
                   FACTURE DU LOYER N°`+ lease.lot + `
                   \n
