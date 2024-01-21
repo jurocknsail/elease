@@ -5,9 +5,9 @@ import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 (<any>pdfMake).vfs = pdfFonts.pdfMake.vfs;
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
-import { DatetimeCustomEvent } from '@ionic/angular';
+import { DatetimeCustomEvent, Platform, isPlatform } from '@ionic/angular';
 import { formatDate } from '@angular/common';
-import { Filesystem, Directory, Encoding, GetUriOptions } from '@capacitor/filesystem';
+import { Filesystem, Directory, GetUriOptions } from '@capacitor/filesystem';
 import { Lease } from '../lease';
 
 const USER_DATA_FOLDER = '/elease_pdfs/';
@@ -19,22 +19,33 @@ const USER_DATA_FOLDER = '/elease_pdfs/';
 export class TabSendPage implements OnInit {
   now: Date;
   defaultSendDate: Date;
+  isApp: boolean;
 
   constructor(
     public storageService: StorageService,
+    public platform: Platform
   ) {
     this.now = new Date();
     this.defaultSendDate = new Date(this.now.getFullYear() + "-" + this.now.getMonth() + 1 + "-25");
+    if(this.platform.is('desktop') || this.platform.is('mobileweb') || this.platform.is('mobile')) {
+      this.isApp = false;
+    } else {
+      this.isApp = true;
+    }
   }
 
   async ngOnInit() {
 
-    if (! await this.checkFileExists({ path: USER_DATA_FOLDER, directory: Directory.Documents })) {
-      await Filesystem.mkdir({
-        path: USER_DATA_FOLDER,
-        directory: Directory.Documents,
-        recursive: false,
-      });
+   
+    console.log(this.platform.platforms())
+    if(this.isApp){
+      if (! await this.checkFileExists({ path: USER_DATA_FOLDER, directory: Directory.Documents })) {
+        await Filesystem.mkdir({
+          path: USER_DATA_FOLDER,
+          directory: Directory.Documents,
+          recursive: false,
+        });
+      }
     }
 
   }
@@ -164,9 +175,11 @@ export class TabSendPage implements OnInit {
           });
 
           // Save PDF when using in Android App 
-          pdf.getBase64(data => {
-            this.writePDF(data, leaseholder, lease);
-          });
+          if(this.isApp) {
+            pdf.getBase64(data => {
+              this.writePDF(data, leaseholder, lease);
+            });
+          }
 
         }
       });
