@@ -92,6 +92,14 @@ export class LeaseholderDetailsPage implements OnInit {
     this.leaseholder.email = this.leaseholderForm.controls["email"].value,
     this.leaseholder.phone = this.leaseholderForm.controls["phone"].value,
 
+   this.leases.controls.forEach( (control, index) => {
+    this.leaseholder.leases[index].lot = control.get("lot")?.value;
+    this.leaseholder.leases[index].address = control.get("address")?.value;
+    this.leaseholder.leases[index].renewalDate = control.get("renewalDate")?.value;
+    this.leaseholder.leases[index].indexing = control.get("indexing")?.value;
+    this.leaseholder.leases[index].price = control.get("price")?.value;
+   });
+
     this.storageService.updateLeaseHolder(this.leaseholder);
   }
 
@@ -129,7 +137,11 @@ export class LeaseholderDetailsPage implements OnInit {
         this.leaseholderForm.get(key)?.enable();
       });
       Object.keys(this.leases.controls).forEach(key => {
-        this.leases.get(key)?.enable();
+        Object.keys((this.leases.get(key) as FormGroup).controls).forEach ( controlKey => {
+          if(controlKey != "lastSendDate"){
+            (this.leases.get(key) as FormGroup).get(controlKey)?.enable();
+          }
+        });
       });
     } else {
       Object.keys(this.leaseholderForm.controls).forEach(key => {
