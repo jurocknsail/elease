@@ -91,6 +91,12 @@
                 <ion-item>
                   <ion-input labelPlacement="floating" label="Loyer" formControlName="price" type="number"></ion-input>
                 </ion-item>
+                <ion-item button mode="md" (click)="onDeleteLease(leaseholder.id, leaseholder.leases[i].id)">
+                  <ion-label>Supprimer le bail</ion-label>
+                    <ion-button slot="end" fill="clear">
+                      <ion-icon slot="icon-only" name="trash-bin" color="danger"></ion-icon>
+                    </ion-button>
+                </ion-item>
               </ion-list>
             </form>
           </div>
