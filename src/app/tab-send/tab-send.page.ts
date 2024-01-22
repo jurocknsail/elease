@@ -36,8 +36,6 @@ export class TabSendPage implements OnInit {
 
   async ngOnInit() {
 
-   
-    console.log(this.platform.platforms())
     if(this.isApp){
       if (! await this.checkFileExists({ path: USER_DATA_FOLDER, directory: Directory.Documents })) {
         await Filesystem.mkdir({

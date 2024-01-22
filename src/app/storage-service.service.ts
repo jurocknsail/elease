@@ -74,6 +74,11 @@ export class StorageService {
     return this.getLeaseholders().find((leaseholder) => leaseholder.id === id);
   }
 
+  public deleteLeaseholder(id: number) {
+    this.getLeaseholders().splice(id,1);
+    console.log(this.getLeaseholders());
+  }
+
   public addLeaseToHolder(holderId: number, addedLease: Lease): void {
     this.getLeaseholder(holderId)?.leases.push(addedLease);
     this.set("data", this.leaseholders);

@@ -2,9 +2,9 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Lease, LeaseClass } from '../lease';
-import { IonAccordionGroup, IonButton } from '@ionic/angular';
+import { IonAccordionGroup, IonButton, IonModal } from '@ionic/angular';
 import { StorageService } from '../storage-service.service';
-
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-leaseholder-details',
@@ -19,6 +19,8 @@ export class LeaseholderDetailsPage implements OnInit {
   @ViewChild('editButton', { static: true })
   editButton!: IonButton;
 
+  @ViewChild(IonModal) modal!: IonModal;
+
   leaseholder: any | undefined;
   leaseholderForm!: FormGroup;
   leaseForm!: FormGroup;
@@ -28,7 +30,8 @@ export class LeaseholderDetailsPage implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private formBuilder: FormBuilder,
-    private storageService: StorageService
+    private storageService: StorageService,
+    private location: Location
   ) { }
 
   ngOnInit() {
@@ -81,6 +84,12 @@ export class LeaseholderDetailsPage implements OnInit {
     this.editButton.disabled = true;
   }
 
+  async onDelete() {
+    this.storageService.deleteLeaseholder(this.leaseholder.id - 1);
+    await this.modal.dismiss(null, 'confirm');
+    this.location.back();
+  }
+
   // On edit lease/leaseholder form save
   onSave(): void {
     this.isEditing = !this.isEditing!;
@@ -88,17 +97,17 @@ export class LeaseholderDetailsPage implements OnInit {
     this.editButton.disabled = false;
 
     this.leaseholder.name = this.leaseholderForm.controls["name"].value,
-    this.leaseholder.description = this.leaseholderForm.controls["description"].value,
-    this.leaseholder.email = this.leaseholderForm.controls["email"].value,
-    this.leaseholder.phone = this.leaseholderForm.controls["phone"].value,
+      this.leaseholder.description = this.leaseholderForm.controls["description"].value,
+      this.leaseholder.email = this.leaseholderForm.controls["email"].value,
+      this.leaseholder.phone = this.leaseholderForm.controls["phone"].value,
 
-   this.leases.controls.forEach( (control, index) => {
-    this.leaseholder.leases[index].lot = control.get("lot")?.value;
-    this.leaseholder.leases[index].address = control.get("address")?.value;
-    this.leaseholder.leases[index].renewalDate = control.get("renewalDate")?.value;
-    this.leaseholder.leases[index].indexing = control.get("indexing")?.value;
-    this.leaseholder.leases[index].price = control.get("price")?.value;
-   });
+      this.leases.controls.forEach((control, index) => {
+        this.leaseholder.leases[index].lot = control.get("lot")?.value;
+        this.leaseholder.leases[index].address = control.get("address")?.value;
+        this.leaseholder.leases[index].renewalDate = control.get("renewalDate")?.value;
+        this.leaseholder.leases[index].indexing = control.get("indexing")?.value;
+        this.leaseholder.leases[index].price = control.get("price")?.value;
+      });
 
     this.storageService.updateLeaseHolder(this.leaseholder);
   }
@@ -137,8 +146,8 @@ export class LeaseholderDetailsPage implements OnInit {
         this.leaseholderForm.get(key)?.enable();
       });
       Object.keys(this.leases.controls).forEach(key => {
-        Object.keys((this.leases.get(key) as FormGroup).controls).forEach ( controlKey => {
-          if(controlKey != "lastSendDate"){
+        Object.keys((this.leases.get(key) as FormGroup).controls).forEach(controlKey => {
+          if (controlKey != "lastSendDate") {
             (this.leases.get(key) as FormGroup).get(controlKey)?.enable();
           }
         });
