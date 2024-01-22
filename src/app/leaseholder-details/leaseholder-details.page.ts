@@ -88,7 +88,7 @@ export class LeaseholderDetailsPage implements OnInit {
   }
 
   async onDelete() {
-    this.storageService.deleteLeaseholder(this.leaseholder.id - 1);
+    this.storageService.deleteLeaseholder(this.leaseholder.id);
     await this.modal.dismiss(null, 'confirm');
     this.location.back();
   }
