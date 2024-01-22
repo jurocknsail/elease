@@ -19,6 +19,9 @@ export class LeaseholderDetailsPage implements OnInit {
   @ViewChild('editButton', { static: true })
   editButton!: IonButton;
 
+  @ViewChild('deleteButton', { static: true })
+  deleteButton!: IonButton;
+
   @ViewChild(IonModal) modal!: IonModal;
 
   leaseholder: any | undefined;
