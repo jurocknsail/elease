@@ -227,8 +227,8 @@ export class LeaseholderDetailsPage implements OnInit {
   // Helper to add lease forms
   private addLease(lease: Lease): void {
     const leaseForm = this.formBuilder.group({
-      address: [lease.address],
-      lot: [lease.lot],
+      address: [lease.address, [Validators.required]],
+      lot: [lease.lot, [Validators.required]],
       lastSendDate: [lease.lastSendDate],
       renewalDate: [lease.renewalDate, [Validators.required]],
       indexing: [lease.indexing, [Validators.required]],

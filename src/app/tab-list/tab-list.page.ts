@@ -46,17 +46,18 @@ export class TabListPage implements OnInit {
   }
 
   onSubmit() {
-    const emptyLeases: Lease[] = [];
-    const leaseHolder = new LeaseHolderClass(
-      this.storageService.getLeaseholders().length+1,
-      this.newLeaseHolderForm.controls["name"].value,
-      this.newLeaseHolderForm.controls["description"].value,
-      this.newLeaseHolderForm.controls["email"].value,
-      this.newLeaseHolderForm.controls["phone"].value,
-      emptyLeases,
-    );
-
-    this.storageService.addLeaseHolder(leaseHolder);
+    if (this.newLeaseHolderForm.valid) {
+      const emptyLeases: Lease[] = [];
+      const leaseHolder = new LeaseHolderClass(
+        this.storageService.getLeaseholders().length + 1,
+        this.newLeaseHolderForm.controls["name"].value,
+        this.newLeaseHolderForm.controls["description"].value,
+        this.newLeaseHolderForm.controls["email"].value,
+        this.newLeaseHolderForm.controls["phone"].value,
+        emptyLeases,
+      );
+      this.storageService.addLeaseHolder(leaseHolder);
+    }
   }
 
 

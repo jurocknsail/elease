@@ -32,7 +32,7 @@
     
   </ion-card>
 
-  <ion-modal trigger="open-modal">
+  <ion-modal trigger="open-modal" [canDismiss]="newLeaseHolderForm.valid">
     <ng-template>
       <ion-header>
         <ion-toolbar>
