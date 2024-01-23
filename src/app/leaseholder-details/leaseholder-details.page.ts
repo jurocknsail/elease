@@ -93,10 +93,10 @@ export class LeaseholderDetailsPage implements OnInit {
     this.location.back();
   }
 
-  async onDeleteLease(holderId: number, leaseId: number) {
-    //console.log((this.leases.at(leaseId-1) as FormGroup).controls)
+  async onDeleteLease(holderId: number, leaseId: number, leaseFormIndex: number) {
+    this.leases.controls.splice(leaseFormIndex, 1);
     this.storageService.deleteLeaseFromHolder(holderId, leaseId);
- }
+  }
 
   // On edit lease/leaseholder form save
   onSave(): void {

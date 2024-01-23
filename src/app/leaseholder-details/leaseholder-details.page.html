@@ -33,7 +33,8 @@
         </ion-buttons>
       </ion-toolbar>
       <ion-note>
-        <br><h2>Êtes vous sûr de vouloir supprimer le locataire {{ leaseholder.name }} et tous ses baux ?</h2>
+        <br>
+        <h2>Êtes vous sûr de vouloir supprimer le locataire {{ leaseholder.name }} et tous ses baux ?</h2>
       </ion-note>
     </ion-content>
   </ng-template>
@@ -91,17 +92,16 @@
                 <ion-item>
                   <ion-input labelPlacement="floating" label="Loyer" formControlName="price" type="number"></ion-input>
                 </ion-item>
-                <ion-item button mode="md" (click)="onDeleteLease(leaseholder.id, leaseholder.leases[i].id)">
+                <ion-item button mode="md" (click)="onDeleteLease(leaseholder.id, leaseholder.leases[i].id, i)">
                   <ion-label>Supprimer le bail</ion-label>
-                    <ion-button slot="end" fill="clear">
-                      <ion-icon slot="icon-only" name="trash-bin" color="danger"></ion-icon>
-                    </ion-button>
+                  <ion-button slot="end" fill="clear">
+                    <ion-icon slot="icon-only" name="trash-bin" color="danger"></ion-icon>
+                  </ion-button>
                 </ion-item>
               </ion-list>
             </form>
           </div>
         </ion-accordion>
-
 
         <ion-accordion toggleIcon="add" toggleIconSlot="end">
           <ion-item slot="header" color="success">
