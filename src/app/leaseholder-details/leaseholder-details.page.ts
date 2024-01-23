@@ -5,6 +5,7 @@ import { Lease, LeaseClass } from '../lease';
 import { IonAccordionGroup, IonButton, IonModal } from '@ionic/angular';
 import { StorageService } from '../storage-service.service';
 import { Location } from '@angular/common';
+import { AlertController } from '@ionic/angular';
 
 @Component({
   selector: 'app-leaseholder-details',
@@ -19,9 +20,6 @@ export class LeaseholderDetailsPage implements OnInit {
   @ViewChild('editButton', { static: true })
   editButton!: IonButton;
 
-  @ViewChild('deleteButton', { static: true })
-  deleteButton!: IonButton;
-
   @ViewChild(IonModal) modal!: IonModal;
 
   leaseholder: any | undefined;
@@ -29,12 +27,16 @@ export class LeaseholderDetailsPage implements OnInit {
   leaseForm!: FormGroup;
   newLeaseForm!: FormGroup;
   isEditing = false;
+  currentLeaserId!: number;
+  currentLeaseFormIndexId!: number;
+  currentLeaseName!: string;
 
   constructor(
     private route: ActivatedRoute,
     private formBuilder: FormBuilder,
     private storageService: StorageService,
-    private location: Location
+    private location: Location,
+    private alertController: AlertController
   ) { }
 
   ngOnInit() {
@@ -88,14 +90,66 @@ export class LeaseholderDetailsPage implements OnInit {
   }
 
   async onDelete() {
+    this.presentDeleteLeaseHolderAlert();
+  }
+  async presentDeleteLeaseHolderAlert() {
+    const alert = await this.alertController.create({
+      header: 'Confirmation de suppression',
+      message: 'Voulez vous vraiment supprimer le locataire ' + this.leaseholder.name,
+      buttons: this.alertDeleteLeaseHolderButtons,
+    });
+    await alert.present();
+  }
+  public alertDeleteLeaseHolderButtons = [
+    {
+      text: 'Annuler',
+      role: 'cancel'
+    },
+    {
+      text: 'OK',
+      role: 'confirm',
+      handler: () => {
+        console.log('Alert confirmed');
+        this.deleteLeaseHolder();
+      },
+    },
+  ];
+  async deleteLeaseHolder() {
     this.storageService.deleteLeaseholder(this.leaseholder.id);
-    await this.modal.dismiss(null, 'confirm');
     this.location.back();
   }
 
-  async onDeleteLease(holderId: number, leaseId: number, leaseFormIndex: number) {
+  async onDeleteLease(leaseId: number, leaseName: string, leaseFormIndex: number) {
+    this.currentLeaserId = leaseId;
+    this.currentLeaseFormIndexId = leaseFormIndex;
+    this.currentLeaseName = leaseName;
+    this.presentDeleteLeaseAlert();
+  }
+  async presentDeleteLeaseAlert() {
+    const alert = await this.alertController.create({
+      header: 'Confirmation de suppression',
+      message: 'Voulez vous vraiment supprimer le bail ' + this.currentLeaseName,
+      buttons: this.alertDeleteLeaseButtons,
+    });
+    await alert.present();
+  }
+  public alertDeleteLeaseButtons = [
+    {
+      text: 'Annuler',
+      role: 'cancel'
+    },
+    {
+      text: 'OK',
+      role: 'confirm',
+      handler: () => {
+        console.log('Alert confirmed');
+        this.deleteLease(this.currentLeaserId, this.currentLeaseFormIndexId);
+      },
+    },
+  ];
+  deleteLease(leaseId: number, leaseFormIndex: number){
     this.leases.controls.splice(leaseFormIndex, 1);
-    this.storageService.deleteLeaseFromHolder(holderId, leaseId);
+    this.storageService.deleteLeaseFromHolder(this.leaseholder.id, leaseId);
   }
 
   // On edit lease/leaseholder form save

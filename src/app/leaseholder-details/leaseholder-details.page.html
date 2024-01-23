@@ -4,7 +4,7 @@
       Détails pour {{ leaseholder.name }}
     </ion-title>
     <ion-buttons slot="start">
-      <ion-button #deleteButton id="delete-modal">
+      <ion-button (click)="onDelete()">
         <ion-icon slot="icon-only" name="trash-bin" color="danger"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -15,30 +15,6 @@
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
-
-<ion-modal #modal trigger="delete-modal">
-  <ng-template>
-    <ion-content class="center">
-      <ion-toolbar>
-        <ion-title>Confirmation</ion-title>
-        <ion-buttons slot="start">
-          <ion-button color="dark" (click)="modal.dismiss()">
-            <ion-icon slot="icon-only" name="close-circle" color="warning"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-        <ion-buttons slot="end">
-          <ion-button color="dark" (click)="onDelete()">
-            <ion-icon slot="icon-only" name="checkbox" color="dark"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-      <ion-note>
-        <br>
-        <h2>Êtes vous sûr de vouloir supprimer le locataire {{ leaseholder.name }} et tous ses baux ?</h2>
-      </ion-note>
-    </ion-content>
-  </ng-template>
-</ion-modal>
 
 <ion-content [fullscreen]="true">
 
@@ -63,7 +39,7 @@
   <ion-accordion-group #accordionGroup expand="inset">
     <div [formGroup]="leaseForm">
       <ng-container formArrayName="leases">
-        <ion-accordion value="{{i}}" toggleIconSlot="end" *ngFor="let leaseForm of leases.controls; let i = index">
+        <ion-accordion toggleIconSlot="end" *ngFor="let leaseForm of leases.controls; let i = index">
           <ion-item slot="header" color="light">
             <ion-label>{{ leaseholder.leases[i].name }}</ion-label>
           </ion-item>
@@ -92,7 +68,7 @@
                 <ion-item>
                   <ion-input labelPlacement="floating" label="Loyer" formControlName="price" type="number"></ion-input>
                 </ion-item>
-                <ion-item button mode="md" (click)="onDeleteLease(leaseholder.id, leaseholder.leases[i].id, i)">
+                <ion-item button mode="md" (click)="onDeleteLease(leaseholder.leases[i].id, leaseholder.leases[i].name, i)">
                   <ion-label>Supprimer le bail</ion-label>
                   <ion-button slot="end" fill="clear">
                     <ion-icon slot="icon-only" name="trash-bin" color="danger"></ion-icon>
