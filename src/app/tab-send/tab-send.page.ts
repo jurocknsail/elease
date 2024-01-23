@@ -26,8 +26,8 @@ export class TabSendPage implements OnInit {
     public platform: Platform
   ) {
     this.now = new Date();
-    this.defaultSendDate = new Date(this.now.getFullYear() + "-" + this.now.getMonth() + 1 + "-25");
-    if(this.platform.is('desktop') || this.platform.is('mobileweb') || this.platform.is('mobile')) {
+    this.defaultSendDate = this.computeDefaultSendDate();
+    if(!this.platform.is('cordova')) {
       this.isApp = false;
     } else {
       this.isApp = true;
@@ -46,6 +46,23 @@ export class TabSendPage implements OnInit {
       }
     }
 
+  }
+
+  computeDefaultSendDate(): Date {
+    return new Date(this.now.getFullYear() + "-" + this.now.getMonth() + 1 + "-25");
+  }
+
+  computePeriod(): string {
+    let month;
+    let year;
+    if(this.defaultSendDate.getMonth() < 11){
+      month = this.defaultSendDate.getMonth() + 2;
+      year = this.defaultSendDate.getFullYear();
+    } else {
+      month = 1;
+      year = this.defaultSendDate.getFullYear() + 1;
+    }
+    return month.toLocaleString('en-US', {minimumIntegerDigits: 2, useGrouping: false }) + "/" + year;
   }
 
   async checkFileExists(getUriOptions: GetUriOptions): Promise<boolean> {
@@ -108,7 +125,7 @@ export class TabSendPage implements OnInit {
               },
               {
                 alignment: 'justify',
-                text: [{ text: 'Période du 01/' + this.now.getMonth() + 2 + '/' + this.now.getFullYear() + ' au 31/' + this.now.getMonth() + 2 + '/' + this.now.getFullYear(), bold: true },
+                text: [{ text: 'Période du 01/' + this.computePeriod() + ' au 31/' + this.computePeriod(), bold: true },
                 `
                   Monsieur,
                   Nous vous prions de recevoir ci-dessous le détail de votre facture concernant le local sis : 
@@ -122,12 +139,12 @@ export class TabSendPage implements OnInit {
                 columns: [
                   {
                     text:
-                      "Date : \n01/" + this.now.getMonth() + 2 + "/" + this.now.getFullYear()
+                      "Date : \n01/" + this.computePeriod()
                   },
                   {
                     text:
                       `Libellé
-                      Appel de loyer ` + this.now.getMonth() + 2 + "/" + this.now.getFullYear() +
+                      Appel de loyer ` + this.computePeriod() +
                       `\nT.V.A. 20%.
                       \nTotal TTC ..................................`
                   },
