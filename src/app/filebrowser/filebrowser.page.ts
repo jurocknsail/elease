@@ -47,7 +47,6 @@ export class FilebrowserPage implements OnInit {
 		// The directory array is just strings
 		// We add the information isFile to make life easier
 		this.folderContent = folderContent.files.map((file) => {
-      console.log("AAAAA " + file.name)
 			return {
 				name: file.name,
 				isFile: file.type === 'file'
@@ -76,7 +75,8 @@ export class FilebrowserPage implements OnInit {
 					handler: async (data) => {
 						await Filesystem.mkdir({
 							directory: APP_DIRECTORY,
-							path: `${this.currentFolder}/${data.name}`
+							path: `${this.currentFolder}/${data.name}`,
+              recursive: true
 						});
 						this.loadDocuments();
 					}
