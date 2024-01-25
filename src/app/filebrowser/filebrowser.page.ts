@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Directory,  Filesystem } from '@capacitor/filesystem';
 import { AlertController, isPlatform, ToastController } from '@ionic/angular';
 import write_blob from 'capacitor-blob-writer';
+import { PreviewAnyFile } from '@awesome-cordova-plugins/preview-any-file/ngx';
 
 const APP_DIRECTORY = Directory.Documents;
 
