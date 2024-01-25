@@ -34,6 +34,8 @@
     "@ionic/angular": "^7.0.0",
     "@ionic/storage-angular": "^4.0.0",
     "@types/pdfmake": "^0.2.8",
+    "capacitor-blob-writer": "^1.1.14",
+    "cordova-plugin-preview-any-file": "^0.2.9",
     "ionicons": "^7.0.0",
     "pdfmake": "^0.2.9",
     "rxjs": "~7.8.0",

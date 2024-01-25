@@ -9,6 +9,10 @@ const routes: Routes = [
   {
     path: 'leaseholder-details/:leaseholderId',
     loadChildren: () => import('./leaseholder-details/leaseholder-details.module').then(m => m.LeaseholderDetailsPageModule)
+  },
+  {
+    path: 'filebrowser',
+    loadChildren: () => import('./filebrowser/filebrowser.module').then( m => m.FilebrowserPageModule)
   }
 ];
 @NgModule({

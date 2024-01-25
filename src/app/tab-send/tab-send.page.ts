@@ -10,7 +10,7 @@ import { formatDate } from '@angular/common';
 import { Filesystem, Directory, GetUriOptions } from '@capacitor/filesystem';
 import { Lease } from '../lease';
 
-const USER_DATA_FOLDER = '/elease_pdfs/';
+const USER_DATA_FOLDER = 'elease_pdfs';
 @Component({
   selector: 'app-tab-send',
   templateUrl: 'tab-send.page.html',
@@ -202,7 +202,7 @@ export class TabSendPage implements OnInit {
   }
 
   async writePDF(data: string, leaseholder: Leaseholder, lease: Lease) {
-    let filePath = USER_DATA_FOLDER + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "/" + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name + ".pdf";
+    let filePath = USER_DATA_FOLDER + "/" + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "/" + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name + ".pdf";
     if (! await this.checkFileExists({ path: filePath, directory: Directory.Documents })) {
       Filesystem.writeFile({
         path: filePath,

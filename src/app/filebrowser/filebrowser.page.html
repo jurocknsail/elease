@@ -1,0 +1,54 @@
+<ion-header>
+	<ion-toolbar [color]="copyFile ? 'secondary' : 'primary'">
+		<ion-buttons slot="start" *ngIf="currentFolder != ''">
+			<ion-back-button></ion-back-button>
+		</ion-buttons>
+		<ion-title> {{ currentFolder || 'Devdactic Explorer' }} </ion-title>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content>
+	<!-- For opening a standard file picker -->
+	<input hidden type="file" #filepicker (change)="fileSelected($event)" />
+
+	<!-- Info if the directory is empty -->
+	<ion-text color="medium" *ngIf="folderContent.length == 0" class="ion-padding ion-text-center">
+		<p>No documents found</p>
+	</ion-text>
+
+	<ion-list>
+		<ion-item-sliding *ngFor="let f of folderContent">
+			<!-- The actual file/folder item with click event -->
+			<ion-item (click)="itemClicked(f)">
+				<ion-icon [name]="f.isFile ? 'document-outline' : 'folder-outline'" slot="start"></ion-icon>
+				{{ f.name }}
+			</ion-item>
+
+			<!-- The start/end option buttons for all operations -->
+			<ion-item-options side="start">
+				<ion-item-option (click)="delete(f)" color="danger">
+					<ion-icon name="trash" slot="icon-only"></ion-icon>
+				</ion-item-option>
+			</ion-item-options>
+
+			<ion-item-options side="end">
+				<ion-item-option (click)="startCopy(f)" color="success"> Copy </ion-item-option>
+			</ion-item-options>
+		</ion-item-sliding>
+	</ion-list>
+
+	<!-- Fab to add files & folders -->
+	<ion-fab vertical="bottom" horizontal="end" slot="fixed">
+		<ion-fab-button>
+			<ion-icon name="add"></ion-icon>
+		</ion-fab-button>
+		<ion-fab-list side="top">
+			<ion-fab-button (click)="createFolder()">
+				<ion-icon name="folder"></ion-icon>
+			</ion-fab-button>
+			<ion-fab-button (click)="addFile()">
+				<ion-icon name="document"></ion-icon>
+			</ion-fab-button>
+		</ion-fab-list>
+	</ion-fab>
+</ion-content>
