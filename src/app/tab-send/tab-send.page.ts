@@ -194,14 +194,18 @@ export class TabSendPage implements OnInit {
 
           // Save PDF to Disc DB
           pdf.getBase64(data => {
+            console.log("pdf write")
             this.writePDF(data, leaseholder, lease);
           });
 
         }
       });
+    });
 
-      this.router.navigate(['/filebrowser/' + USER_DATA_FOLDER ]);
-    })
+    console.log("navigate")
+
+    this.router.navigate(['/filebrowser/' + USER_DATA_FOLDER ]);
+
   }
 
   async writePDF(data: string, leaseholder: Leaseholder, lease: Lease) {
