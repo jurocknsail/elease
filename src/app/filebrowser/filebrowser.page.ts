@@ -29,7 +29,7 @@ export class FilebrowserPage implements OnInit {
 		private route: ActivatedRoute,
 		private alertCtrl: AlertController,
 		private router: Router,
-		//private previewAnyFile: PreviewAnyFile,
+		private previewAnyFile: PreviewAnyFile,
 		private toastCtrl: ToastController
 	) {}
 
@@ -91,10 +91,79 @@ export class FilebrowserPage implements OnInit {
 
 	async fileSelected($event: any) {}
 
-	async itemClicked(entry: any) {}
+	async itemClicked(entry: File) {
+    if (this.copyFile) {
+      // TODO
+    } else {
+      // Open the file or folder
+      if (entry.isFile) {
+        this.openFile(entry);
+      } else {
+        let pathToOpen =
+          this.currentFolder != '' ? this.currentFolder + '/' + entry.name : entry.name;
+        let folder = encodeURIComponent(pathToOpen);
+        this.router.navigateByUrl(`/filebrowser/${folder}`);
+      }
+    }
+  }
 
-	async openFile(entry: any) {}
-	b64toBlob = (b64Data: any, contentType = '', sliceSize = 512) => {};
+  async openFile(entry: File) {
+    if (isPlatform('hybrid')) {
+      console.log("cordova")
+      // Get the URI and use our Cordova plugin for preview
+      const file_uri = await Filesystem.getUri({
+        directory: APP_DIRECTORY,
+        path: this.currentFolder + '/' + entry.name
+      });
+
+      this.previewAnyFile.preview(file_uri.uri)
+        .then((res: any) => console.log(res))
+        .catch((error: any) => console.error(error));
+    } else {
+      console.log("browser")
+
+      // Browser fallback to download the file
+      const file = await Filesystem.readFile({
+        directory: APP_DIRECTORY,
+        path: this.currentFolder + '/' + entry.name
+      });
+
+      console.log(file.data instanceof Blob)      
+
+      const blob = this.b64toBlob(file.data, 'application/pdf');
+      window.open(URL.createObjectURL(blob), "_blank");
+      
+      /*const blobUrl = URL.createObjectURL(blob);
+      let a = document.createElement('a');
+      document.body.appendChild(a);
+      a.setAttribute('style', 'display: none');
+      a.href = blobUrl;
+      a.download = entry.name;
+      a.click();
+      window.URL.revokeObjectURL(blobUrl);
+      a.remove();*/
+    }
+  }
+  
+  b64toBlob = (b64Data: any, contentType = '', sliceSize = 512) => {
+    const byteCharacters = atob(b64Data);
+	const byteArrays = [];
+
+	for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+		const slice = byteCharacters.slice(offset, offset + sliceSize);
+
+		const byteNumbers = new Array(slice.length);
+		for (let i = 0; i < slice.length; i++) {
+			byteNumbers[i] = slice.charCodeAt(i);
+		}
+
+		const byteArray = new Uint8Array(byteNumbers);
+		byteArrays.push(byteArray);
+	}
+
+	const blob = new Blob(byteArrays, { type: contentType });
+	return blob;
+  };
 
 	async delete(entry: any) {}
 

@@ -13,7 +13,11 @@ const routes: Routes = [
   {
     path: 'filebrowser',
     loadChildren: () => import('./filebrowser/filebrowser.module').then( m => m.FilebrowserPageModule)
-  }
+  },
+  {
+		path: 'filebrowser/:folder',
+		loadChildren: () => import('./filebrowser/filebrowser.module').then((m) => m.FilebrowserPageModule)
+	}
 ];
 @NgModule({
   imports: [
