@@ -9,6 +9,7 @@ import { DatetimeCustomEvent, Platform, isPlatform } from '@ionic/angular';
 import { formatDate } from '@angular/common';
 import { Filesystem, Directory, StatOptions } from '@capacitor/filesystem';
 import { Lease } from '../lease';
+import { Router } from '@angular/router';
 
 const USER_DATA_FOLDER = 'elease_pdfs';
 const APP_DIRECTORY: Directory = Directory.Documents;
@@ -25,7 +26,8 @@ export class TabSendPage implements OnInit {
 
   constructor(
     public storageService: StorageService,
-    public platform: Platform
+    public platform: Platform,
+    private router: Router
   ) {
     this.now = new Date();
     this.defaultSendDate = this.computeDefaultSendDate();
@@ -197,6 +199,8 @@ export class TabSendPage implements OnInit {
 
         }
       });
+
+      this.router.navigate(['/filebrowser/' + USER_DATA_FOLDER ]);
     })
   }
 
@@ -214,7 +218,7 @@ export class TabSendPage implements OnInit {
         path: filePath,
         directory: Directory.Documents
       });
-      Filesystem.writeFile({
+      await Filesystem.writeFile({
         path: filePath,
         data: data,
         directory: Directory.Documents,
