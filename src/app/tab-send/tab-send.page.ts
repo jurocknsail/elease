@@ -7,10 +7,12 @@ import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { DatetimeCustomEvent, Platform, isPlatform } from '@ionic/angular';
 import { formatDate } from '@angular/common';
-import { Filesystem, Directory, GetUriOptions } from '@capacitor/filesystem';
+import { Filesystem, Directory, StatOptions } from '@capacitor/filesystem';
 import { Lease } from '../lease';
 
 const USER_DATA_FOLDER = 'elease_pdfs';
+const APP_DIRECTORY: Directory = Directory.Documents;
+
 @Component({
   selector: 'app-tab-send',
   templateUrl: 'tab-send.page.html',
@@ -27,7 +29,7 @@ export class TabSendPage implements OnInit {
   ) {
     this.now = new Date();
     this.defaultSendDate = this.computeDefaultSendDate();
-    if(!this.platform.is('cordova')) {
+    if (!this.platform.is('cordova')) {
       this.isApp = false;
     } else {
       this.isApp = true;
@@ -36,15 +38,14 @@ export class TabSendPage implements OnInit {
 
   async ngOnInit() {
 
-    if(this.isApp){
-      if (! await this.checkFileExists({ path: USER_DATA_FOLDER, directory: Directory.Documents })) {
-        await Filesystem.mkdir({
-          path: USER_DATA_FOLDER,
-          directory: Directory.Documents,
-          recursive: false,
-        });
-      }
+    if (! await this.checkFileExists({ path: USER_DATA_FOLDER, directory: APP_DIRECTORY })) {
+      await Filesystem.mkdir({
+        directory: APP_DIRECTORY,
+        path: USER_DATA_FOLDER,
+        recursive: true
+      });
     }
+
 
   }
 
@@ -55,22 +56,22 @@ export class TabSendPage implements OnInit {
   computePeriod(): string {
     let month;
     let year;
-    if(this.defaultSendDate.getMonth() < 11){
+    if (this.defaultSendDate.getMonth() < 11) {
       month = this.defaultSendDate.getMonth() + 2;
       year = this.defaultSendDate.getFullYear();
     } else {
       month = 1;
       year = this.defaultSendDate.getFullYear() + 1;
     }
-    return month.toLocaleString('en-US', {minimumIntegerDigits: 2, useGrouping: false }) + "/" + year;
+    return month.toLocaleString('en-US', { minimumIntegerDigits: 2, useGrouping: false }) + "/" + year;
   }
 
-  async checkFileExists(getUriOptions: GetUriOptions): Promise<boolean> {
+  async checkFileExists(statOptions: StatOptions): Promise<boolean> {
     try {
-      await Filesystem.stat(getUriOptions);
+      await Filesystem.stat(statOptions);
       return true;
     } catch (checkDirException) {
-      if (checkDirException instanceof Error && checkDirException.message === 'File does not exist') {
+      if (checkDirException instanceof Error && checkDirException.message === 'Entry does not exist.') {
         return false;
       } else {
         throw checkDirException;
@@ -185,16 +186,14 @@ export class TabSendPage implements OnInit {
           const pdf = pdfMake.createPdf(docDefinition);
 
           // Open PDF in tab when using web browser
-          pdf.getBlob(blob => {
-            window.open(URL.createObjectURL(blob), "_blank");
-          });
+          //pdf.getBlob(blob => {
+          //  window.open(URL.createObjectURL(blob), "_blank");
+          //});
 
-          // Save PDF when using in Android App 
-          if(this.isApp) {
-            pdf.getBase64(data => {
-              this.writePDF(data, leaseholder, lease);
-            });
-          }
+          // Save PDF to Disc DB
+          pdf.getBase64(data => {
+            this.writePDF(data, leaseholder, lease);
+          });
 
         }
       });
