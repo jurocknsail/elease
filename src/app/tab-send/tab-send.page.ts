@@ -23,6 +23,7 @@ export class TabSendPage implements OnInit {
   now: Date;
   defaultSendDate: Date;
   isApp: boolean;
+  public progress = 0;
 
   constructor(
     public storageService: StorageService,
@@ -48,7 +49,6 @@ export class TabSendPage implements OnInit {
       });
     }
 
-
   }
 
   computeDefaultSendDate(): Date {
@@ -73,9 +73,10 @@ export class TabSendPage implements OnInit {
       await Filesystem.stat(statOptions);
       return true;
     } catch (checkDirException) {
-      if (checkDirException instanceof Error && checkDirException.message === 'Entry does not exist.') {
+      if (checkDirException instanceof Error && (checkDirException.message === 'Entry does not exist.' || checkDirException.message === 'File does not exist')) {
         return false;
       } else {
+        console.log("error : " + checkDirException)
         throw checkDirException;
       }
     }
@@ -89,6 +90,17 @@ export class TabSendPage implements OnInit {
   }
 
   generatePdf() {
+
+    let promises: Promise<void>[] = []
+
+    let totalLeases = 0;
+    this.storageService.getLeaseholders().forEach(leaseholder => {
+      leaseholder.leases.forEach(lease => {
+        totalLeases = totalLeases + 1;
+      });
+    });
+    let currentLeaseNb = 1;
+
     this.storageService.getLeaseholders().forEach(leaseholder => {
       leaseholder.leases.forEach(lease => {
 
@@ -193,18 +205,24 @@ export class TabSendPage implements OnInit {
           //});
 
           // Save PDF to Disc DB
-          pdf.getBase64(data => {
-            console.log("pdf write")
-            this.writePDF(data, leaseholder, lease);
+          const myPromise: Promise<void> = new Promise((resolve, reject) => {
+            pdf.getBase64(data => {
+              this.writePDF(data, leaseholder, lease).then(() => {
+                this.progress = currentLeaseNb / totalLeases;
+                currentLeaseNb = currentLeaseNb +1;
+                resolve();
+              });
+            });
           });
-
+          promises.push(myPromise);
         }
       });
     });
 
-    console.log("navigate")
-
-    this.router.navigate(['/filebrowser/' + USER_DATA_FOLDER ]);
+    Promise.all(promises).then(() => {
+      this.router.navigate(['/filebrowser/' + USER_DATA_FOLDER]);
+      this.progress = 0;
+    });
 
   }
 
