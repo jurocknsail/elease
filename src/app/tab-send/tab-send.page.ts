@@ -10,6 +10,8 @@ import { formatDate } from '@angular/common';
 import { Filesystem, Directory, StatOptions } from '@capacitor/filesystem';
 import { Lease } from '../lease';
 import { Router } from '@angular/router';
+import { EmailComposer } from '@awesome-cordova-plugins/email-composer/ngx';
+
 
 const USER_DATA_FOLDER = 'elease_pdfs';
 const APP_DIRECTORY: Directory = Directory.Documents;
@@ -28,7 +30,8 @@ export class TabSendPage implements OnInit {
   constructor(
     public storageService: StorageService,
     public platform: Platform,
-    private router: Router
+    private router: Router,
+    private email: EmailComposer,
   ) {
     this.now = new Date();
     this.defaultSendDate = this.computeDefaultSendDate();
@@ -249,6 +252,21 @@ export class TabSendPage implements OnInit {
     }
   }
 
-  sendEmail() { }
+  sendEmail() { 
+
+    let email = {
+      to: 'julien.berger1421@gmail.com',
+      cc: 'max@mustermann.de',
+      attachments: [
+        
+      ],
+      subject: 'My Cool Image',
+      body: 'Hey Simon, what do you thing about this image?',
+      isHtml: true
+    };
+ 
+    this.email.open(email);
+
+  }
 
 }
