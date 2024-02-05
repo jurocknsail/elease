@@ -37,6 +37,7 @@ export class TabSendPage implements OnInit {
     this.defaultSendDate = this.computeDefaultSendDate();
     if (!isPlatform('hybrid')) {
 			this.isBrowser = true;
+      console.log("Browser")
 		}
   }
 
