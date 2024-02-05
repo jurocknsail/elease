@@ -1,8 +1,7 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Directory,  Filesystem } from '@capacitor/filesystem';
-import { AlertController, isPlatform, ToastController } from '@ionic/angular';
-import write_blob from 'capacitor-blob-writer';
+import { AlertController, isPlatform, Platform } from '@ionic/angular';
 import { PreviewAnyFile } from '@awesome-cordova-plugins/preview-any-file/ngx';
 
 const APP_DIRECTORY = Directory.Documents;
@@ -19,7 +18,7 @@ type File = {
 })
 export class FilebrowserPage implements OnInit {
 
-  folderContent : any[] = [];
+    folderContent : any[] = [];
 	currentFolder = '';
 	copyFile = null;
 	@ViewChild('filepicker') uploader!: ElementRef;
@@ -30,12 +29,13 @@ export class FilebrowserPage implements OnInit {
 		private alertCtrl: AlertController,
 		private router: Router,
 		private previewAnyFile: PreviewAnyFile,
-		private toastCtrl: ToastController
+		public platform: Platform
 	) {}
 
 	ngOnInit() {
 		this.currentFolder = this.route.snapshot.paramMap.get('folder') || '';
 		this.loadDocuments();
+		console.log("Platform type : " + this.platform.platforms() )
 	}
 
 	async loadDocuments() {

@@ -6,6 +6,4 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # copy the built Angular app files to the default nginx html directory
 COPY /www /usr/share/nginx/html
 
-RUN chown nginx:nginx /usr/share/nginx/html/*
-
 # the paths are relative from the Docker file

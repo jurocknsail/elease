@@ -24,7 +24,7 @@ const APP_DIRECTORY: Directory = Directory.Documents;
 export class TabSendPage implements OnInit {
   now: Date;
   defaultSendDate: Date;
-  isApp: boolean;
+	isBrowser = false;
   public progress = 0;
 
   constructor(
@@ -35,14 +35,16 @@ export class TabSendPage implements OnInit {
   ) {
     this.now = new Date();
     this.defaultSendDate = this.computeDefaultSendDate();
-    if (!this.platform.is('cordova')) {
-      this.isApp = false;
-    } else {
-      this.isApp = true;
-    }
+    if (!isPlatform('hybrid')) {
+			this.isBrowser = true;
+		}
   }
 
   async ngOnInit() {
+
+    if (!isPlatform('hybrid')) {
+			this.isBrowser = true;
+		}
 
     if (! await this.checkFileExists({ path: USER_DATA_FOLDER, directory: APP_DIRECTORY })) {
       await Filesystem.mkdir({
@@ -232,7 +234,7 @@ export class TabSendPage implements OnInit {
   async writePDF(data: string, leaseholder: Leaseholder, lease: Lease) {
     let filePath = USER_DATA_FOLDER + "/" + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "/" + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name + ".pdf";
     if (! await this.checkFileExists({ path: filePath, directory: Directory.Documents })) {
-      Filesystem.writeFile({
+      await Filesystem.writeFile({
         path: filePath,
         data: data,
         directory: Directory.Documents,
@@ -256,7 +258,7 @@ export class TabSendPage implements OnInit {
 
     let email = {
       to: 'julien.berger1421@gmail.com',
-      cc: 'max@mustermann.de',
+      cc: 'julien.berger1421@gmail.com',
       attachments: [
         
       ],
