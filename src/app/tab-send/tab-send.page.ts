@@ -39,6 +39,7 @@ export class TabSendPage implements OnInit {
 			this.isBrowser = true;
       console.log("Browser")
 		}
+    console.log(platform.platforms())
   }
 
   async ngOnInit() {
