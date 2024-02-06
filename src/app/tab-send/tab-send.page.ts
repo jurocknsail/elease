@@ -35,11 +35,11 @@ export class TabSendPage implements OnInit {
   ) {
     this.now = new Date();
     this.defaultSendDate = this.computeDefaultSendDate();
+
     if (!isPlatform('hybrid')) {
 			this.isBrowser = true;
       console.log("Browser")
 		}
-    console.log(platform.platforms())
   }
 
   async ngOnInit() {
@@ -59,7 +59,11 @@ export class TabSendPage implements OnInit {
   }
 
   computeDefaultSendDate(): Date {
-    return new Date(this.now.getFullYear() + "-" + this.now.getMonth() + 1 + "-25");
+    return new Date(this.now.getFullYear() + "-" + (this.now.getMonth() + 1) + "-25");
+  }
+
+  daysInNextMonth (date: Date) {
+    return new Date(date.getFullYear(), date.getMonth() + 2, 0).getDate();
   }
 
   computePeriod(): string {
@@ -147,7 +151,7 @@ export class TabSendPage implements OnInit {
               },
               {
                 alignment: 'justify',
-                text: [{ text: 'Période du 01/' + this.computePeriod() + ' au 31/' + this.computePeriod(), bold: true },
+                text: [{ text: 'Période du 01/' + this.computePeriod() + ' au ' + this.daysInNextMonth(this.defaultSendDate) + '/' + this.computePeriod(), bold: true },
                 `
                   Monsieur,
                   Nous vous prions de recevoir ci-dessous le détail de votre facture concernant le local sis : 
