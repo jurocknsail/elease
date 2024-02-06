@@ -1,12 +1,35 @@
+
+<ion-menu contentId="main-content">
+  <ion-header>
+    <ion-toolbar>
+      <ion-title>Menu</ion-title>
+    </ion-toolbar>
+  </ion-header>
+  <ion-content class="ion-padding">
+
+    <ion-list>
+      <ion-item button detail="false" (click)="export()">
+        <ion-icon aria-hidden="true" name="download" slot="start" color="success"></ion-icon>
+        <ion-label>Sauvegarde</ion-label>
+      </ion-item>
+    </ion-list>
+
+    
+  </ion-content>
+</ion-menu>
+
 <ion-header [translucent]="true">
   <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button color="success"></ion-menu-button>
+    </ion-buttons>
     <ion-title>
       Locataires
     </ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" id="main-content">
 
   <ion-card *ngFor="let leaseholder of storageService.getLeaseholders()" [routerLink]="['/leaseholder-details', leaseholder.id]" color="light">
     <ion-card-header>

@@ -37,6 +37,15 @@ export class TabListPage implements OnInit {
 
   }
 
+  export() {
+    this.downloadFile(this.storageService.getLeaseholders())
+  }
+
+  private downloadFile(data: Leaseholder[]) {
+    const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+    window.open(URL.createObjectURL(blob), "_blank");
+  }
+
   cancel() {
     this.modal?.dismiss(null, 'cancel');
   }
