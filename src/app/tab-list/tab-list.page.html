@@ -9,11 +9,14 @@
 
     <ion-list>
       <ion-item button detail="false" (click)="export()">
-        <ion-icon aria-hidden="true" name="download" slot="start" color="success"></ion-icon>
+        <ion-icon aria-hidden="true" name="cloud-download" slot="start" color="success"></ion-icon>
         <ion-label>Sauvegarde</ion-label>
       </ion-item>
+      <ion-item button detail="false" (click)="import()">
+        <ion-icon aria-hidden="true" name="cloud-upload" slot="start" color="success"></ion-icon>
+        <ion-label>Importer</ion-label>
+      </ion-item>
     </ion-list>
-
     
   </ion-content>
 </ion-menu>

@@ -46,6 +46,10 @@ export class TabListPage implements OnInit {
     window.open(URL.createObjectURL(blob), "_blank");
   }
 
+  import() {
+    console.log("Import")
+  }
+
   cancel() {
     this.modal?.dismiss(null, 'cancel');
   }
