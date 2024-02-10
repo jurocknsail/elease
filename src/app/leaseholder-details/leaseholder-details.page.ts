@@ -72,6 +72,7 @@ export class LeaseholderDetailsPage implements OnInit {
       renewalDate: ["", [Validators.required]],
       indexing: ["", [Validators.required]],
       price: ["", [Validators.required]],
+      charge: ["", []],
     });
 
     this.toogleEdit(false);
@@ -169,6 +170,7 @@ export class LeaseholderDetailsPage implements OnInit {
         this.leaseholder.leases[index].renewalDate = control.get("renewalDate")?.value;
         this.leaseholder.leases[index].indexing = control.get("indexing")?.value;
         this.leaseholder.leases[index].price = control.get("price")?.value;
+        this.leaseholder.leases[index].charge = control.get("charge")?.value;
       });
 
     this.storageService.updateLeaseHolder(this.leaseholder);
@@ -188,6 +190,7 @@ export class LeaseholderDetailsPage implements OnInit {
       this.newLeaseForm.controls["renewalDate"].value,
       this.newLeaseForm.controls["indexing"].value,
       this.newLeaseForm.controls["price"].value,
+      this.newLeaseForm.controls["charge"].value,
     );
     this.storageService.addLeaseToHolder(this.leaseholder.id, addedLease);
 
@@ -233,6 +236,7 @@ export class LeaseholderDetailsPage implements OnInit {
       renewalDate: [lease.renewalDate, [Validators.required]],
       indexing: [lease.indexing, [Validators.required]],
       price: [lease.price, [Validators.required]],
+      charge: [lease.charge, []],
     });
     this.leases.push(leaseForm);
     this.toogleEdit(false);

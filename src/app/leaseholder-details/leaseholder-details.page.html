@@ -68,6 +68,9 @@
                 <ion-item>
                   <ion-input labelPlacement="floating" label="Loyer" formControlName="price" type="number"></ion-input>
                 </ion-item>
+                <ion-item>
+                  <ion-input labelPlacement="floating" label="Charges" formControlName="charge" type="number"></ion-input>
+                </ion-item>
                 <ion-item button mode="md" (click)="onDeleteLease(leaseholder.leases[i].id, leaseholder.leases[i].name, i)">
                   <ion-label>Supprimer le bail</ion-label>
                   <ion-button slot="end" fill="clear">
@@ -106,6 +109,9 @@
                 </ion-item>
                 <ion-item>
                   <ion-input formControlName="price" labelPlacement="floating" label="Loyer" type="number"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input formControlName="charge" labelPlacement="floating" label="Charges" type="number"></ion-input>
                 </ion-item>
               </ion-list>
               <ion-button color="success" type="submit" [disabled]="!newLeaseForm.valid">Ajouter</ion-button>

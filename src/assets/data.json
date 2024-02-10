@@ -16,6 +16,7 @@
             "renewalDate": "2023-11-29",
             "indexing": 1,
             "price": 2000,
+            "charge": 100,
             "isSelected": true
         },
         {
@@ -28,6 +29,7 @@
             "renewalDate": "2023-11-29",
             "indexing": 1,
             "price": 600,
+            "charge": null,
             "isSelected": true
         }
       ]
@@ -49,6 +51,7 @@
             "renewalDate": "2023-11-29",
             "indexing": 1,
             "price": 1000,
+            "charge": null,
             "isSelected": true
         }
       ]

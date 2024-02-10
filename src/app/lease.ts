@@ -9,6 +9,7 @@ export interface Lease {
   renewalDate: number;
   indexing: number;
   price: number;
+  charge: number;
 }
 
 export class LeaseClass implements Lease {
@@ -22,6 +23,7 @@ export class LeaseClass implements Lease {
   public renewalDate: number;
   public indexing: number;
   public price: number;
+  public charge: number;
   public isSelected = true;
 
   constructor(
@@ -34,6 +36,7 @@ export class LeaseClass implements Lease {
     renewalDate: number,
     indexing: number,
     price: number,
+    charge: number,
     //isSelected: boolean,
   ) {
 
@@ -47,6 +50,7 @@ export class LeaseClass implements Lease {
     this.indexing = indexing;
     this.price = price;
     this.isSelected = true;
+    this.charge = charge;
   }
 
   toString(): string {
@@ -59,6 +63,7 @@ export class LeaseClass implements Lease {
     this.renewalDate + ' ' + 
     this.indexing + ' ' +
     this.price + ' ' +
-    this.isSelected + ' '
+    this.isSelected + ' ' +
+    this.charge + ' '
   }
 }
