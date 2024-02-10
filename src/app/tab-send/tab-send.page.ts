@@ -127,6 +127,12 @@ export class TabSendPage implements OnInit {
               subject: 'Appel de Loyer',
               keywords: 'LOYER ' + lease.name,
             },
+            styles: {
+              red: {
+                bold: true,
+                color: '#ff5500'
+              }
+            },
             content: [
               {
                 alignment: 'left',
@@ -184,6 +190,17 @@ export class TabSendPage implements OnInit {
                       { text: priceTTC.toFixed(2), bold: true }
                     ]
                   }
+                ]
+              },
+              {
+                alignment: 'justify',
+                text: [
+                  { text: (lease.charge != null && lease.charge != 0) ? "\n\nCharges :" : "", style: [ 'red' ] },
+                  {
+                    text:
+                    (lease.charge != null && lease.charge != 0) ? 
+                    `\nMerci d'ajouter au loyer le montant des charges s'élevant à : ` + lease.charge + "€" : "", style: [ 'red' ]
+                  },
                 ]
               },
               {
