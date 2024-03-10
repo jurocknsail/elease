@@ -10,27 +10,37 @@
             "id": 1,
             "name": "Local 1",
             "lot": 1,
-            "address": "Adresse du local 1",
+            "streetNumber": 123,
+            "streetName" : "Rue de la Paix",
+            "optionalAddressInfo": "Bat A",
+            "postalCode": 12345,
+            "city" : "SmallVille",
             "description": "Local 1",
             "lastSendDate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
             "price": 2000,
             "charge": 100,
-            "isSelected": true
+            "isSelected": true,
+            "isPro": true
         },
         {
             "id": 2,
             "name": "Local 2",
             "lot": 2,
-            "address": "Adresse du local 2",
+            "streetNumber": 123,
+            "streetName" : "Rue de la Paix",
+            "optionalAddressInfo": "Bat A",
+            "postalCode": 12345,
+            "city" : "SmallVille",
             "description": "Local 2",
             "lastSendDate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
             "price": 600,
             "charge": null,
-            "isSelected": true
+            "isSelected": true,
+            "isPro": true
         }
       ]
     },
@@ -45,14 +55,19 @@
             "id": 1,
             "name": "Local 1",
             "lot": 1,
-            "address": "Adresse du local 1",
+            "streetNumber": 123,
+            "streetName" : "Rue de la Paix",
+            "optionalAddressInfo": "Bat A",
+            "postalCode": 12345,
+            "city" : "SmallVille",
             "description": "Local 1",
             "lastSendDate": "2023-11-29",
             "renewalDate": "2023-11-29",
             "indexing": 1,
             "price": 1000,
             "charge": null,
-            "isSelected": true
+            "isSelected": true,
+            "isPro": false
         }
       ]
     }

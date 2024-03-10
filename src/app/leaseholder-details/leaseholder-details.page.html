@@ -47,8 +47,24 @@
             <form [formGroupName]=i>
               <ion-list>
                 <ion-item>
-                  <ion-input labelPlacement="floating" label="Adresse" formControlName="address"
-                    type="string"></ion-input>
+                  <ion-input labelPlacement="floating" label="N° de rue" formControlName="streetNumber"
+                    type="number"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input labelPlacement="floating" label="Nom de rue" formControlName="streetName"
+                             type="string"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input labelPlacement="floating" label="Complément d'adresse" formControlName="optionalAddressInfo"
+                             type="string"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input labelPlacement="floating" label="Code postal" formControlName="postalCode"
+                             type="number"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input labelPlacement="floating" label="Ville" formControlName="city"
+                             type="string"></ion-input>
                 </ion-item>
                 <ion-item>
                   <ion-input labelPlacement="floating" label="Lot" formControlName="lot" type="number"></ion-input>
@@ -70,6 +86,9 @@
                 </ion-item>
                 <ion-item>
                   <ion-input labelPlacement="floating" label="Charges" formControlName="charge" type="number"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-checkbox formControlName="isPro" label-placement="floating" alignment="center">Pro ?</ion-checkbox>
                 </ion-item>
                 <ion-item button mode="md" (click)="onDeleteLease(leaseholder.leases[i].id, leaseholder.leases[i].name, i)">
                   <ion-label>Supprimer le bail</ion-label>
@@ -93,8 +112,24 @@
                   <ion-input formControlName="name" labelPlacement="floating" label="Nom" type="string"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input labelPlacement="floating" label="Adresse" formControlName="address"
-                    type="string"></ion-input>
+                  <ion-input labelPlacement="floating" label="N° de rue" formControlName="streetNumber"
+                             type="number"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input labelPlacement="floating" label="Nom de rue" formControlName="streetName"
+                             type="string"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input labelPlacement="floating" label="Complément d'adresse" formControlName="optionalAddressInfo"
+                             type="string"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input labelPlacement="floating" label="Code postal" formControlName="postalCode"
+                             type="number"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input labelPlacement="floating" label="Ville" formControlName="city"
+                             type="string"></ion-input>
                 </ion-item>
                 <ion-item>
                   <ion-input labelPlacement="floating" label="Lot" formControlName="lot" type="number"></ion-input>
@@ -112,6 +147,9 @@
                 </ion-item>
                 <ion-item>
                   <ion-input formControlName="charge" labelPlacement="floating" label="Charges" type="number"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-checkbox formControlName="isPro" label-placement="floating" alignment="center">Pro ?</ion-checkbox>
                 </ion-item>
               </ion-list>
               <ion-button color="success" type="submit" [disabled]="!newLeaseForm.valid">Ajouter</ion-button>

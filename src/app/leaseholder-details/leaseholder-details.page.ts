@@ -68,11 +68,16 @@ export class LeaseholderDetailsPage implements OnInit {
     this.newLeaseForm = this.formBuilder.group({
       name: ["", [Validators.required]],
       lot: ["", [Validators.required]],
-      address: ["", [Validators.required]],
+      streetNumber: ["", [Validators.required]],
+      streetName: ["", [Validators.required]],
+      optionalAddressInfo: ["", []],
+      postalCode: ["", [Validators.required]],
+      city: ["", [Validators.required]],
       renewalDate: ["", [Validators.required]],
       indexing: ["", [Validators.required]],
       price: ["", [Validators.required]],
       charge: ["", []],
+      isPro: [true, [Validators.required]],
     });
 
     this.toogleEdit(false);
@@ -166,11 +171,16 @@ export class LeaseholderDetailsPage implements OnInit {
 
       this.leases.controls.forEach((control, index) => {
         this.leaseholder.leases[index].lot = control.get("lot")?.value;
-        this.leaseholder.leases[index].address = control.get("address")?.value;
+        this.leaseholder.leases[index].streetNumber = control.get("streetNumber")?.value;
+        this.leaseholder.leases[index].streetName = control.get("streetName")?.value;
+        this.leaseholder.leases[index].optionalAddressInfo = control.get("optionalAddressInfo")?.value;
+        this.leaseholder.leases[index].postalCode = control.get("postalCode")?.value;
+        this.leaseholder.leases[index].city = control.get("city")?.value;
         this.leaseholder.leases[index].renewalDate = control.get("renewalDate")?.value;
         this.leaseholder.leases[index].indexing = control.get("indexing")?.value;
         this.leaseholder.leases[index].price = control.get("price")?.value;
         this.leaseholder.leases[index].charge = control.get("charge")?.value;
+        this.leaseholder.leases[index].isPro = control.get("isPro")?.value;
       });
 
     this.storageService.updateLeaseHolder(this.leaseholder);
@@ -184,13 +194,18 @@ export class LeaseholderDetailsPage implements OnInit {
       this.leases.length + 1,
       this.newLeaseForm.controls["name"].value,
       this.newLeaseForm.controls["lot"].value,
-      this.newLeaseForm.controls["address"].value,
+      this.newLeaseForm.controls["streetNumber"].value,
+      this.newLeaseForm.controls["streetName"].value,
+      this.newLeaseForm.controls["optionalAddressInfo"].value,
+      this.newLeaseForm.controls["postalCode"].value,
+      this.newLeaseForm.controls["city"].value,
       "",
       0,
       this.newLeaseForm.controls["renewalDate"].value,
       this.newLeaseForm.controls["indexing"].value,
       this.newLeaseForm.controls["price"].value,
       this.newLeaseForm.controls["charge"].value,
+      this.newLeaseForm.controls["isPro"].value,
     );
     this.storageService.addLeaseToHolder(this.leaseholder.id, addedLease);
 
@@ -230,13 +245,18 @@ export class LeaseholderDetailsPage implements OnInit {
   // Helper to add lease forms
   private addLease(lease: Lease): void {
     const leaseForm = this.formBuilder.group({
-      address: [lease.address, [Validators.required]],
+      streetNumber: [lease.streetNumber, [Validators.required]],
+      streetName: [lease.streetName, [Validators.required]],
+      optionalAddressInfo: [lease.optionalAddressInfo, []],
+      postalCode: [lease.postalCode, [Validators.required]],
+      city: [lease.city, [Validators.required]],
       lot: [lease.lot, [Validators.required]],
       lastSendDate: [lease.lastSendDate],
       renewalDate: [lease.renewalDate, [Validators.required]],
       indexing: [lease.indexing, [Validators.required]],
       price: [lease.price, [Validators.required]],
       charge: [lease.charge, []],
+      isPro: [lease.isPro, [Validators.required]],
     });
     this.leases.push(leaseForm);
     this.toogleEdit(false);

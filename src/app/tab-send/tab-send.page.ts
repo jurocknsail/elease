@@ -1,16 +1,17 @@
-import { Component, OnInit } from '@angular/core';
-import { StorageService } from '../storage-service.service';
-import { Leaseholder } from '../leaseholder';
+import {Component, OnInit} from '@angular/core';
+import {StorageService} from '../storage-service.service';
+import {Leaseholder} from '../leaseholder';
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
+import {TDocumentDefinitions} from 'pdfmake/interfaces';
+import {DatetimeCustomEvent, isPlatform, Platform} from '@ionic/angular';
+import {formatDate} from '@angular/common';
+import {Directory, Filesystem, StatOptions} from '@capacitor/filesystem';
+import {Lease} from '../lease';
+import {Router} from '@angular/router';
+import {EmailComposer} from '@awesome-cordova-plugins/email-composer/ngx';
+
 (<any>pdfMake).vfs = pdfFonts.pdfMake.vfs;
-import { TDocumentDefinitions } from 'pdfmake/interfaces';
-import { DatetimeCustomEvent, Platform, isPlatform } from '@ionic/angular';
-import { formatDate } from '@angular/common';
-import { Filesystem, Directory, StatOptions } from '@capacitor/filesystem';
-import { Lease } from '../lease';
-import { Router } from '@angular/router';
-import { EmailComposer } from '@awesome-cordova-plugins/email-composer/ngx';
 
 
 const USER_DATA_FOLDER = 'elease_pdfs';
@@ -100,6 +101,14 @@ export class TabSendPage implements OnInit {
     }
   }
 
+  computeTVA (lease : Lease): number {
+    return lease.price * 0.2;
+  }
+  computeTotalPrice ( lease: Lease): number {
+    let noChargesPrice = lease.isPro ? lease.price + this.computeTVA(lease) : lease.price;
+    return (lease.charge != null && lease.charge != 0) ? noChargesPrice + lease.charge : noChargesPrice;
+  }
+
   generatePdf() {
 
     let promises: Promise<void>[] = []
@@ -116,9 +125,6 @@ export class TabSendPage implements OnInit {
       leaseholder.leases.forEach(lease => {
 
         if (lease.isSelected) {
-
-          let priceTVA = lease.price * 0.2;
-          let priceTTC = lease.price + priceTVA;
 
           const docDefinition: TDocumentDefinitions = {
             info: {
@@ -143,64 +149,63 @@ export class TabSendPage implements OnInit {
               },
               {
                 alignment: 'right',
-                text: leaseholder.name.toUpperCase() + "\n" + lease.address.toUpperCase() + "\n"
+                text: leaseholder.name.toUpperCase() + "\n" + lease.streetNumber + " " + lease.streetName.toUpperCase() + "\n"
+                      + ((lease.optionalAddressInfo != null && lease.optionalAddressInfo != "") ? lease.optionalAddressInfo.toUpperCase() + "\n" : "")
+                      + lease.postalCode + " " + lease.city.toUpperCase()
               },
               {
                 alignment: 'left',
-                text:
-                  `LA CIOTAT,
-                  Le `+ formatDate(this.defaultSendDate, 'dd/MM/yyyy', "en-GB") +
-                  `\n
-                  FACTURE DU LOYER N°`+ lease.lot + `
-                  \n
+                text: [
+                  "LA CIOTAT \n Le " + formatDate(this.defaultSendDate, 'dd/MM/yyyy', "en-GB"),
+                  { text: "\n\nFACTURE DU LOYER pour " + ((lease.lot != null && lease.lot != 0) ? "le lot n° " + lease.lot : lease.name) , bold: true},
+                  `
+
                   Établie par la SCI LA CHARINE`
+                ]
               },
               {
                 alignment: 'justify',
                 text: [{ text: 'Période du 01/' + this.computePeriod() + ' au ' + this.daysInNextMonth(this.defaultSendDate) + '/' + this.computePeriod(), bold: true },
+                { text:
                 `
-                  Monsieur,
-                  Nous vous prions de recevoir ci-dessous le détail de votre facture concernant le local sis : 
+
+                  Madame, Monsieur,
+                  Nous vous prions de recevoir ci-dessous le détail de votre facture concernant le local sis :
                   `
-                + lease.name + ", " + lease.address +
-                `
+                },
+                { text: lease.name + ", "
+                + lease.streetNumber + " "
+                + lease.streetName + ", "
+                + ((lease.optionalAddressInfo != null && lease.optionalAddressInfo != "") ? lease.optionalAddressInfo + ", " : "")
+                + lease.postalCode + " "
+                + lease.city.toUpperCase()
+                , italics: true },
+                  `
                   \n
                   `]
               },
               {
                 columns: [
-                  {
-                    text:
-                      "Date : \n01/" + this.computePeriod()
-                  },
-                  {
-                    text:
-                      `Libellé
-                      Appel de loyer ` + this.computePeriod() +
-                      `\nT.V.A. 20%.
-                      \nTotal TTC ..................................`
-                  },
+                  { text: "Date : \n01/" + this.computePeriod() , bold: true},
                   {
                     text: [
-                      "Montant\n"
-                      + lease.price.toFixed(2) + "\n"
-                      + priceTVA.toFixed(2) + "\n"
-                      + "--------------\n"
-                      ,
-                      { text: priceTTC.toFixed(2), bold: true }
+                      { text: "Libellé\n" , bold: true},
+                      "Loyer HT" +
+                      (lease.isPro ? "\nT.V.A. 20%" : "\n" ),
+                      { text: (lease.charge != null && lease.charge != 0) ? "\nAvance sur charges" : "\n", style: [ 'red' ] },
+                      { text: "\nTotal TTC", bold: true },
+                    ]
+                  },
+                  {
+                    alignment: 'right',
+                    text: [
+                      { text: "Montant\n" , bold: true},
+                      + lease.price.toFixed(2)+ "\n"
+                      + (lease.isPro ? this.computeTVA(lease).toFixed(2)  + "\n" : "\n" ),
+                      { text: (lease.charge != null && lease.charge != 0) ? lease.charge.toFixed(2)  + "\n" : "\n", style: [ 'red' ] },
+                      { text: this.computeTotalPrice(lease).toFixed(2) + "€", bold: true }
                     ]
                   }
-                ]
-              },
-              {
-                alignment: 'justify',
-                text: [
-                  { text: (lease.charge != null && lease.charge != 0) ? "\n\nCharges :" : "", style: [ 'red' ] },
-                  {
-                    text:
-                    (lease.charge != null && lease.charge != 0) ? 
-                    `\nMerci d'ajouter au loyer le montant des charges s'élevant à : ` + lease.charge + "€" : "", style: [ 'red' ]
-                  },
                 ]
               },
               {
@@ -209,8 +214,8 @@ export class TabSendPage implements OnInit {
                   { text: "\n\nConditions de règlement :", italics: true },
                   {
                     text:
-                      `\nEn application de la loi n° 92.1482 Du 31/12/92, le règlement anticipé ne donnera pas lieu à escompte. 
-                    En cas de réglement après échéance, il sera fait applications des dispositions légales après mise en demeure. 
+                      `\nEn application de la loi n° 92.1482 Du 31/12/92, le règlement anticipé ne donnera pas lieu à escompte.
+                    En cas de réglement après échéance, il sera fait applications des dispositions légales après mise en demeure.
                     SCI LA CHARINE au capital de 2000 euros, inscrite au RCS de MARSEILLE sous le n° 507 834 117.
                     \n`,
                     italics: true
@@ -277,19 +282,19 @@ export class TabSendPage implements OnInit {
     }
   }
 
-  sendEmail() { 
+  sendEmail() {
 
     let email = {
       to: 'julien.berger1421@gmail.com',
       cc: 'julien.berger1421@gmail.com',
       attachments: [
-        
+
       ],
       subject: 'My Cool Image',
       body: 'Hey Simon, what do you thing about this image?',
       isHtml: true
     };
- 
+
     this.email.open(email);
 
   }
