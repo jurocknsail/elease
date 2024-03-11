@@ -186,13 +186,13 @@ export class TabSendPage implements OnInit {
               },
               {
                 columns: [
-                  { text: "Date : \n01/" + this.computePeriod() , bold: true},
+                  { text: "Date \n01/" + this.computePeriod() , bold: true},
                   {
                     text: [
                       { text: "Libellé\n" , bold: true},
                       "Loyer HT" +
                       (lease.isPro ? "\nT.V.A. 20%" : "\n" ),
-                      { text: (lease.charge != null && lease.charge != 0) ? "\nAvance sur charges" : "\n", style: [ 'red' ] },
+                      { text: (lease.charge != null && lease.charge != 0) ? "\nAvance sur charges" : "\n", style: [ 'black' ] },
                       { text: "\nTotal TTC", bold: true },
                     ]
                   },
@@ -200,9 +200,9 @@ export class TabSendPage implements OnInit {
                     alignment: 'right',
                     text: [
                       { text: "Montant\n" , bold: true},
-                      + lease.price.toFixed(2)+ "\n"
+                      lease.price.toFixed(2) + "\n"
                       + (lease.isPro ? this.computeTVA(lease).toFixed(2)  + "\n" : "\n" ),
-                      { text: (lease.charge != null && lease.charge != 0) ? lease.charge.toFixed(2)  + "\n" : "\n", style: [ 'red' ] },
+                      { text: (lease.charge != null && lease.charge != 0) ? lease.charge.toFixed(2)  + "\n" : "\n", style: [ 'black' ] },
                       { text: this.computeTotalPrice(lease).toFixed(2) + "€", bold: true }
                     ]
                   }
@@ -238,7 +238,7 @@ export class TabSendPage implements OnInit {
           //});
 
           // Save PDF to Disc DB
-          const myPromise: Promise<void> = new Promise((resolve, reject) => {
+          const myPromise: Promise<void> = new Promise((resolve) => {
             pdf.getBase64(data => {
               this.writePDF(data, leaseholder, lease).then(() => {
                 this.progress = currentLeaseNb / totalLeases;
