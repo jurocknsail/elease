@@ -38,12 +38,12 @@ export class StorageService {
 
   async getData() {
 
-
+/*
     if (this._storage == null) {
       const storage = await this.storage.create();
       this._storage = storage;
     }
-
+*/
     //await this.loadLeaseholders();
     //this.leaseholders = this.getLeaseholders();
 
@@ -81,14 +81,27 @@ export class StorageService {
     return this.getLeaseholders().find((leaseholder) => leaseholder.objectId === id);
   }
 
-  public deleteLeaseholder(id: number) {
-    this.getLeaseholders().splice(this.getLeaseholders().findIndex(item => item.id === id), 1)
-    this.set("data", this.leaseholders);
+  public deleteLeaseholder(id: string) {
+    this.parseService.deleteLeaseHolder(id);
+    this.getLeaseholders().splice(this.getLeaseholders().findIndex(item => item.objectId === id), 1)
+    //this.set("data", this.leaseholders);
   }
   public deleteLeaseFromHolder(holderId: string, leaseId: number) {
     let holderLeases = this.getLeaseholder(holderId)?.leases;
-    holderLeases?.splice(holderLeases.findIndex(lease => lease.id === leaseId), 1)
-    this.set("data", this.leaseholders);
+    let leaseIndex = holderLeases?.findIndex(lease => lease.id === leaseId);
+    if( leaseIndex != undefined) {
+
+      console.log(leaseIndex)
+      let _l = holderLeases?.[leaseIndex] ;
+      if(_l != undefined && _l.objectId != undefined) {
+        console.log(_l.objectId)
+        this.parseService.deleteLease(_l.objectId)
+      }
+
+      holderLeases?.splice(leaseIndex, 1)
+      //this.set("data", this.leaseholders);
+
+    }
   }
 
   public addLeaseToHolder(holderId: string, addedLease: Lease): void {
@@ -104,6 +117,7 @@ export class StorageService {
 
   public updateLeaseHolder(leaseholder: Leaseholder) {
 
+    /*
     let lh = this.getLeaseholder(leaseholder.objectId);
     if(lh != null) {
       lh.description = leaseholder.description;
@@ -115,6 +129,9 @@ export class StorageService {
     }
 
     this.set("data", this.leaseholders);
+
+     */
+    this.parseService.updateLeaseholder(leaseholder);
   }
 
 }

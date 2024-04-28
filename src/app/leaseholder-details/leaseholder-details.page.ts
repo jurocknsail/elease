@@ -121,7 +121,7 @@ export class LeaseholderDetailsPage implements OnInit {
     },
   ];
   async deleteLeaseHolder() {
-    this.storageService.deleteLeaseholder(this.leaseholder.id);
+    this.storageService.deleteLeaseholder(this.leaseholder.objectId);
     this.location.back();
   }
 
@@ -154,8 +154,9 @@ export class LeaseholderDetailsPage implements OnInit {
     },
   ];
   deleteLease(leaseId: number, leaseFormIndex: number){
+    console.log(leaseId + "/"+ leaseFormIndex )
     this.leases.controls.splice(leaseFormIndex, 1);
-    this.storageService.deleteLeaseFromHolder(this.leaseholder.id, leaseId);
+    this.storageService.deleteLeaseFromHolder(this.leaseholder.objectId, leaseId);
   }
 
   // On edit lease/leaseholder form save
