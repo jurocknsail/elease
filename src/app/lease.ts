@@ -1,4 +1,6 @@
 export interface Lease {
+  objectId?: string;
+
   isSelected: boolean;
   isPro : boolean;
   id: number;
@@ -35,6 +37,7 @@ export class LeaseClass implements Lease {
   public charge: number;
   public isSelected : boolean = true;
   public isPro: boolean = true;
+
 
   constructor(
     id: number,

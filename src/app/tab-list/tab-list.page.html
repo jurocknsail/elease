@@ -17,7 +17,7 @@
         <ion-label>Importer</ion-label>
       </ion-item>
     </ion-list>
-    
+
   </ion-content>
 </ion-menu>
 
@@ -34,12 +34,12 @@
 
 <ion-content [fullscreen]="true" id="main-content">
 
-  <ion-card *ngFor="let leaseholder of storageService.getLeaseholders()" [routerLink]="['/leaseholder-details', leaseholder.id]" color="light">
+  <ion-card *ngFor="let leaseholder of storageService.getLeaseholders()" [routerLink]="['/leaseholder-details', leaseholder.objectId]" color="light">
     <ion-card-header>
       <ion-card-title>{{ leaseholder.name }}</ion-card-title>
       <ion-card-subtitle>{{ leaseholder.description }}</ion-card-subtitle>
     </ion-card-header>
-  
+
     <ion-card-content>
       <ion-list color="light">
         <ion-item *ngFor="let lease of leaseholder.leases">
@@ -47,15 +47,15 @@
         </ion-item>
       </ion-list>
     </ion-card-content>
-    
+
   </ion-card>
 
   <ion-card id="open-modal" color="success" button="true" style="text-align:center">
 
     <ion-button color="light" shape="round" fill="outline" size="large" disabled="true" >
       <ion-icon slot="icon-only" name="add"></ion-icon>
-    </ion-button>  
-    
+    </ion-button>
+
   </ion-card>
 
   <ion-modal trigger="open-modal" [canDismiss]="newLeaseHolderForm.valid">
@@ -72,7 +72,7 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding">
-        
+
         <form id="newLeaseHolderForm" [formGroup]="newLeaseHolderForm" (ngSubmit)="onSubmit()">
           <ion-list>
             <ion-item>
@@ -88,7 +88,7 @@
               <ion-input labelPlacement="floating" label="Email" formControlName="email" type="email"></ion-input>
             </ion-item>
           </ion-list>
-          
+
         </form>
 
       </ion-content>

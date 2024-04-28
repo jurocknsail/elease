@@ -41,6 +41,7 @@
     "cordova-plugin-email-composer": "^0.10.1",
     "cordova-plugin-preview-any-file": "^0.2.9",
     "ionicons": "^7.0.0",
+    "parse": "^5.0.0",
     "pdfmake": "^0.2.9",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

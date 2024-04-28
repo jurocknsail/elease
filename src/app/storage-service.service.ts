@@ -5,6 +5,7 @@ import { Leaseholder } from './leaseholder';
 import { Lease } from './lease';
 import { tap } from 'rxjs/operators';
 import { Observable, firstValueFrom } from 'rxjs';
+import {ParseService} from "./parse-service.service";
 
 @Injectable({
   providedIn: 'root'
@@ -16,8 +17,9 @@ export class StorageService {
   private dataLoaded!: Observable<any>;
 
   constructor(
-    private storage: Storage, 
-    private http: HttpClient
+    private storage: Storage,
+    private http: HttpClient,
+    private parseService: ParseService
   ) { }
 
   // Load lease holders from local storage
@@ -36,19 +38,24 @@ export class StorageService {
 
   async getData() {
 
+
     if (this._storage == null) {
       const storage = await this.storage.create();
       this._storage = storage;
     }
 
-    await this.loadLeaseholders();
-    this.leaseholders = this.getLeaseholders();
+    //await this.loadLeaseholders();
+    //this.leaseholders = this.getLeaseholders();
 
-    if (this.leaseholders == undefined) {
+
+    this.leaseholders = await this.parseService.getLeaseholders();
+    this.set("data", this.leaseholders);
+
+    /*if (this.leaseholders == undefined) {
       this.dataLoaded = this.loadData();
       await firstValueFrom(this.dataLoaded);
       this.set("data", this.leaseholders);
-    }
+    }*/
 
   }
 
@@ -70,33 +77,34 @@ export class StorageService {
     this.leaseholders = leaseholders;
   }
 
-  public getLeaseholder(id: number): Leaseholder | undefined {
-    return this.getLeaseholders().find((leaseholder) => leaseholder.id === id);
+  public getLeaseholder(id: string | null | undefined ): Leaseholder | undefined {
+    return this.getLeaseholders().find((leaseholder) => leaseholder.objectId === id);
   }
 
   public deleteLeaseholder(id: number) {
     this.getLeaseholders().splice(this.getLeaseholders().findIndex(item => item.id === id), 1)
     this.set("data", this.leaseholders);
   }
-  public deleteLeaseFromHolder(holderId: number, leaseId: number) {
+  public deleteLeaseFromHolder(holderId: string, leaseId: number) {
     let holderLeases = this.getLeaseholder(holderId)?.leases;
     holderLeases?.splice(holderLeases.findIndex(lease => lease.id === leaseId), 1)
     this.set("data", this.leaseholders);
   }
 
-  public addLeaseToHolder(holderId: number, addedLease: Lease): void {
+  public addLeaseToHolder(holderId: string, addedLease: Lease): void {
     this.getLeaseholder(holderId)?.leases.push(addedLease);
     this.set("data", this.leaseholders);
   }
 
   public addLeaseHolder(leaseholder: Leaseholder) {
     this.getLeaseholders().push(leaseholder);
+    this.parseService.createLeaseholder(leaseholder);
     this.set("data", this.leaseholders);
   }
 
   public updateLeaseHolder(leaseholder: Leaseholder) {
 
-    let lh = this.getLeaseholder(leaseholder.id);
+    let lh = this.getLeaseholder(leaseholder.objectId);
     if(lh != null) {
       lh.description = leaseholder.description;
       lh.email = leaseholder.email;

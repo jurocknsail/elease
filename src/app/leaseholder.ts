@@ -1,6 +1,7 @@
 import { Lease } from './lease'
 
 export interface Leaseholder {
+  objectId?: string;
   id: number;
   name: string;
   description: string;

@@ -4,9 +4,8 @@ import { StorageService } from '../storage-service.service';
 import { IonModal } from '@ionic/angular';
 import { OverlayEventDetail } from '@ionic/core/components';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { LeaseholderDetailsPage } from '../leaseholder-details/leaseholder-details.page';
 import { Lease } from '../lease';
-import { TabsPage } from '../tabs/tabs.page';
+import {ParseService} from "../parse-service.service";
 @Component({
   selector: 'app-tab-list',
   templateUrl: 'tab-list.page.html',
@@ -22,7 +21,7 @@ export class TabListPage implements OnInit {
 
   constructor(
     public storageService: StorageService,
-    private formBuilder: FormBuilder,
+    private formBuilder: FormBuilder
   ) { }
 
   async ngOnInit() {
