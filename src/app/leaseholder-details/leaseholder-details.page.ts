@@ -202,13 +202,14 @@ export class LeaseholderDetailsPage implements OnInit {
       this.newLeaseForm.controls["city"].value,
       "",
       0,
-      this.newLeaseForm.controls["renewalDate"].value,
+      //this.newLeaseForm.controls["renewalDate"].value,
+      0,
       this.newLeaseForm.controls["indexing"].value,
       this.newLeaseForm.controls["price"].value,
       this.newLeaseForm.controls["charge"].value,
       this.newLeaseForm.controls["isPro"].value,
     );
-    this.storageService.addLeaseToHolder(this.leaseholder.id, addedLease);
+    this.storageService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
 
     // Add corresponding form
     this.addLease(addedLease);

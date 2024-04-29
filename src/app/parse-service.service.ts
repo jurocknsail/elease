@@ -54,7 +54,6 @@ export class ParseService {
   async getLeaseholders(): Promise<any[]> {
     const LeaseholderObject = Parse.Object.extend('Leaseholder');
     const query = new Parse.Query(LeaseholderObject);
-    // Include the 'leases' pointer column to fetch associated leases
     query.include('leases');
 
     try {
@@ -109,6 +108,47 @@ export class ParseService {
         const result = await leaseholderObject.save();
         return result.toJSON();
       }
+
+    } catch (error) {
+      console.error('Error updating leaseholder: ', error);
+      throw error;
+    }
+  }
+
+  async addLeaseToHolder(lease: Lease, leaseholderId: string): Promise<any> {
+    const LeaseholderObject = Parse.Object.extend('Leaseholder');
+    const query = new Parse.Query(LeaseholderObject);
+
+    try {
+        const leaseholderObject = await query.get(leaseholderId);
+        
+        
+        const leaseObject = new Parse.Object('Lease');
+        leaseObject.set('isSelected', lease.isSelected);
+        leaseObject.set('isPro', lease.isPro);
+        leaseObject.set('name', lease.name);
+        leaseObject.set('lot', lease.lot);
+        leaseObject.set('streetNumber', lease.streetNumber);
+        leaseObject.set('streetName', lease.streetName);
+        leaseObject.set('optionalAddressInfo', lease.optionalAddressInfo);
+        leaseObject.set('postalCode', lease.postalCode);
+        leaseObject.set('city', lease.city);
+        leaseObject.set('description', lease.description);
+        leaseObject.set('lastSendDate', lease.lastSendDate);
+        leaseObject.set('renewalDate', lease.renewalDate);
+        leaseObject.set('price', lease.price);
+        leaseObject.set('charge', lease.charge);
+        leaseObject.set('indexing', lease.indexing);
+
+        await leaseObject.save();
+
+        let leases : Parse.Object [] = leaseholderObject.get('leases');
+        leases.push(leaseObject);
+        leaseObject.set('leases', leases);
+
+        const result = await leaseholderObject.save();
+        return result.toJSON();
+      
 
     } catch (error) {
       console.error('Error updating leaseholder: ', error);
