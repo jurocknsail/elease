@@ -121,9 +121,8 @@ export class ParseService {
 
     try {
         const leaseholderObject = await query.get(leaseholderId);
-        
-        
         const leaseObject = new Parse.Object('Lease');
+
         leaseObject.set('isSelected', lease.isSelected);
         leaseObject.set('isPro', lease.isPro);
         leaseObject.set('name', lease.name);
@@ -148,7 +147,6 @@ export class ParseService {
 
         const result = await leaseholderObject.save();
         return result.toJSON();
-      
 
     } catch (error) {
       console.error('Error updating leaseholder: ', error);

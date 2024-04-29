@@ -58,7 +58,7 @@
 
   </ion-card>
 
-  <ion-modal trigger="open-modal" [canDismiss]="newLeaseHolderForm.valid">
+  <ion-modal trigger="open-modal">
     <ng-template>
       <ion-header>
         <ion-toolbar>
@@ -67,7 +67,7 @@
           </ion-buttons>
           <ion-title>Ajouter un Locataire</ion-title>
           <ion-buttons slot="end">
-            <ion-button type="submit" form="newLeaseHolderForm" (click)="confirm()" [strong]="true">Ajouter</ion-button>
+            <ion-button [class.button-disabled]="!newLeaseHolderForm.valid" type="submit" form="newLeaseHolderForm" (click)="confirm()" [strong]="true">Ajouter</ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
