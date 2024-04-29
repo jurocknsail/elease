@@ -86,9 +86,9 @@ export class StorageService {
     this.getLeaseholders().splice(this.getLeaseholders().findIndex(item => item.objectId === id), 1)
     //this.set("data", this.leaseholders);
   }
-  public deleteLeaseFromHolder(holderId: string, leaseId: number) {
+  public deleteLeaseFromHolder(holderId: string, leaseId: string) {
     let holderLeases = this.getLeaseholder(holderId)?.leases;
-    let leaseIndex = holderLeases?.findIndex(lease => lease.id === leaseId);
+    let leaseIndex = holderLeases?.findIndex(lease => lease.objectId === leaseId);
     if( leaseIndex != undefined) {
 
       console.log(leaseIndex)

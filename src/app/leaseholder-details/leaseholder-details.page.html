@@ -90,7 +90,7 @@
                 <ion-item>
                   <ion-checkbox formControlName="isPro" label-placement="floating" alignment="center">Pro ?</ion-checkbox>
                 </ion-item>
-                <ion-item button mode="md" (click)="onDeleteLease(leaseholder.leases[i].id, leaseholder.leases[i].name, i)">
+                <ion-item button mode="md" (click)="onDeleteLease(leaseholder.leases[i].objectId, leaseholder.leases[i].name, i)">
                   <ion-label>Supprimer le bail</ion-label>
                   <ion-button slot="end" fill="clear">
                     <ion-icon slot="icon-only" name="trash-bin" color="danger"></ion-icon>

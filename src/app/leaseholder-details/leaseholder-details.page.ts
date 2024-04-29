@@ -27,7 +27,7 @@ export class LeaseholderDetailsPage implements OnInit {
   leaseForm!: FormGroup;
   newLeaseForm!: FormGroup;
   isEditing = false;
-  currentLeaserId!: number;
+  currentLeaserId!: string;
   currentLeaseFormIndexId!: number;
   currentLeaseName!: string;
 
@@ -125,7 +125,7 @@ export class LeaseholderDetailsPage implements OnInit {
     this.location.back();
   }
 
-  async onDeleteLease(leaseId: number, leaseName: string, leaseFormIndex: number) {
+  async onDeleteLease(leaseId: string, leaseName: string, leaseFormIndex: number) {
     this.currentLeaserId = leaseId;
     this.currentLeaseFormIndexId = leaseFormIndex;
     this.currentLeaseName = leaseName;
@@ -153,7 +153,7 @@ export class LeaseholderDetailsPage implements OnInit {
       },
     },
   ];
-  deleteLease(leaseId: number, leaseFormIndex: number){
+  deleteLease(leaseId: string, leaseFormIndex: number){
     console.log(leaseId + "/"+ leaseFormIndex )
     this.leases.controls.splice(leaseFormIndex, 1);
     this.storageService.deleteLeaseFromHolder(this.leaseholder.objectId, leaseId);
