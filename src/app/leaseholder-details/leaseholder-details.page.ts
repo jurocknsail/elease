@@ -6,6 +6,7 @@ import { IonAccordionGroup, IonButton, IonModal } from '@ionic/angular';
 import { Location } from '@angular/common';
 import { AlertController } from '@ionic/angular';
 import { ParseService } from '../parse-service.service';
+import { Leaseholder } from '../leaseholder';
 
 @Component({
   selector: 'app-leaseholder-details',
@@ -22,7 +23,7 @@ export class LeaseholderDetailsPage implements OnInit {
 
   @ViewChild(IonModal) modal!: IonModal;
 
-  leaseholder: any | undefined;
+  leaseholder: Leaseholder | any | undefined;
   leaseholderForm!: FormGroup;
   leaseForm!: FormGroup;
   newLeaseForm!: FormGroup;

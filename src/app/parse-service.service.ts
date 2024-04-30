@@ -55,6 +55,7 @@ export class ParseService {
 
     try {
       const result = await leaseholderObject.save();
+      leaseholder.objectId = result.get("objectId");
       this.getLeaseholders().push(leaseholder);
       return result.toJSON();
     } catch (error) {
@@ -151,7 +152,8 @@ export class ParseService {
         leaseObject.set('charge', lease.charge);
         leaseObject.set('indexing', lease.indexing);
 
-        await leaseObject.save();
+        let leaseObj = await leaseObject.save();
+        lease.objectId = leaseObj.get("objectId");
 
         let leases : Parse.Object [] = leaseholderObject.get('leases');
         leases.push(leaseObject);

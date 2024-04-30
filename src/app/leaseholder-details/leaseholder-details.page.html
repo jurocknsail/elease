@@ -4,14 +4,18 @@
       Détails pour {{ leaseholder.name }}
     </ion-title>
     <ion-buttons slot="start">
+      <ion-back-button default-href="#"></ion-back-button>
+    </ion-buttons>
+    <ion-buttons slot="primary">
+
       <ion-button (click)="onDelete()">
         <ion-icon slot="icon-only" name="trash-bin" color="danger"></ion-icon>
       </ion-button>
-    </ion-buttons>
-    <ion-buttons slot="primary">
+
       <ion-button #editButton (click)="onEdit()">
         <ion-icon slot="icon-only" name="create" color="success"></ion-icon>
       </ion-button>
+
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
@@ -101,7 +105,7 @@
           </div>
         </ion-accordion>
 
-        <ion-accordion toggleIcon="add" toggleIconSlot="end">
+        <ion-accordion toggleIcon="add" toggleIconSlot="end" [disabled]="isEditing">
           <ion-item slot="header" color="success">
             <ion-label></ion-label>
           </ion-item>
