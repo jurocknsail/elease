@@ -9,7 +9,7 @@ import {formatDate} from '@angular/common';
 import {Directory, Filesystem, StatOptions} from '@capacitor/filesystem';
 import {Lease} from '../lease';
 import {Router} from '@angular/router';
-import {EmailComposer} from '@awesome-cordova-plugins/email-composer/ngx';
+import { ParseService } from '../parse-service.service';
 
 (<any>pdfMake).vfs = pdfFonts.pdfMake.vfs;
 
@@ -32,7 +32,7 @@ export class TabSendPage implements OnInit {
     public storageService: StorageService,
     public platform: Platform,
     private router: Router,
-    private email: EmailComposer,
+    private parseService: ParseService,
   ) {
     this.now = new Date();
     this.defaultSendDate = this.computeDefaultSendDate();
@@ -284,18 +284,7 @@ export class TabSendPage implements OnInit {
 
   sendEmail() {
 
-    let email = {
-      to: 'julien.berger1421@gmail.com',
-      cc: 'julien.berger1421@gmail.com',
-      attachments: [
-
-      ],
-      subject: 'My Cool Image',
-      body: 'Hey Simon, what do you thing about this image?',
-      isHtml: true
-    };
-
-    this.email.open(email);
+   this.parseService.sendEmail();
 
   }
 
