@@ -1,5 +1,4 @@
 import { Component } from '@angular/core';
-import { StorageService } from './storage-service.service';
 import {ParseService} from "./parse-service.service";
 import {LeaseHolderClass} from "./leaseholder";
 import {Lease, LeaseClass} from "./lease";
@@ -13,12 +12,11 @@ import Parse from "parse";
 export class AppComponent {
 
   constructor(
-    private storageService: StorageService,
     private parseService: ParseService
   ) {}
 
   async ngOnInit() {
-    await this.storageService.getData();
+    await this.parseService.getData();
 
 
 /*

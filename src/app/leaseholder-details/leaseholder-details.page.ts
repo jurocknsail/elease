@@ -3,9 +3,9 @@ import { ActivatedRoute } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Lease, LeaseClass } from '../lease';
 import { IonAccordionGroup, IonButton, IonModal } from '@ionic/angular';
-import { StorageService } from '../storage-service.service';
 import { Location } from '@angular/common';
 import { AlertController } from '@ionic/angular';
+import { ParseService } from '../parse-service.service';
 
 @Component({
   selector: 'app-leaseholder-details',
@@ -34,7 +34,7 @@ export class LeaseholderDetailsPage implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private formBuilder: FormBuilder,
-    private storageService: StorageService,
+    private parseService: ParseService,
     private location: Location,
     private alertController: AlertController
   ) { }
@@ -46,7 +46,7 @@ export class LeaseholderDetailsPage implements OnInit {
     const leaseholderIdFromRoute = routeParams.get('leaseholderId');
 
     // Find the leaseholder that correspond with the id provided in route.
-    this.leaseholder = this.storageService.getLeaseholder(leaseholderIdFromRoute);
+    this.leaseholder = this.parseService.getLeaseholder(leaseholderIdFromRoute);
 
     // Manage leaseholder form
     this.leaseholderForm = this.formBuilder.group({
@@ -121,7 +121,7 @@ export class LeaseholderDetailsPage implements OnInit {
     },
   ];
   async deleteLeaseHolder() {
-    this.storageService.deleteLeaseholder(this.leaseholder.objectId);
+    this.parseService.deleteLeaseholder(this.leaseholder.objectId);
     this.location.back();
   }
 
@@ -156,7 +156,7 @@ export class LeaseholderDetailsPage implements OnInit {
   deleteLease(leaseId: string, leaseFormIndex: number){
     console.log(leaseId + "/"+ leaseFormIndex )
     this.leases.controls.splice(leaseFormIndex, 1);
-    this.storageService.deleteLeaseFromHolder(this.leaseholder.objectId, leaseId);
+    this.parseService.deleteLeaseFromHolder(this.leaseholder.objectId, leaseId);
   }
 
   // On edit lease/leaseholder form save
@@ -184,7 +184,7 @@ export class LeaseholderDetailsPage implements OnInit {
         this.leaseholder.leases[index].isPro = control.get("isPro")?.value;
       });
 
-    this.storageService.updateLeaseHolder(this.leaseholder);
+    this.parseService.updateLeaseholder(this.leaseholder);
   }
 
   // On ADD form Submit actions
@@ -209,7 +209,7 @@ export class LeaseholderDetailsPage implements OnInit {
       this.newLeaseForm.controls["charge"].value,
       this.newLeaseForm.controls["isPro"].value,
     );
-    this.storageService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
+    this.parseService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
 
     // Add corresponding form
     this.addLease(addedLease);

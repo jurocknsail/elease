@@ -1,5 +1,4 @@
 import {Component, OnInit} from '@angular/core';
-import {StorageService} from '../storage-service.service';
 import {Leaseholder} from '../leaseholder';
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -29,10 +28,9 @@ export class TabSendPage implements OnInit {
   public progress = 0;
 
   constructor(
-    public storageService: StorageService,
     public platform: Platform,
     private router: Router,
-    private parseService: ParseService,
+    public parseService: ParseService,
   ) {
     this.now = new Date();
     this.defaultSendDate = this.computeDefaultSendDate();
@@ -114,14 +112,14 @@ export class TabSendPage implements OnInit {
     let promises: Promise<void>[] = []
 
     let totalLeases = 0;
-    this.storageService.getLeaseholders().forEach(leaseholder => {
+    this.parseService.getLeaseholders().forEach(leaseholder => {
       leaseholder.leases.forEach(lease => {
         totalLeases = totalLeases + 1;
       });
     });
     let currentLeaseNb = 1;
 
-    this.storageService.getLeaseholders().forEach(leaseholder => {
+    this.parseService.getLeaseholders().forEach(leaseholder => {
       leaseholder.leases.forEach(lease => {
 
         if (lease.isSelected) {

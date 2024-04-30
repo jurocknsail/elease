@@ -34,7 +34,7 @@
 
 <ion-content [fullscreen]="true" id="main-content">
 
-  <ion-card *ngFor="let leaseholder of storageService.getLeaseholders()" [routerLink]="['/leaseholder-details', leaseholder.objectId]" color="light">
+  <ion-card *ngFor="let leaseholder of parseService.getLeaseholders()" [routerLink]="['/leaseholder-details', leaseholder.objectId]" color="light">
     <ion-card-header>
       <ion-card-title>{{ leaseholder.name }}</ion-card-title>
       <ion-card-subtitle>{{ leaseholder.description }}</ion-card-subtitle>

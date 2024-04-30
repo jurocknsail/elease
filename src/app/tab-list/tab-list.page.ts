@@ -1,6 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { LeaseHolderClass, Leaseholder } from '../leaseholder';
-import { StorageService } from '../storage-service.service';
 import { IonModal } from '@ionic/angular';
 import { OverlayEventDetail } from '@ionic/core/components';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -20,7 +19,7 @@ export class TabListPage implements OnInit {
   newLeaseHolderForm!: FormGroup;
 
   constructor(
-    public storageService: StorageService,
+    public parseService: ParseService,
     private formBuilder: FormBuilder
   ) { }
 
@@ -37,7 +36,7 @@ export class TabListPage implements OnInit {
   }
 
   export() {
-    this.downloadFile(this.storageService.getLeaseholders())
+    this.downloadFile(this.parseService.getLeaseholders())
   }
 
   private downloadFile(data: Leaseholder[]) {
@@ -61,14 +60,14 @@ export class TabListPage implements OnInit {
     if (this.newLeaseHolderForm.valid) {
       const emptyLeases: Lease[] = [];
       const leaseHolder = new LeaseHolderClass(
-        this.storageService.getLeaseholders().length + 1,
+        this.parseService.getLeaseholders().length + 1,
         this.newLeaseHolderForm.controls["name"].value,
         this.newLeaseHolderForm.controls["description"].value,
         this.newLeaseHolderForm.controls["email"].value,
         this.newLeaseHolderForm.controls["phone"].value,
         emptyLeases,
       );
-      this.storageService.addLeaseHolder(leaseHolder);
+      this.parseService.createLeaseholder(leaseHolder);
     }
   }
 

@@ -2,15 +2,26 @@
 import { Injectable } from '@angular/core';
 import Parse from 'parse';
 import {Lease} from "./lease";
-import {Leaseholder} from "./leaseholder";
+import {LeaseHolderClass, Leaseholder} from "./leaseholder";
 
 @Injectable({
   providedIn: 'root'
 })
 export class ParseService {
+
+  private leaseholders: Leaseholder[] = [];
+
   constructor() {
     Parse.initialize('C7MCVCYTpBqpybLw6FBsI9Nf8soq5mYF36yLgVOS', 'Z7iF24sIAoPWz2hViLXQCSdmilMhDWNs1A67ajXY');
     Parse.serverURL = 'https://parseapi.back4app.com';
+  }
+
+  async getData() {
+    this.leaseholders = await this.fetchLeaseholders();
+  }
+
+  public getLeaseholders(): Leaseholder[] {
+    return this.leaseholders;
   }
 
   async createLeaseholder(leaseholder: Leaseholder): Promise<any> {
@@ -44,6 +55,7 @@ export class ParseService {
 
     try {
       const result = await leaseholderObject.save();
+      this.getLeaseholders().push(leaseholder);
       return result.toJSON();
     } catch (error) {
       console.error('Error creating leaseholder: ', error);
@@ -51,7 +63,7 @@ export class ParseService {
     }
   }
 
-  async getLeaseholders(): Promise<any[]> {
+  async fetchLeaseholders(): Promise<any[]> {
     const LeaseholderObject = Parse.Object.extend('Leaseholder');
     const query = new Parse.Query(LeaseholderObject);
     query.include('leases');
@@ -115,7 +127,7 @@ export class ParseService {
     }
   }
 
-  async addLeaseToHolder(lease: Lease, leaseholderId: string): Promise<any> {
+  async addLeaseToHolder(leaseholderId: string, lease: Lease): Promise<any> {
     const LeaseholderObject = Parse.Object.extend('Leaseholder');
     const query = new Parse.Query(LeaseholderObject);
 
@@ -146,6 +158,9 @@ export class ParseService {
         leaseObject.set('leases', leases);
 
         const result = await leaseholderObject.save();
+
+        this.getLeaseholder(leaseholderId)?.leases.push(lease);
+
         return result.toJSON();
 
     } catch (error) {
@@ -167,7 +182,7 @@ export class ParseService {
     }
   }
 
-  async deleteLeaseHolder(leaseHolderObjectId: string): Promise<void> {
+  async deleteLeaseholder(leaseHolderObjectId: string): Promise<void> {
     const LeaseholderObject = Parse.Object.extend('Leaseholder');
     const query = new Parse.Query(LeaseholderObject);
 
@@ -178,6 +193,7 @@ export class ParseService {
         await Promise.all(leases.map(async (lease: Parse.Object) => {
           try {
             await lease.destroy();
+            this.getLeaseholders().splice(this.getLeaseholders().findIndex(item => item.objectId === leaseHolderObjectId), 1)
           } catch (error) {
             console.error('Error deleting associated leases: ', error);
           }
@@ -187,6 +203,26 @@ export class ParseService {
     } catch (error) {
       console.error('Error deleting leaseholder: ', error);
       throw error;
+    }
+  }
+
+  public getLeaseholder(id: string | null | undefined ): Leaseholder | undefined {
+    return this.getLeaseholders().find((leaseholder) => leaseholder.objectId === id);
+  }
+
+  public deleteLeaseFromHolder(holderId: string, leaseId: string) {
+    let holderLeases = this.getLeaseholder(holderId)?.leases;
+    let leaseIndex = holderLeases?.findIndex(lease => lease.objectId === leaseId);
+    if( leaseIndex != undefined) {
+
+      console.log(leaseIndex)
+      let _l = holderLeases?.[leaseIndex] ;
+      if(_l != undefined && _l.objectId != undefined) {
+        console.log(_l.objectId)
+        this.deleteLease(_l.objectId)
+      }
+
+      holderLeases?.splice(leaseIndex, 1)
     }
   }
 
