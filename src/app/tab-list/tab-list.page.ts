@@ -60,7 +60,6 @@ export class TabListPage implements OnInit {
     if (this.newLeaseHolderForm.valid) {
       const emptyLeases: Lease[] = [];
       const leaseHolder = new LeaseHolderClass(
-        this.parseService.getLeaseholders().length + 1,
         this.newLeaseHolderForm.controls["name"].value,
         this.newLeaseHolderForm.controls["description"].value,
         this.newLeaseHolderForm.controls["email"].value,

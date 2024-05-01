@@ -3,7 +3,6 @@ export interface Lease {
 
   isSelected: boolean;
   isPro : boolean;
-  id: number;
   name: string;
   lot: number;
   streetNumber: number;
@@ -21,7 +20,6 @@ export interface Lease {
 
 export class LeaseClass implements Lease {
 
-  public id: number;
   public name: string;
   public lot: number;
   public streetNumber: number;
@@ -40,7 +38,6 @@ export class LeaseClass implements Lease {
 
 
   constructor(
-    id: number,
     name: string,
     lot: number,
     streetNumber: number,
@@ -58,7 +55,6 @@ export class LeaseClass implements Lease {
     isPro: boolean,
   ) {
 
-    this.id = id;
     this.name = name;
     this.lot = lot;
     this.streetNumber = streetNumber;
@@ -77,8 +73,7 @@ export class LeaseClass implements Lease {
   }
 
   toString(): string {
-    return this.id + ' '
-      + this.name + ' '
+    return this.name + ' '
       + this.lot + ' '
       + this.streetNumber + ' '
       + this.streetName + ' '

@@ -193,7 +193,6 @@ export class LeaseholderDetailsPage implements OnInit {
 
     // Add lease to model
     let addedLease = new LeaseClass(
-      this.leases.length + 1,
       this.newLeaseForm.controls["name"].value,
       this.newLeaseForm.controls["lot"].value,
       this.newLeaseForm.controls["streetNumber"].value,

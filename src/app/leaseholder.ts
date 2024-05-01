@@ -2,7 +2,6 @@ import { Lease } from './lease'
 
 export interface Leaseholder {
   objectId?: string;
-  id: number;
   name: string;
   description: string;
   email: string;
@@ -12,7 +11,6 @@ export interface Leaseholder {
 
 export class LeaseHolderClass implements Leaseholder {
 
-  public id: number;
   public name: string;
   public description: string;
   public email: string;
@@ -20,7 +18,6 @@ export class LeaseHolderClass implements Leaseholder {
   public leases: Lease[];
 
   constructor(
-    id: number,
     name: string,
     description: string,
     email: string,
@@ -29,7 +26,6 @@ export class LeaseHolderClass implements Leaseholder {
 
   ) {
 
-    this.id = id;
     this.name = name;
     this.description = description;
     this.email = email;
