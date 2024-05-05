@@ -29,6 +29,10 @@ export class ParseService {
       const leaseHolders = await query.find();
       // @ts-ignore
       this.leaseholders = leaseHolders.map(lh => lh.toJSON() as Leaseholder);
+
+      this.leaseholders.forEach( l => {
+        console.log("Fetched leaseholder : " + l.objectId);
+      })
     } catch (error) {
       console.error('Error fetching leaseholders: ', error);
       throw error;
@@ -39,52 +43,37 @@ export class ParseService {
     return this.leaseholders;
   }
 
-  async createLeaseholder(leaseholder: Leaseholder): Promise<any> {
+  async createLeaseholder(leaseholder: Leaseholder): Promise<void> {
     const leaseholderObject = new Parse.Object('Leaseholder');
     leaseholderObject.set('name', leaseholder.name);
     leaseholderObject.set('description', leaseholder.description);
     leaseholderObject.set('email', leaseholder.email);
     leaseholderObject.set('phone', leaseholder.phone);
-
     const leases: Parse.Object[] = [];
-    leaseholder.leases.forEach((lease: Lease) => {
-      const leaseObject = new Parse.Object('Lease');
-      leaseObject.set('isSelected', lease.isSelected);
-      leaseObject.set('isPro', lease.isPro);
-      leaseObject.set('name', lease.name);
-      leaseObject.set('lot', lease.lot);
-      leaseObject.set('streetNumber', lease.streetNumber);
-      leaseObject.set('streetName', lease.streetName);
-      leaseObject.set('optionalAddressInfo', lease.optionalAddressInfo);
-      leaseObject.set('postalCode', lease.postalCode);
-      leaseObject.set('city', lease.city);
-      leaseObject.set('description', lease.description);
-      leaseObject.set('lastSendDate', lease.lastSendDate);
-      leaseObject.set('renewalDate', lease.renewalDate);
-      leaseObject.set('price', lease.price);
-      leaseObject.set('charge', lease.charge);
-      leaseObject.set('indexing', lease.indexing);
-      leases?.push(leaseObject);
-    });
     leaseholderObject.set('leases', leases);
 
     try {
-      const result = await leaseholderObject.save();
-      leaseholder.objectId = result.get("objectId");
-      this.getLeaseholders().push(leaseholder);
-      return result.toJSON();
+      // @ts-ignore
+      const lh = (await leaseholderObject.save()).toJSON() as Leaseholder;
+      this.getLeaseholders().push(lh);
+
+      console.log("Leaseholder created : " + lh.objectId);
+
     } catch (error) {
       console.error('Error creating leaseholder: ', error);
       throw error;
     }
   }
 
-  async updateLeaseholder(leaseholder: Leaseholder): Promise<any> {
+  async updateLeaseholder(leaseholder: Leaseholder): Promise<void> {
     const LeaseholderObject = Parse.Object.extend('Leaseholder');
     const query = new Parse.Query(LeaseholderObject);
 
     try {
       if (leaseholder.objectId != null) {
+
+        console.log("Updating leaseholder with id : " + leaseholder.objectId)
+
         const leaseholderObject = await query.get(leaseholder.objectId);
         leaseholderObject.set('name', leaseholder.name);
         leaseholderObject.set('description', leaseholder.description);
@@ -96,6 +85,9 @@ export class ParseService {
         const leases: Parse.Object[] = [];
         for (const lease of leaseholder.leases) {
           if (lease.objectId != null) {
+
+            console.log("Updating lease with id : " + lease.objectId)
+
             const leaseObject = await leaseQuery.get(lease.objectId);
             leaseObject.set('isSelected', lease.isSelected);
             leaseObject.set('isPro', lease.isPro);
@@ -117,8 +109,9 @@ export class ParseService {
         }
         leaseholderObject.set('leases', leases);
 
-        const result = await leaseholderObject.save();
-        return result.toJSON();
+        await leaseholderObject.save();
+
+        console.log("Updated leaseholder with id : " + leaseholder.objectId)
       }
 
     } catch (error) {
@@ -127,42 +120,46 @@ export class ParseService {
     }
   }
 
-  async addLeaseToHolder(leaseholderId: string, lease: Lease): Promise<any> {
-    const LeaseholderObject = Parse.Object.extend('Leaseholder');
-    const query = new Parse.Query(LeaseholderObject);
+  async addLeaseToHolder(leaseholderId: string, lease: Lease): Promise<void> {
 
     try {
-        const leaseholderObject = await query.get(leaseholderId);
-        const leaseObject = new Parse.Object('Lease');
 
-        leaseObject.set('isSelected', lease.isSelected);
-        leaseObject.set('isPro', lease.isPro);
-        leaseObject.set('name', lease.name);
-        leaseObject.set('lot', lease.lot);
-        leaseObject.set('streetNumber', lease.streetNumber);
-        leaseObject.set('streetName', lease.streetName);
-        leaseObject.set('optionalAddressInfo', lease.optionalAddressInfo);
-        leaseObject.set('postalCode', lease.postalCode);
-        leaseObject.set('city', lease.city);
-        leaseObject.set('description', lease.description);
-        leaseObject.set('lastSendDate', lease.lastSendDate);
-        leaseObject.set('renewalDate', lease.renewalDate);
-        leaseObject.set('price', lease.price);
-        leaseObject.set('charge', lease.charge);
-        leaseObject.set('indexing', lease.indexing);
+      console.log("Adding lease " + lease.name + " to leaseholder with id : " + leaseholderId);
 
-        let leaseObj = await leaseObject.save();
-        lease.objectId = leaseObj.get("objectId");
+      const leaseObject = new Parse.Object('Lease');
 
-        let leases : Parse.Object [] = leaseholderObject.get('leases');
-        leases.push(leaseObject);
-        leaseObject.set('leases', leases);
+      leaseObject.set('isSelected', lease.isSelected);
+      leaseObject.set('isPro', lease.isPro);
+      leaseObject.set('name', lease.name);
+      leaseObject.set('lot', lease.lot);
+      leaseObject.set('streetNumber', lease.streetNumber);
+      leaseObject.set('streetName', lease.streetName);
+      leaseObject.set('optionalAddressInfo', lease.optionalAddressInfo);
+      leaseObject.set('postalCode', lease.postalCode);
+      leaseObject.set('city', lease.city);
+      leaseObject.set('description', lease.description);
+      leaseObject.set('lastSendDate', lease.lastSendDate);
+      leaseObject.set('renewalDate', lease.renewalDate);
+      leaseObject.set('price', lease.price);
+      leaseObject.set('charge', lease.charge);
+      leaseObject.set('indexing', lease.indexing);
 
-        const result = await leaseholderObject.save();
+      let leaseObj = await leaseObject.save();
+      // @ts-ignore
+      lease = leaseObj.toJSON() as Lease;
 
-        this.getLeaseholder(leaseholderId)?.leases.push(lease);
+      const LeaseholderObject = Parse.Object.extend('Leaseholder');
+      const query = new Parse.Query(LeaseholderObject);
+      const leaseholderObject = await query.get(leaseholderId);
 
-        return result.toJSON();
+      let leases : Parse.Object [] = leaseholderObject.get('leases');
+      leases.push(leaseObj);
+      leaseholderObject.set('leases', leases);
+      await leaseholderObject.save();
+
+      this.getLeaseholder(leaseholderId)?.leases.push(lease);
+
+      console.log("Added lease " + lease.name + "(" + lease.objectId + ") to leaseholder with id : " + leaseholderId);
 
     } catch (error) {
       console.error('Error updating leaseholder: ', error);
@@ -184,6 +181,9 @@ export class ParseService {
   }
 
   async deleteLeaseholder(leaseHolderObjectId: string): Promise<void> {
+
+    console.log("Deleting leaseholder with id : " + leaseHolderObjectId);
+
     const LeaseholderObject = Parse.Object.extend('Leaseholder');
     const query = new Parse.Query(LeaseholderObject);
 
@@ -194,13 +194,13 @@ export class ParseService {
         await Promise.all(leases.map(async (lease: Parse.Object) => {
           try {
             await lease.destroy();
-            this.getLeaseholders().splice(this.getLeaseholders().findIndex(item => item.objectId === leaseHolderObjectId), 1)
           } catch (error) {
             console.error('Error deleting associated leases: ', error);
           }
         }));
       }
       await leaseholderObject.destroy();
+      this.getLeaseholders().splice(this.getLeaseholders().findIndex(item => item.objectId === leaseHolderObjectId), 1)
     } catch (error) {
       console.error('Error deleting leaseholder: ', error);
       throw error;
