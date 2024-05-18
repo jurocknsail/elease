@@ -1,12 +1,11 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Lease, LeaseClass } from '../lease';
-import { IonAccordionGroup, IonButton, IonModal } from '@ionic/angular';
-import { Location } from '@angular/common';
-import { AlertController } from '@ionic/angular';
-import { ParseService } from '../parse-service.service';
-import { Leaseholder } from '../leaseholder';
+import {Component, OnInit, ViewChild} from '@angular/core';
+import {ActivatedRoute} from '@angular/router';
+import {FormArray, FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {Lease, LeaseClass} from '../lease';
+import {AlertController, IonAccordionGroup, IonButton, IonModal} from '@ionic/angular';
+import {Location} from '@angular/common';
+import {ParseService} from '../parse-service.service';
+import {Leaseholder} from '../leaseholder';
 
 @Component({
   selector: 'app-leaseholder-details',
@@ -62,7 +61,7 @@ export class LeaseholderDetailsPage implements OnInit {
       leases: this.formBuilder.array([])
     });
     this.leaseholder.leases.forEach((lease: Lease) => {
-      this.addLease(lease);
+      this.addLeaseForm(lease);
     });
 
     // Manage new lease form
@@ -209,17 +208,22 @@ export class LeaseholderDetailsPage implements OnInit {
       this.newLeaseForm.controls["charge"].value,
       this.newLeaseForm.controls["isPro"].value,
     );
-    this.parseService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
+
+    // Add lease to local holder
+    this.leaseholder.leases.push(addedLease);
 
     // Add corresponding form
-    this.addLease(addedLease);
+    this.addLeaseForm(addedLease);
 
     // Expand it
-    let toogleAccordionId: string = `${this.leases.length - 1}`;
-    this.accordionGroup.value = toogleAccordionId;
+    this.accordionGroup.value = `${this.leases.length - 1}`;
 
     // Clear the form
     this.newLeaseForm.reset();
+
+    // Push to DB
+    this.parseService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
+
   }
 
   private toogleEdit(edit: boolean) {
@@ -245,7 +249,7 @@ export class LeaseholderDetailsPage implements OnInit {
   }
 
   // Helper to add lease forms
-  private addLease(lease: Lease): void {
+  private addLeaseForm(lease: Lease): void {
     const leaseForm = this.formBuilder.group({
       streetNumber: [lease.streetNumber, [Validators.required]],
       streetName: [lease.streetName, [Validators.required]],
