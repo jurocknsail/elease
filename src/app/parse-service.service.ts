@@ -157,7 +157,7 @@ export class ParseService {
       leaseholderObject.set('leases', leases);
       await leaseholderObject.save();
 
-      this.getLeaseholder(leaseholderId)?.leases.push(lease);
+      //this.getLeaseholder(leaseholderId)?.leases.push(lease);
 
       console.log("Added lease " + lease.name + "(" + lease.objectId + ") to leaseholder with id : " + leaseholderId);
 
@@ -168,6 +168,7 @@ export class ParseService {
   }
 
   async deleteLease(leaseId: string): Promise<void> {
+    console.log("Deleting Lease " + leaseId)
     const LeaseObject = Parse.Object.extend('Lease');
     const query = new Parse.Query(LeaseObject);
 
@@ -178,6 +179,7 @@ export class ParseService {
       console.error('Error deleting lease: ', error);
       throw error;
     }
+    console.log("Deleted Lease " + leaseId)
   }
 
   async deleteLeaseholder(leaseHolderObjectId: string): Promise<void> {
@@ -212,19 +214,18 @@ export class ParseService {
   }
 
   public deleteLeaseFromHolder(holderId: string, leaseId: string) {
+    console.log("Deleting Lease " + leaseId + " from holder " + holderId)
     let holderLeases = this.getLeaseholder(holderId)?.leases;
     let leaseIndex = holderLeases?.findIndex(lease => lease.objectId === leaseId);
     if( leaseIndex != undefined) {
-
-      console.log(leaseIndex)
       let _l = holderLeases?.[leaseIndex] ;
       if(_l != undefined && _l.objectId != undefined) {
-        console.log(_l.objectId)
         this.deleteLease(_l.objectId)
       }
-
-      holderLeases?.splice(leaseIndex, 1)
+      this.getLeaseholder(holderId)?.leases.splice(leaseIndex, 1)
     }
+    console.log("Deleted Lease " + leaseId + " from holder " + holderId)
+    console.log(JSON.stringify(this.leaseholders));
   }
 
   async sendEmail() {

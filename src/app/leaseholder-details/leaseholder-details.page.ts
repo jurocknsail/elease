@@ -125,11 +125,14 @@ export class LeaseholderDetailsPage implements OnInit {
     this.location.back();
   }
 
-  async onDeleteLease(leaseId: string, leaseName: string, leaseFormIndex: number) {
-    this.currentLeaserId = leaseId;
-    this.currentLeaseFormIndexId = leaseFormIndex;
-    this.currentLeaseName = leaseName;
-    this.presentDeleteLeaseAlert();
+  async onDeleteLease(leaseFormIndex: number) {
+    let deletingLease: Leaseholder = this.leaseholder.leases[leaseFormIndex]
+    if (deletingLease.objectId != null) {
+      this.currentLeaserId = deletingLease.objectId;
+      this.currentLeaseFormIndexId = leaseFormIndex;
+      this.currentLeaseName = deletingLease.name;
+      this.presentDeleteLeaseAlert();
+    }
   }
   async presentDeleteLeaseAlert() {
     const alert = await this.alertController.create({

@@ -45,7 +45,7 @@
       <ng-container formArrayName="leases">
         <ion-accordion toggleIconSlot="end" *ngFor="let leaseForm of leases.controls; let i = index">
           <ion-item slot="header" color="light">
-            <ion-label>{{ leaseholder.leases[i].name }}</ion-label>
+            <ion-label>{{ leaseholder["leases"][i].name }}</ion-label>
           </ion-item>
           <div class="ion-padding" slot="content">
             <form [formGroupName]=i>
@@ -94,7 +94,7 @@
                 <ion-item>
                   <ion-checkbox formControlName="isPro" label-placement="floating" alignment="center">Pro ?</ion-checkbox>
                 </ion-item>
-                <ion-item button mode="md" (click)="onDeleteLease(leaseholder.leases[i].objectId, leaseholder.leases[i].name, i)">
+                <ion-item button mode="md" (click)="onDeleteLease(i)">
                   <ion-label>Supprimer le bail</ion-label>
                   <ion-button slot="end" fill="clear">
                     <ion-icon slot="icon-only" name="trash-bin" color="danger"></ion-icon>

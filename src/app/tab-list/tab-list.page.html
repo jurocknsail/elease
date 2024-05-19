@@ -73,7 +73,7 @@
       </ion-header>
       <ion-content class="ion-padding">
 
-        <form id="newLeaseHolderForm" [formGroup]="newLeaseHolderForm" (ngSubmit)="onSubmit()">
+        <form (keydown.enter)="$event.preventDefault()" id="newLeaseHolderForm" [formGroup]="newLeaseHolderForm" (ngSubmit)="onSubmit()">
           <ion-list>
             <ion-item>
               <ion-input labelPlacement="floating" label="Nom" formControlName="name" type="string"></ion-input>
