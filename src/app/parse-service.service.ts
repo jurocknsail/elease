@@ -20,19 +20,14 @@ export class ParseService {
     const LeaseholderObject = Parse.Object.extend('Leaseholder');
     const query = new Parse.Query(LeaseholderObject);
     query.include('leases');
-
-    try {
-      const leaseHolders = await query.find();
+    await query.find().then( (leaseHolders) => {
       // @ts-ignore
       this.leaseholders = leaseHolders.map(lh => lh.toJSON() as Leaseholder);
 
       this.leaseholders.forEach( l => {
         console.log("Fetched leaseholder : " + l.objectId);
       })
-    } catch (error) {
-      console.error('Error fetching leaseholders: ', error);
-      throw error;
-    }
+    });
   }
 
   public getLeaseholders(): Leaseholder[] {

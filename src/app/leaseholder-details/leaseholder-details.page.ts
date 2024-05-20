@@ -1,5 +1,5 @@
 import {Component, OnInit, ViewChild} from '@angular/core';
-import {ActivatedRoute} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 import {FormArray, FormBuilder, FormGroup, Validators} from '@angular/forms';
 import {Lease, LeaseClass} from '../lease';
 import {AlertController, IonAccordionGroup, IonButton, IonModal} from '@ionic/angular';
@@ -14,10 +14,10 @@ import {Leaseholder} from '../leaseholder';
 })
 export class LeaseholderDetailsPage implements OnInit {
 
-  @ViewChild('accordionGroup', {static: true})
+  @ViewChild('accordionGroup', {static: false})
   accordionGroup!: IonAccordionGroup;
 
-  @ViewChild('editButton', {static: true})
+  @ViewChild('editButton', {static: false})
   editButton!: IonButton;
 
   @ViewChild(IonModal) modal!: IonModal;
@@ -36,57 +36,60 @@ export class LeaseholderDetailsPage implements OnInit {
     private formBuilder: FormBuilder,
     private parseService: ParseService,
     private location: Location,
-    private alertController: AlertController
+    private alertController: AlertController,
   ) {
   }
 
-  ngOnInit() {
+  async ngOnInit() {
 
     console.log(this.route.snapshot.paramMap)
 
     // First get the leaseholder id from the current route.
+    const routeParams = this.route.snapshot.paramMap;
+    const leaseholderIdFromRoute = routeParams.get('leaseholderId');
 
-    this.route.paramMap.subscribe(params => {
-      const leaseholderIdFromRoute = params.get('leaseholderId');
+    // Find the leaseholder that correspond with the id provided in route.
+    this.leaseholder = this.parseService.getLeaseholder(leaseholderIdFromRoute);
 
-
-      // Find the leaseholder that correspond with the id provided in route.
+    if (!this.leaseholder) {
+      await this.parseService.fetchLeaseholders();
       this.leaseholder = this.parseService.getLeaseholder(leaseholderIdFromRoute);
+    }
 
-      // Manage leaseholder form
-      this.leaseholderForm = this.formBuilder.group({
-        name: [this.leaseholder.name, [Validators.required]],
-        description: [this.leaseholder.description, [Validators.required]],
-        phone: [this.leaseholder.phone, [Validators.required]],
-        email: [this.leaseholder.email, [Validators.required, Validators.email]],
-      });
-
-      // Manage leases forms
-      this.leaseForm = this.formBuilder.group({
-        leases: this.formBuilder.array([])
-      });
-      this.leaseholder.leases.forEach((lease: Lease) => {
-        this.addLeaseForm(lease);
-      });
-
-      // Manage new lease form
-      this.newLeaseForm = this.formBuilder.group({
-        name: ["", [Validators.required]],
-        lot: ["", [Validators.required]],
-        streetNumber: ["", [Validators.required]],
-        streetName: ["", [Validators.required]],
-        optionalAddressInfo: ["", []],
-        postalCode: ["", [Validators.required]],
-        city: ["", [Validators.required]],
-        renewalDate: ["", [Validators.required]],
-        indexing: ["", [Validators.required]],
-        price: ["", [Validators.required]],
-        charge: ["", []],
-        isPro: [true, [Validators.required]],
-      });
-
-      this.toogleEdit(false);
+    // Manage leaseholder form
+    this.leaseholderForm = this.formBuilder.group({
+      name: [this.leaseholder.name, [Validators.required]],
+      description: [this.leaseholder.description, [Validators.required]],
+      phone: [this.leaseholder.phone, [Validators.required]],
+      email: [this.leaseholder.email, [Validators.required, Validators.email]],
     });
+
+    // Manage leases forms
+    this.leaseForm = this.formBuilder.group({
+      leases: this.formBuilder.array([])
+    });
+    this.leaseholder.leases.forEach((lease: Lease) => {
+      this.addLeaseForm(lease);
+    });
+
+    // Manage new lease form
+    this.newLeaseForm = this.formBuilder.group({
+      name: ["", [Validators.required]],
+      lot: ["", [Validators.required]],
+      streetNumber: ["", [Validators.required]],
+      streetName: ["", [Validators.required]],
+      optionalAddressInfo: ["", []],
+      postalCode: ["", [Validators.required]],
+      city: ["", [Validators.required]],
+      renewalDate: ["", [Validators.required]],
+      indexing: ["", [Validators.required]],
+      price: ["", [Validators.required]],
+      charge: ["", []],
+      isPro: [true, [Validators.required]],
+    });
+
+    this.toogleEdit(false);
+
   }
 
   // Getter for leases forms
@@ -202,42 +205,42 @@ export class LeaseholderDetailsPage implements OnInit {
   }
 
   // On ADD form Submit actions
-    async onAdd() {
+  async onAdd() {
 
-      // Add lease to model
-      let addedLease = new LeaseClass(
-        this.newLeaseForm.controls["name"].value,
-        this.newLeaseForm.controls["lot"].value,
-        this.newLeaseForm.controls["streetNumber"].value,
-        this.newLeaseForm.controls["streetName"].value,
-        this.newLeaseForm.controls["optionalAddressInfo"].value,
-        this.newLeaseForm.controls["postalCode"].value,
-        this.newLeaseForm.controls["city"].value,
-        "",
-        0,
-        //this.newLeaseForm.controls["renewalDate"].value,
-        0,
-        this.newLeaseForm.controls["indexing"].value,
-        this.newLeaseForm.controls["price"].value,
-        this.newLeaseForm.controls["charge"].value,
-        this.newLeaseForm.controls["isPro"].value,
-      );
+    // Add lease to model
+    let addedLease = new LeaseClass(
+      this.newLeaseForm.controls["name"].value,
+      this.newLeaseForm.controls["lot"].value,
+      this.newLeaseForm.controls["streetNumber"].value,
+      this.newLeaseForm.controls["streetName"].value,
+      this.newLeaseForm.controls["optionalAddressInfo"].value,
+      this.newLeaseForm.controls["postalCode"].value,
+      this.newLeaseForm.controls["city"].value,
+      "",
+      0,
+      //this.newLeaseForm.controls["renewalDate"].value,
+      0,
+      this.newLeaseForm.controls["indexing"].value,
+      this.newLeaseForm.controls["price"].value,
+      this.newLeaseForm.controls["charge"].value,
+      this.newLeaseForm.controls["isPro"].value,
+    );
 
-      // Push to DB
-      // Add lease to local holder
-      (addedLease as Lease).objectId = await this.parseService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
-      this.leaseholder.leases.push(addedLease);
+    // Push to DB
+    // Add lease to local holder
+    (addedLease as Lease).objectId = await this.parseService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
+    this.leaseholder.leases.push(addedLease);
 
-      // Add corresponding form
-      this.addLeaseForm(addedLease);
+    // Add corresponding form
+    this.addLeaseForm(addedLease);
 
-      // Expand it
-      this.accordionGroup.value = `${this.leases.length - 1}`;
+    // Expand it
+    this.accordionGroup.value = `${this.leases.length - 1}`;
 
-      // Clear the form
-      this.newLeaseForm.reset();
+    // Clear the form
+    this.newLeaseForm.reset();
 
-    }
+  }
 
   private toogleEdit(edit: boolean) {
     if (edit) {
