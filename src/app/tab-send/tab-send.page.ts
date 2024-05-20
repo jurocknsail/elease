@@ -50,7 +50,14 @@ export class TabSendPage implements OnInit {
 
     this.leaseholders = this.parseService.getLeaseholders()
 
-    if (! await this.checkFileExists({ path: USER_DATA_FOLDER, directory: APP_DIRECTORY })) {
+    if (await this.checkFileExists({ path: USER_DATA_FOLDER, directory: APP_DIRECTORY })) {
+
+      await Filesystem.rmdir({
+        directory: APP_DIRECTORY,
+        path: USER_DATA_FOLDER,
+        recursive: true
+      });
+
       await Filesystem.mkdir({
         directory: APP_DIRECTORY,
         path: USER_DATA_FOLDER,
@@ -261,7 +268,7 @@ export class TabSendPage implements OnInit {
   }
 
   async writePDF(data: string, leaseholder: Leaseholder, lease: Lease) {
-    let filePath = USER_DATA_FOLDER + "/" + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "/" + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name + ".pdf";
+    let filePath = USER_DATA_FOLDER + "/" + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name + ".pdf";
     if (! await this.checkFileExists({ path: filePath, directory: Directory.Documents })) {
       await Filesystem.writeFile({
         path: filePath,
@@ -281,12 +288,6 @@ export class TabSendPage implements OnInit {
         recursive: true
       });
     }
-  }
-
-  sendEmail() {
-
-   this.parseService.sendEmail();
-
   }
 
 }
