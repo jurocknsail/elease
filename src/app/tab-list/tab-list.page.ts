@@ -17,6 +17,7 @@ export class TabListPage implements OnInit {
   message = 'This modal example uses triggers to automatically open a modal when the button is clicked.';
   name: string | undefined;
   newLeaseHolderForm!: FormGroup;
+  leaseholders: Leaseholder[] = [];
 
   constructor(
     public parseService: ParseService,
@@ -24,6 +25,9 @@ export class TabListPage implements OnInit {
   ) { }
 
   async ngOnInit() {
+
+    await this.parseService.fetchLeaseholders();
+    this.leaseholders = this.parseService.getLeaseholders()
 
     // Manage new lease form
     this.newLeaseHolderForm = this.formBuilder.group({

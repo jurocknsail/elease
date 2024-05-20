@@ -15,7 +15,7 @@
     <ion-label>Date d'envoi par défaut</ion-label>
     <ion-datetime-button datetime="datetime"></ion-datetime-button>
   </ion-item>
-  
+
   <ion-modal [keepContentsMounted]="true">
     <ng-template>
       <ion-datetime (ionChange)="setDate($event)" value="{{ defaultSendDate  | date:'YYYY-MM-dd'}}" presentation="date" [showDefaultButtons]="true" id="datetime">
@@ -24,9 +24,9 @@
     </ng-template>
   </ion-modal>
 
- 
+
   <ion-list [inset]="true" lines="none">
-    <ion-item-group *ngFor="let leaseholder of parseService.getLeaseholders()">
+    <ion-item-group *ngFor="let leaseholder of leaseholders">
       <ion-item-divider >
         <ion-label>{{ leaseholder.name }} - {{ leaseholder.email }}</ion-label>
       </ion-item-divider>

@@ -14,10 +14,10 @@ import {Leaseholder} from '../leaseholder';
 })
 export class LeaseholderDetailsPage implements OnInit {
 
-  @ViewChild('accordionGroup', { static: true })
+  @ViewChild('accordionGroup', {static: true})
   accordionGroup!: IonAccordionGroup;
 
-  @ViewChild('editButton', { static: true })
+  @ViewChild('editButton', {static: true})
   editButton!: IonButton;
 
   @ViewChild(IonModal) modal!: IonModal;
@@ -37,51 +37,56 @@ export class LeaseholderDetailsPage implements OnInit {
     private parseService: ParseService,
     private location: Location,
     private alertController: AlertController
-  ) { }
+  ) {
+  }
 
   ngOnInit() {
 
+    console.log(this.route.snapshot.paramMap)
+
     // First get the leaseholder id from the current route.
-    const routeParams = this.route.snapshot.paramMap;
-    const leaseholderIdFromRoute = routeParams.get('leaseholderId');
 
-    // Find the leaseholder that correspond with the id provided in route.
-    this.leaseholder = this.parseService.getLeaseholder(leaseholderIdFromRoute);
+    this.route.paramMap.subscribe(params => {
+      const leaseholderIdFromRoute = params.get('leaseholderId');
 
-    // Manage leaseholder form
-    this.leaseholderForm = this.formBuilder.group({
-      name: [this.leaseholder.name, [Validators.required]],
-      description: [this.leaseholder.description, [Validators.required]],
-      phone: [this.leaseholder.phone, [Validators.required]],
-      email: [this.leaseholder.email, [Validators.required, Validators.email]],
+
+      // Find the leaseholder that correspond with the id provided in route.
+      this.leaseholder = this.parseService.getLeaseholder(leaseholderIdFromRoute);
+
+      // Manage leaseholder form
+      this.leaseholderForm = this.formBuilder.group({
+        name: [this.leaseholder.name, [Validators.required]],
+        description: [this.leaseholder.description, [Validators.required]],
+        phone: [this.leaseholder.phone, [Validators.required]],
+        email: [this.leaseholder.email, [Validators.required, Validators.email]],
+      });
+
+      // Manage leases forms
+      this.leaseForm = this.formBuilder.group({
+        leases: this.formBuilder.array([])
+      });
+      this.leaseholder.leases.forEach((lease: Lease) => {
+        this.addLeaseForm(lease);
+      });
+
+      // Manage new lease form
+      this.newLeaseForm = this.formBuilder.group({
+        name: ["", [Validators.required]],
+        lot: ["", [Validators.required]],
+        streetNumber: ["", [Validators.required]],
+        streetName: ["", [Validators.required]],
+        optionalAddressInfo: ["", []],
+        postalCode: ["", [Validators.required]],
+        city: ["", [Validators.required]],
+        renewalDate: ["", [Validators.required]],
+        indexing: ["", [Validators.required]],
+        price: ["", [Validators.required]],
+        charge: ["", []],
+        isPro: [true, [Validators.required]],
+      });
+
+      this.toogleEdit(false);
     });
-
-    // Manage leases forms
-    this.leaseForm = this.formBuilder.group({
-      leases: this.formBuilder.array([])
-    });
-    this.leaseholder.leases.forEach((lease: Lease) => {
-      this.addLeaseForm(lease);
-    });
-
-    // Manage new lease form
-    this.newLeaseForm = this.formBuilder.group({
-      name: ["", [Validators.required]],
-      lot: ["", [Validators.required]],
-      streetNumber: ["", [Validators.required]],
-      streetName: ["", [Validators.required]],
-      optionalAddressInfo: ["", []],
-      postalCode: ["", [Validators.required]],
-      city: ["", [Validators.required]],
-      renewalDate: ["", [Validators.required]],
-      indexing: ["", [Validators.required]],
-      price: ["", [Validators.required]],
-      charge: ["", []],
-      isPro: [true, [Validators.required]],
-    });
-
-    this.toogleEdit(false);
-
   }
 
   // Getter for leases forms
@@ -98,6 +103,7 @@ export class LeaseholderDetailsPage implements OnInit {
   async onDelete() {
     this.presentDeleteLeaseHolderAlert();
   }
+
   async presentDeleteLeaseHolderAlert() {
     const alert = await this.alertController.create({
       header: 'Confirmation de suppression',
@@ -106,6 +112,7 @@ export class LeaseholderDetailsPage implements OnInit {
     });
     await alert.present();
   }
+
   public alertDeleteLeaseHolderButtons = [
     {
       text: 'Annuler',
@@ -120,6 +127,7 @@ export class LeaseholderDetailsPage implements OnInit {
       },
     },
   ];
+
   async deleteLeaseHolder() {
     this.parseService.deleteLeaseholder(this.leaseholder.objectId);
     this.location.back();
@@ -134,6 +142,7 @@ export class LeaseholderDetailsPage implements OnInit {
       this.presentDeleteLeaseAlert();
     }
   }
+
   async presentDeleteLeaseAlert() {
     const alert = await this.alertController.create({
       header: 'Confirmation de suppression',
@@ -142,6 +151,7 @@ export class LeaseholderDetailsPage implements OnInit {
     });
     await alert.present();
   }
+
   public alertDeleteLeaseButtons = [
     {
       text: 'Annuler',
@@ -156,8 +166,9 @@ export class LeaseholderDetailsPage implements OnInit {
       },
     },
   ];
-  deleteLease(leaseId: string, leaseFormIndex: number){
-    console.log(leaseId + "/"+ leaseFormIndex )
+
+  deleteLease(leaseId: string, leaseFormIndex: number) {
+    console.log(leaseId + "/" + leaseFormIndex)
     this.leases.controls.splice(leaseFormIndex, 1);
     this.parseService.deleteLeaseFromHolder(this.leaseholder.objectId, leaseId);
   }
@@ -191,43 +202,42 @@ export class LeaseholderDetailsPage implements OnInit {
   }
 
   // On ADD form Submit actions
-  onAdd(): void {
+    async onAdd() {
 
-    // Add lease to model
-    let addedLease = new LeaseClass(
-      this.newLeaseForm.controls["name"].value,
-      this.newLeaseForm.controls["lot"].value,
-      this.newLeaseForm.controls["streetNumber"].value,
-      this.newLeaseForm.controls["streetName"].value,
-      this.newLeaseForm.controls["optionalAddressInfo"].value,
-      this.newLeaseForm.controls["postalCode"].value,
-      this.newLeaseForm.controls["city"].value,
-      "",
-      0,
-      //this.newLeaseForm.controls["renewalDate"].value,
-      0,
-      this.newLeaseForm.controls["indexing"].value,
-      this.newLeaseForm.controls["price"].value,
-      this.newLeaseForm.controls["charge"].value,
-      this.newLeaseForm.controls["isPro"].value,
-    );
+      // Add lease to model
+      let addedLease = new LeaseClass(
+        this.newLeaseForm.controls["name"].value,
+        this.newLeaseForm.controls["lot"].value,
+        this.newLeaseForm.controls["streetNumber"].value,
+        this.newLeaseForm.controls["streetName"].value,
+        this.newLeaseForm.controls["optionalAddressInfo"].value,
+        this.newLeaseForm.controls["postalCode"].value,
+        this.newLeaseForm.controls["city"].value,
+        "",
+        0,
+        //this.newLeaseForm.controls["renewalDate"].value,
+        0,
+        this.newLeaseForm.controls["indexing"].value,
+        this.newLeaseForm.controls["price"].value,
+        this.newLeaseForm.controls["charge"].value,
+        this.newLeaseForm.controls["isPro"].value,
+      );
 
-    // Add lease to local holder
-    this.leaseholder.leases.push(addedLease);
+      // Push to DB
+      // Add lease to local holder
+      (addedLease as Lease).objectId = await this.parseService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
+      this.leaseholder.leases.push(addedLease);
 
-    // Add corresponding form
-    this.addLeaseForm(addedLease);
+      // Add corresponding form
+      this.addLeaseForm(addedLease);
 
-    // Expand it
-    this.accordionGroup.value = `${this.leases.length - 1}`;
+      // Expand it
+      this.accordionGroup.value = `${this.leases.length - 1}`;
 
-    // Clear the form
-    this.newLeaseForm.reset();
+      // Clear the form
+      this.newLeaseForm.reset();
 
-    // Push to DB
-    this.parseService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
-
-  }
+    }
 
   private toogleEdit(edit: boolean) {
     if (edit) {

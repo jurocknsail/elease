@@ -26,6 +26,7 @@ export class TabSendPage implements OnInit {
   defaultSendDate: Date;
 	isBrowser = false;
   public progress = 0;
+  leaseholders: Leaseholder[] = [];
 
   constructor(
     public platform: Platform,
@@ -46,6 +47,8 @@ export class TabSendPage implements OnInit {
     if (!isPlatform('hybrid')) {
 			this.isBrowser = true;
 		}
+
+    this.leaseholders = this.parseService.getLeaseholders()
 
     if (! await this.checkFileExists({ path: USER_DATA_FOLDER, directory: APP_DIRECTORY })) {
       await Filesystem.mkdir({

@@ -16,11 +16,7 @@ export class ParseService {
     Parse.serverURL = 'https://parseapi.back4app.com';
   }
 
-  getData() {
-     this.fetchLeaseholders();
-  }
-
-  async fetchLeaseholders(): Promise<void> {
+  async fetchLeaseholders() {
     const LeaseholderObject = Parse.Object.extend('Leaseholder');
     const query = new Parse.Query(LeaseholderObject);
     query.include('leases');
@@ -120,7 +116,7 @@ export class ParseService {
     }
   }
 
-  async addLeaseToHolder(leaseholderId: string, lease: Lease): Promise<void> {
+  async addLeaseToHolder(leaseholderId: string, lease: Lease): Promise<string> {
 
     try {
 
@@ -157,13 +153,16 @@ export class ParseService {
       leaseholderObject.set('leases', leases);
       await leaseholderObject.save();
 
-      //this.getLeaseholder(leaseholderId)?.leases.push(lease);
-
       console.log("Added lease " + lease.name + "(" + lease.objectId + ") to leaseholder with id : " + leaseholderId);
 
     } catch (error) {
       console.error('Error updating leaseholder: ', error);
       throw error;
+    }
+    if(lease.objectId != undefined) {
+      return lease.objectId;
+    }else {
+      return "";
     }
   }
 
@@ -213,19 +212,29 @@ export class ParseService {
     return this.getLeaseholders().find((leaseholder) => leaseholder.objectId === id);
   }
 
-  public deleteLeaseFromHolder(holderId: string, leaseId: string) {
+  public async deleteLeaseFromHolder(holderId: string, leaseId: string) {
     console.log("Deleting Lease " + leaseId + " from holder " + holderId)
     let holderLeases = this.getLeaseholder(holderId)?.leases;
     let leaseIndex = holderLeases?.findIndex(lease => lease.objectId === leaseId);
-    if( leaseIndex != undefined) {
-      let _l = holderLeases?.[leaseIndex] ;
-      if(_l != undefined && _l.objectId != undefined) {
+    if (leaseIndex != undefined) {
+      let _l = holderLeases?.[leaseIndex];
+      if (_l != undefined && _l.objectId != undefined) {
+
+        // Delete lease pointer in leaseholder
+        const LeaseholderObject = Parse.Object.extend('Leaseholder');
+        const query = new Parse.Query(LeaseholderObject);
+        console.log("Removing lease pointer from leaseholder with id : " + holderId)
+        const leaseholderObject = await query.get(holderId);
+        let leasesPointers = leaseholderObject.get("leases")
+        let updatedLeasesPointers = leasesPointers.filter((lease: Parse.Object) => lease.id !== leaseId);
+        leaseholderObject.set("leases", updatedLeasesPointers);
+        await  leaseholderObject.save();
+        // The delete lease object
         this.deleteLease(_l.objectId)
       }
       this.getLeaseholder(holderId)?.leases.splice(leaseIndex, 1)
     }
     console.log("Deleted Lease " + leaseId + " from holder " + holderId)
-    console.log(JSON.stringify(this.leaseholders));
   }
 
   async sendEmail() {
