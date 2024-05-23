@@ -251,6 +251,10 @@ export class TabSendPage implements OnInit {
               this.writePDF(data, leaseholder, lease).then(() => {
                 this.progress = currentLeaseNb / totalLeases;
                 currentLeaseNb = currentLeaseNb +1;
+
+                // Add pdf to map of leaseholder email/base64
+                this.parseService.addLeaseholderPDF(leaseholder.email, data);
+
                 resolve();
               });
             });
