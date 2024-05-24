@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import Parse from 'parse';
 import {Lease} from "./lease";
 import {LeaseHolderClass, Leaseholder} from "./leaseholder";
+import { Observable, from } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -14,7 +15,7 @@ export class ParseService {
 
 
   constructor() {
-    Parse.initialize('DIexJJsupqwz6DZNFjE08gARDd70hqK9FQc1bdru', '35XUMWxvrSFXaa7Sp0iNHr23eqvErid3YZgZfT1V');
+    Parse.initialize('UpzwFllH00WNx93mtvAF7DLQyL6sn7q9N8aSZ5sa', '5ANbzl2CZK8rYwIxckuVTOLHDhD16Ob9hV8qjad7');
     Parse.serverURL = 'https://parseapi.back4app.com';
   }
 
@@ -234,25 +235,20 @@ export class ParseService {
     console.log("Deleted Lease " + leaseId + " from holder " + holderId)
   }
 
-  async sendEmail(email: string, pdfData: string): Promise<any> {
+  sendEmail(email: string, pdfData: string): Observable<any> {
     const CloudCode = Parse.Cloud;
-    return CloudCode.run('sendEmail', {
+    return from(CloudCode.run('sendEmail', {
       recipientEmail: email,
       subject: "Test email",
       text: "Super test !",
-      /*attachments: [
+      attachments: [
         {
           ContentType: 'application/pdf',
           Filename: 'test.pdf',
           Base64Content: pdfData,
         }
-      ]*/
-    }).then( (response: any) => {
-      console.log('BBB Email sent !', response);
-    }).catch((error: any) => {
-      console.error('BBB Failed to send email:', error);
-    });
-
+      ]
+    }));
   }
 
   public addLeaseholderPDF(email: string, pdfData: string) {
