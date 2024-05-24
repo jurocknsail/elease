@@ -4,6 +4,7 @@ import Parse from 'parse';
 import {Lease} from "./lease";
 import {LeaseHolderClass, Leaseholder} from "./leaseholder";
 import { Observable, from } from 'rxjs';
+import {environment} from "../environments/environment";
 
 @Injectable({
   providedIn: 'root'
@@ -15,8 +16,8 @@ export class ParseService {
 
 
   constructor() {
-    Parse.initialize('UpzwFllH00WNx93mtvAF7DLQyL6sn7q9N8aSZ5sa', '5ANbzl2CZK8rYwIxckuVTOLHDhD16Ob9hV8qjad7');
-    Parse.serverURL = 'https://parseapi.back4app.com';
+    Parse.initialize(environment.parseAppId, environment.parseJsKey);
+    Parse.serverURL = environment.parseServerUrl;
   }
 
   async fetchLeaseholders() {
