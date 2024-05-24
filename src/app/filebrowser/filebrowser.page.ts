@@ -118,7 +118,6 @@ export class FilebrowserPage implements OnInit {
   sendEmail() {
     this.parseService.getLeaseholdersPDFs().forEach( (pdfDataList, email) => {
       pdfDataList.forEach((pdfData) => {
-        console.log("AAA " + email)
         this.parseService.sendEmail(email, pdfData).subscribe({
           next: (res) => {
             console.log('Email sent successfully !');
