@@ -178,7 +178,7 @@ export class FilebrowserPage implements OnInit {
 
       // Show success message
       const toast = this.toastController.create({
-        message: 'Tous les emails ont été envoyés !',
+        message: 'Tous les emails ont été envoyés ! Tu les as aussi reçus en copie.',
         duration: 2000,
         position: "middle",
         color: 'primary'
