@@ -9,6 +9,7 @@ import {Directory, Filesystem, StatOptions} from '@capacitor/filesystem';
 import {Lease} from '../lease';
 import {Router} from '@angular/router';
 import { ParseService } from '../parse-service.service';
+import { LeasePdfInfoClass } from '../leasepdfinfo';
 
 (<any>pdfMake).vfs = pdfFonts.pdfMake.vfs;
 
@@ -27,6 +28,7 @@ export class TabSendPage implements OnInit {
 	isBrowser = false;
   public progress = 0;
   leaseholders: Leaseholder[] = [];
+  periodMonth! : string;
 
   constructor(
     public platform: Platform,
@@ -85,7 +87,8 @@ export class TabSendPage implements OnInit {
       month = 1;
       year = this.defaultSendDate.getFullYear() + 1;
     }
-    return month.toLocaleString('en-US', { minimumIntegerDigits: 2, useGrouping: false }) + "/" + year;
+    this.periodMonth = month.toLocaleString('en-US', { minimumIntegerDigits: 2, useGrouping: false }) + "/" + year;
+    return this.periodMonth;
   }
 
   async checkFileExists(statOptions: StatOptions): Promise<boolean> {
@@ -252,8 +255,9 @@ export class TabSendPage implements OnInit {
                 this.progress = currentLeaseNb / totalLeases;
                 currentLeaseNb = currentLeaseNb +1;
 
-                // Add pdf to map of leaseholder email/base64
-                this.parseService.addLeaseholderPDF(leaseholder.email, data);
+                // Add pdf to map of leaseholder email/pdfInfo
+                let pdfInfo = new LeasePdfInfoClass (lease.name.trim().toLowerCase()+"_"+ this.periodMonth.replace("/", "_"), this.periodMonth, data);
+                this.parseService.addLeaseholderPDF(leaseholder.email, pdfInfo);
 
                 resolve();
               });

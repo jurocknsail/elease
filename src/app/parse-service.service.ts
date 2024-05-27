@@ -5,6 +5,7 @@ import {Lease} from "./lease";
 import {LeaseHolderClass, Leaseholder} from "./leaseholder";
 import { Observable, from } from 'rxjs';
 import {environment} from "../environments/environment";
+import { LeasePdfInfo } from './leasepdfinfo';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +13,7 @@ import {environment} from "../environments/environment";
 export class ParseService {
 
   private leaseholders: Leaseholder[] = [];
-  public emailAndBase64PDF = new Map<string, string[]>();
+  public emailAndBase64PDF = new Map<string, LeasePdfInfo[]>();
 
 
   constructor() {
@@ -236,28 +237,36 @@ export class ParseService {
     console.log("Deleted Lease " + leaseId + " from holder " + holderId)
   }
 
-  sendEmail(email: string, pdfData: string): Observable<any> {
+  sendEmail(email: string, pdfInfo: LeasePdfInfo): Observable<any> {
+
+    console.log("Sending email for leaseholder : " + email + " with data : \ndate : " + pdfInfo.pdfDate + "\nlease : " + pdfInfo.pdfName);
     const CloudCode = Parse.Cloud;
     return from(CloudCode.run('sendEmail', {
       recipientEmail: email,
-      subject: "Test email",
-      text: "Super test !",
+      subject: "Facture de loyer pour le mois de " + pdfInfo.pdfDate,
+      text:  
+      `Bonjour
+      Merci de trouver ci-joint le(s) appel(s) de loyer(s) pour la prochaine période.
+      Bonne reception, 
+      Pierre MARGERIT`,
       attachments: [
         {
           ContentType: 'application/pdf',
-          Filename: 'test.pdf',
-          Base64Content: pdfData,
+          Filename: pdfInfo.pdfName,
+          Base64Content: pdfInfo.pdfBase64,
         }
-      ]
+      ],
+      sandbox: true
     }));
   }
 
-  public addLeaseholderPDF(email: string, pdfData: string) {
+  public addLeaseholderPDF(email: string, pdfData: LeasePdfInfo) {
     if (!this.emailAndBase64PDF.has(email)) {
       this.emailAndBase64PDF.set(email, []);
     }
     this.emailAndBase64PDF.get(email)!.push(pdfData);
   }
+
   public getLeaseholdersPDFs () {
     return this.emailAndBase64PDF;
   }
