@@ -1,10 +1,10 @@
 // parse.service.ts
 import { Injectable } from '@angular/core';
 import Parse from 'parse';
-import {Lease} from "./lease";
-import {LeaseHolderClass, Leaseholder} from "./leaseholder";
+import { Lease } from "./lease";
+import { LeaseHolderClass, Leaseholder } from "./leaseholder";
 import { Observable, from } from 'rxjs';
-import {environment} from "../environments/environment";
+import { environment } from "../environments/environment";
 import { LeasePdfInfo } from './leasepdfinfo';
 
 @Injectable({
@@ -25,11 +25,11 @@ export class ParseService {
     const LeaseholderObject = Parse.Object.extend('Leaseholder');
     const query = new Parse.Query(LeaseholderObject);
     query.include('leases');
-    await query.find().then( (leaseHolders) => {
+    await query.find().then((leaseHolders) => {
       // @ts-ignore
       this.leaseholders = leaseHolders.map(lh => lh.toJSON() as Leaseholder);
 
-      this.leaseholders.forEach( l => {
+      this.leaseholders.forEach(l => {
         console.log("Fetched leaseholder : " + l.objectId);
       })
     });
@@ -148,7 +148,7 @@ export class ParseService {
       const query = new Parse.Query(LeaseholderObject);
       const leaseholderObject = await query.get(leaseholderId);
 
-      let leases : Parse.Object [] = leaseholderObject.get('leases');
+      let leases: Parse.Object[] = leaseholderObject.get('leases');
       leases.push(leaseObj);
       leaseholderObject.set('leases', leases);
       await leaseholderObject.save();
@@ -159,9 +159,9 @@ export class ParseService {
       console.error('Error updating leaseholder: ', error);
       throw error;
     }
-    if(lease.objectId != undefined) {
+    if (lease.objectId != undefined) {
       return lease.objectId;
-    }else {
+    } else {
       return "";
     }
   }
@@ -190,7 +190,7 @@ export class ParseService {
 
     try {
       const leaseholderObject = await query.get(leaseHolderObjectId);
-      let leases : Parse.Object[] = leaseholderObject.get("leases");
+      let leases: Parse.Object[] = leaseholderObject.get("leases");
       if (leases && leases.length > 0) {
         await Promise.all(leases.map(async (lease: Parse.Object) => {
           try {
@@ -208,7 +208,7 @@ export class ParseService {
     }
   }
 
-  public getLeaseholder(id: string | null | undefined ): Leaseholder | undefined {
+  public getLeaseholder(id: string | null | undefined): Leaseholder | undefined {
     return this.getLeaseholders().find((leaseholder) => leaseholder.objectId === id);
   }
 
@@ -228,7 +228,7 @@ export class ParseService {
         let leasesPointers = leaseholderObject.get("leases")
         let updatedLeasesPointers = leasesPointers.filter((lease: Parse.Object) => lease.id !== leaseId);
         leaseholderObject.set("leases", updatedLeasesPointers);
-        await  leaseholderObject.save();
+        await leaseholderObject.save();
         // The delete lease object
         this.deleteLease(_l.objectId)
       }
@@ -237,37 +237,48 @@ export class ParseService {
     console.log("Deleted Lease " + leaseId + " from holder " + holderId)
   }
 
-  sendEmail(email: string, pdfInfo: LeasePdfInfo): Observable<any> {
+  sendEmail(recipientEmail: string, pdfDataList: LeasePdfInfo[]) : Observable<any>{
 
-    console.log("Sending email for leaseholder : " + email + " with data : \ndate : " + pdfInfo.pdfDate + "\nlease : " + pdfInfo.pdfName);
-    const CloudCode = Parse.Cloud;
-    return from(CloudCode.run('sendEmail', {
-      recipientEmail: email,
-      subject: "Facture de loyer pour le mois de " + pdfInfo.pdfDate,
-      text:  
-      `Bonjour
-      Merci de trouver ci-joint le(s) appel(s) de loyer(s) pour la prochaine période.
-      Bonne reception, 
-      Pierre MARGERIT`,
-      attachments: [
-        {
+    let attachments: any[] = [];
+    let attachment: { [key: string]: any };
+    
+      pdfDataList.forEach((pdfData) => {
+        attachment = {
           ContentType: 'application/pdf',
-          Filename: pdfInfo.pdfName,
-          Base64Content: pdfInfo.pdfBase64,
-        }
-      ],
-      sandbox: true
-    }));
+          Filename: pdfData.pdfName,
+          Base64Content: pdfData.pdfBase64,
+        };
+        attachments.push(attachment);
+      });
+
+      console.log("Sending email(s) for leaseholder : " + recipientEmail + " with data : " + JSON.stringify(attachments, ['ContentType', 'Filename'], 2));
+
+      const CloudCode = Parse.Cloud;
+      return from(CloudCode.run('sendEmail', {
+        senderEmail: environment.senderEmail,
+        recipientEmail: recipientEmail,
+        subject: "Facture de loyer pour le mois de " + pdfDataList[0].pdfDate,
+        text:
+          `Bonjour,
+  
+  Merci de trouver ci-joint le(s) appel(s) de loyer(s) pour la prochaine période.
+  Bonne reception, 
+  
+  Pierre MARGERIT`,
+        attachments: attachments,
+        sandbox: environment.sandbox
+      }))
+
   }
 
-  public addLeaseholderPDF(email: string, pdfData: LeasePdfInfo) {
-    if (!this.emailAndBase64PDF.has(email)) {
-      this.emailAndBase64PDF.set(email, []);
+  public addLeaseholderPDF(recipientEmail: string, pdfData: LeasePdfInfo) {
+    if (!this.emailAndBase64PDF.has(recipientEmail)) {
+      this.emailAndBase64PDF.set(recipientEmail, []);
     }
-    this.emailAndBase64PDF.get(email)!.push(pdfData);
+    this.emailAndBase64PDF.get(recipientEmail)!.push(pdfData);
   }
 
-  public getLeaseholdersPDFs () {
+  public getLeaseholdersPDFs() {
     return this.emailAndBase64PDF;
   }
 

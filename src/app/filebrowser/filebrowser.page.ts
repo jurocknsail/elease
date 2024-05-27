@@ -116,17 +116,15 @@ export class FilebrowserPage implements OnInit {
 
 
   sendEmail() {
-    this.parseService.getLeaseholdersPDFs().forEach( (pdfDataList, email) => {
-      pdfDataList.forEach((pdfInfo) => {
-        this.parseService.sendEmail(email, pdfInfo).subscribe({
-          next: (res) => {
-            console.log('Email sent successfully !');
-          },
-          error: (err) => {
-            console.error('Error sending email : ', err.message);
-          }
-        });
-      })
+    this.parseService.getLeaseholdersPDFs().forEach( (pdfDataList, recipientEmail) => {
+      this.parseService.sendEmail(recipientEmail, pdfDataList).subscribe({
+        next: (res) => {
+          console.log('Email(s) sent successfully from ' + recipientEmail);
+        },
+        error: (err) => {
+          console.error('Error sending email(s) from ' + recipientEmail, err.message);
+        }
+      });
     });
   }
 
