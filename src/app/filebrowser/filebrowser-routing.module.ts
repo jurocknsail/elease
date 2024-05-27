@@ -2,15 +2,18 @@ import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 
 import { FilebrowserPage } from './filebrowser.page';
+import {AuthGuard} from "../auth.guard";
 
 const routes: Routes = [
   {
     path: '',
-    component: FilebrowserPage
+    component: FilebrowserPage,
+    canActivate: [AuthGuard]
   },
   {
 		path: ':folder',
-    component: FilebrowserPage
+    component: FilebrowserPage,
+    canActivate: [AuthGuard]
 	}
 ];
 

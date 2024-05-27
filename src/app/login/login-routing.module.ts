@@ -1,14 +1,12 @@
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 
-import { LeaseholderDetailsPage } from './leaseholder-details.page';
-import {AuthGuard} from "../auth.guard";
+import { LoginPage } from './login.page';
 
 const routes: Routes = [
   {
     path: '',
-    component: LeaseholderDetailsPage,
-    canActivate: [AuthGuard]
+    component: LoginPage
   }
 ];
 
@@ -16,4 +14,4 @@ const routes: Routes = [
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule],
 })
-export class LeaseholderDetailsPageRoutingModule {}
+export class LoginPageRoutingModule {}

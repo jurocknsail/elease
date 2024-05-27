@@ -1,0 +1,27 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Login</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-grid>
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Login</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <form (ngSubmit)="onSubmit()">
+              <ion-item>
+                <ion-input type="text" [(ngModel)]="username" name="username" required label="Username"></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-input type="password" [(ngModel)]="password" name="password" required label="Password"></ion-input>
+              </ion-item>
+              <ion-button expand="block" type="submit">Login</ion-button>
+            </form>
+            <ion-text color="danger" *ngIf="errorMessage">{{ errorMessage }}</ion-text>
+          </ion-card-content>
+        </ion-card>
+  </ion-grid>
+</ion-content>

@@ -5,6 +5,9 @@ import { OverlayEventDetail } from '@ionic/core/components';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Lease } from '../lease';
 import {ParseService} from "../parse-service.service";
+import * as Parse from 'parse';
+import {Router} from "@angular/router";
+
 @Component({
   selector: 'app-tab-list',
   templateUrl: 'tab-list.page.html',
@@ -21,7 +24,8 @@ export class TabListPage implements OnInit {
 
   constructor(
     public parseService: ParseService,
-    private formBuilder: FormBuilder
+    private formBuilder: FormBuilder,
+    private router: Router,
   ) { }
 
   async ngOnInit() {
@@ -37,6 +41,12 @@ export class TabListPage implements OnInit {
       email: ["", [Validators.required, Validators.email]],
     });
 
+  }
+
+  async logout() {
+    const user = await Parse.User.logOut();
+    await this.router.navigate(["/login"]);
+    console.log('Logged out', user);
   }
 
   export() {

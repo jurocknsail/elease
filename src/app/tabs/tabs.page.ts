@@ -10,6 +10,4 @@ export class TabsPage {
   constructor(
   ) {}
 
-  async ngOnInit() {
-  }
 }
