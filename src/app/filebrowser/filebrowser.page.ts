@@ -123,7 +123,8 @@ export class FilebrowserPage implements OnInit {
         message: "Une erreur est survenue, recommence !",
         duration: 3000,
         position: "middle",
-        color: 'danger'
+        color: 'danger',
+        icon: "warning"
       });
       toast.then((t) => {
         t.onDidDismiss().then ( () => {
@@ -157,7 +158,8 @@ export class FilebrowserPage implements OnInit {
               message: "Erreur lors de l'envoi pour " + recipientEmail,
               duration: 3000,
               position: "middle",
-              color: 'danger'
+              color: 'danger',
+              icon: "warning"
             });
             toast.then((t) => {
               t.onDidDismiss().then ( () => {
@@ -178,10 +180,11 @@ export class FilebrowserPage implements OnInit {
 
       // Show success message
       const toast = this.toastController.create({
-        message: 'Tous les emails ont été envoyés ! Tu les as aussi reçus en copie.',
+        message: 'Tous les emails ont été envoyés ! Tu les as aussi reçus en copie 😊',
         duration: 2000,
         position: "middle",
-        color: 'primary'
+        color: 'primary',
+        icon: "send"
       });
 
       toast.then((t) => {
