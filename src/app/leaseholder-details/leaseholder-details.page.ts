@@ -85,7 +85,7 @@ export class LeaseholderDetailsPage implements OnInit {
       indexing: ["", [Validators.required]],
       price: ["", [Validators.required]],
       charge: ["", []],
-      isPro: [true, [Validators.required]],
+      isPro: [false, []],
     });
 
     this.toogleEdit(false);

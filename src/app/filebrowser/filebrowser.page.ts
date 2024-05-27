@@ -1,9 +1,9 @@
-import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
-import {ActivatedRoute, Router} from '@angular/router';
-import {Directory, Filesystem} from '@capacitor/filesystem';
-import {AlertController, isPlatform, Platform} from '@ionic/angular';
-import {PreviewAnyFile} from '@awesome-cordova-plugins/preview-any-file/ngx';
-import {ParseService} from "../parse-service.service";
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Directory, Filesystem } from '@capacitor/filesystem';
+import { isPlatform, LoadingController, Platform, ToastController } from '@ionic/angular';
+import { PreviewAnyFile } from '@awesome-cordova-plugins/preview-any-file/ngx';
+import { ParseService } from "../parse-service.service";
 
 const APP_DIRECTORY = Directory.Documents;
 
@@ -27,11 +27,12 @@ export class FilebrowserPage implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private alertCtrl: AlertController,
     private router: Router,
     private previewAnyFile: PreviewAnyFile,
     public platform: Platform,
     public parseService: ParseService,
+    private loadingController: LoadingController,
+    private toastController: ToastController
   ) {
   }
 
@@ -111,21 +112,87 @@ export class FilebrowserPage implements OnInit {
       byteArrays.push(byteArray);
     }
 
-    return new Blob(byteArrays, {type: contentType});
+    return new Blob(byteArrays, { type: contentType });
   };
 
 
-  sendEmail() {
-    this.parseService.getLeaseholdersPDFs().forEach( (pdfDataList, recipientEmail) => {
-      this.parseService.sendEmail(recipientEmail, pdfDataList).subscribe({
-        next: (res) => {
-          console.log('Email(s) sent successfully from ' + recipientEmail);
-        },
-        error: (err) => {
-          console.error('Error sending email(s) from ' + recipientEmail, err.message);
-        }
+  async sendEmail() {
+
+    if(this.parseService.getLeaseholdersPDFs().size == 0) {
+      const toast = this.toastController.create({
+        message: "Une erreur est survenue, recommence !",
+        duration: 3000,
+        position: "middle",
+        color: 'danger'
       });
+      toast.then((t) => {
+        t.onDidDismiss().then ( () => {
+          this.router.navigate(['/']);
+        });
+        t.present();
+      })
+      return;
+    }
+
+    let promises: Promise<void>[] = []
+
+    // Show loading overlay
+    const loading = await this.loadingController.create({
+      message: 'Envoie des emails ...'
     });
+    await loading.present();
+
+    this.parseService.getLeaseholdersPDFs().forEach((pdfDataList, recipientEmail) => {
+      const myPromise: Promise<void> = new Promise((resolve) => {
+        this.parseService.sendEmail(recipientEmail, pdfDataList).subscribe({
+          next: (res) => {
+            console.log('Email(s) sent successfully from ' + recipientEmail);
+            resolve();
+          },
+          error: (err) => {
+            console.error('Error sending email(s) from ' + recipientEmail, err.message);
+
+            // Show success message
+            const toast = this.toastController.create({
+              message: "Erreur lors de l'envoi pour " + recipientEmail,
+              duration: 3000,
+              position: "middle",
+              color: 'danger'
+            });
+            toast.then((t) => {
+              t.onDidDismiss().then ( () => {
+                this.router.navigate(['/']);
+              });
+              t.present();
+            })
+
+          }
+        });
+      });
+      promises.push(myPromise);
+    });
+
+    Promise.all(promises).then(() => {
+      console.log("All emails sent.");
+      loading.dismiss();
+
+      // Show success message
+      const toast = this.toastController.create({
+        message: 'Tous les emails ont été envoyés !',
+        duration: 2000,
+        position: "middle",
+        color: 'primary'
+      });
+
+      toast.then((t) => {
+        t.onDidDismiss().then ( () => {
+          this.router.navigate(['/']);
+        });
+        t.present();
+      })
+
+    });
+
   }
 
 }

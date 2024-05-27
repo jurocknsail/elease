@@ -50,7 +50,11 @@ export class TabSendPage implements OnInit {
 			this.isBrowser = true;
 		}
 
-    this.leaseholders = this.parseService.getLeaseholders()
+    this.leaseholders = this.parseService.getLeaseholders();
+    if (this.leaseholders.length == 0) {
+      await this.parseService.fetchLeaseholders();
+      this.leaseholders = this.parseService.getLeaseholders()
+    }
 
     if (await this.checkFileExists({ path: USER_DATA_FOLDER, directory: APP_DIRECTORY })) {
 
@@ -120,7 +124,19 @@ export class TabSendPage implements OnInit {
     return (lease.charge != null && lease.charge != 0) ? noChargesPrice + lease.charge : noChargesPrice;
   }
 
-  generatePdf() {
+  async generatePdf() {
+
+    await Filesystem.rmdir({
+      directory: APP_DIRECTORY,
+      path: USER_DATA_FOLDER,
+      recursive: true
+    });
+    await Filesystem.mkdir({
+      directory: APP_DIRECTORY,
+      path: USER_DATA_FOLDER,
+      recursive: true
+    });
+    this.parseService.getLeaseholdersPDFs().clear();
 
     let promises: Promise<void>[] = []
 
@@ -256,7 +272,7 @@ export class TabSendPage implements OnInit {
                 currentLeaseNb = currentLeaseNb +1;
 
                 // Add pdf to map of leaseholder email/pdfInfo
-                let pdfInfo = new LeasePdfInfoClass (lease.name.replace(" ", "_").trim().toLowerCase() + "_" + this.periodMonth.replace("/", "_"), this.periodMonth, data);
+                let pdfInfo = new LeasePdfInfoClass (this.generatePdfName(leaseholder, lease, this.periodMonth), this.periodMonth, data);
                 this.parseService.addLeaseholderPDF(leaseholder.email, pdfInfo);
 
                 resolve();
@@ -275,8 +291,12 @@ export class TabSendPage implements OnInit {
 
   }
 
+  private generatePdfName(leaseholder: Leaseholder, lease: Lease, periodMonth: string): string {
+    return leaseholder.name.replace(" ", "_").trim().toLowerCase() + "-" + lease.name.replace(" ", "_").trim().toLowerCase() + "-" + periodMonth.replace("/", "_")+".pdf"
+  }
+
   async writePDF(data: string, leaseholder: Leaseholder, lease: Lease) {
-    let filePath = USER_DATA_FOLDER + "/" + formatDate(this.now, 'dd_MM_yyyy', "en-GB") + "_" + leaseholder.name + "_" + lease.name + ".pdf";
+    let filePath = USER_DATA_FOLDER + "/" + this.generatePdfName(leaseholder, lease, this.periodMonth);
     if (! await this.checkFileExists({ path: filePath, directory: Directory.Documents })) {
       await Filesystem.writeFile({
         path: filePath,
