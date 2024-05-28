@@ -1,0 +1,41 @@
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30%;
+}
+
+.logo {
+  width: 120px;
+  height: auto;
+  margin-bottom: 40px;
+}
+
+.login-card {
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+}
+
+.login-item {
+  margin-bottom: 20px;
+}
+
+ion-input {
+  --placeholder-color: #8e8e93;
+}
+
+.login-button {
+  --background: #007aff;
+  --background-focused: #005bbb;
+  --background-hover: #005bbb;
+  --border-radius: 8px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+ion-text {
+  margin-top: 20px;
+  text-align: center;
+}
