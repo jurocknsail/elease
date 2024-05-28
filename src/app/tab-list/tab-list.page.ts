@@ -7,6 +7,7 @@ import { Lease } from '../lease';
 import {ParseService} from "../parse-service.service";
 import * as Parse from 'parse';
 import {Router} from "@angular/router";
+import { MenuController } from '@ionic/angular';
 
 @Component({
   selector: 'app-tab-list',
@@ -26,6 +27,7 @@ export class TabListPage implements OnInit {
     public parseService: ParseService,
     private formBuilder: FormBuilder,
     private router: Router,
+    private menuController: MenuController
   ) { }
 
   async ngOnInit() {
@@ -44,13 +46,16 @@ export class TabListPage implements OnInit {
   }
 
   async logout() {
+    this.parseService.clearData();
     const user = await Parse.User.logOut();
+    await this.menuController.close();
     await this.router.navigate(["/login"]);
     console.log('Logged out', user);
   }
 
-  export() {
-    this.downloadFile(this.parseService.getLeaseholders())
+  async export() {
+    this.downloadFile(this.parseService.getLeaseholders());
+    await this.menuController.close();
   }
 
   private downloadFile(data: Leaseholder[]) {
@@ -58,8 +63,9 @@ export class TabListPage implements OnInit {
     window.open(URL.createObjectURL(blob), "_blank");
   }
 
-  import() {
+  async import() {
     console.log("Import")
+    await this.menuController.close();
   }
 
   cancel() {

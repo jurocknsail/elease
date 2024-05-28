@@ -39,6 +39,10 @@ export class ParseService {
     return this.leaseholders;
   }
 
+  public clearData() {
+    this.leaseholders = [];
+  }
+
   async createLeaseholder(leaseholder: Leaseholder): Promise<void> {
     const leaseholderObject = new Parse.Object('Leaseholder');
     leaseholderObject.set('name', leaseholder.name);
@@ -49,6 +53,13 @@ export class ParseService {
     leaseholderObject.set('leases', leases);
 
     try {
+
+      // Create an ACL object
+      const acl = new Parse.ACL(Parse.User.current());
+      acl.setPublicReadAccess(false);
+      acl.setPublicWriteAccess(false);
+      leaseholderObject.setACL(acl);
+
       // @ts-ignore
       const lh = (await leaseholderObject.save()).toJSON() as Leaseholder;
       this.getLeaseholders().push(lh);
@@ -105,6 +116,12 @@ export class ParseService {
         }
         leaseholderObject.set('leases', leases);
 
+        // Create an ACL object
+        const acl = new Parse.ACL(Parse.User.current());
+        acl.setPublicReadAccess(false);
+        acl.setPublicWriteAccess(false);
+        leaseholderObject.setACL(acl);
+
         await leaseholderObject.save();
 
         console.log("Updated leaseholder with id : " + leaseholder.objectId)
@@ -140,6 +157,12 @@ export class ParseService {
       leaseObject.set('charge', lease.charge);
       leaseObject.set('indexing', lease.indexing);
 
+      // Create an ACL object
+      const acl = new Parse.ACL(Parse.User.current());
+      acl.setPublicReadAccess(false);
+      acl.setPublicWriteAccess(false);
+      leaseObject.setACL(acl);
+
       let leaseObj = await leaseObject.save();
       // @ts-ignore
       lease = leaseObj.toJSON() as Lease;
@@ -151,6 +174,9 @@ export class ParseService {
       let leases: Parse.Object[] = leaseholderObject.get('leases');
       leases.push(leaseObj);
       leaseholderObject.set('leases', leases);
+
+      leaseholderObject.setACL(acl);
+
       await leaseholderObject.save();
 
       console.log("Added lease " + lease.name + "(" + lease.objectId + ") to leaseholder with id : " + leaseholderId);
@@ -228,6 +254,13 @@ export class ParseService {
         let leasesPointers = leaseholderObject.get("leases")
         let updatedLeasesPointers = leasesPointers.filter((lease: Parse.Object) => lease.id !== leaseId);
         leaseholderObject.set("leases", updatedLeasesPointers);
+
+        // Create an ACL object
+        const acl = new Parse.ACL(Parse.User.current());
+        acl.setPublicReadAccess(false);
+        acl.setPublicWriteAccess(false);
+        leaseholderObject.setACL(acl);
+
         await leaseholderObject.save();
         // The delete lease object
         this.deleteLease(_l.objectId)
@@ -241,7 +274,7 @@ export class ParseService {
 
     let attachments: any[] = [];
     let attachment: { [key: string]: any };
-    
+
       pdfDataList.forEach((pdfData) => {
         attachment = {
           ContentType: 'application/pdf',
@@ -260,10 +293,10 @@ export class ParseService {
         subject: "Facture de loyer pour le mois de " + pdfDataList[0].pdfDate,
         text:
           `Bonjour,
-  
+
   Merci de trouver ci-joint le(s) appel(s) de loyer(s) pour la prochaine période.
-  Bonne reception, 
-  
+  Bonne reception,
+
   Pierre MARGERIT`,
         attachments: attachments,
         sandbox: environment.sandbox
