@@ -288,16 +288,16 @@ export class ParseService {
 
       const CloudCode = Parse.Cloud;
       return from(CloudCode.run('sendEmail', {
-        senderEmail: environment.senderEmail,
+        senderEmail: Parse.User.current()?.getEmail(),
         recipientEmail: recipientEmail,
         subject: "Facture de loyer pour le mois de " + pdfDataList[0].pdfDate,
         text:
           `Bonjour,
 
-  Merci de trouver ci-joint le(s) appel(s) de loyer(s) pour la prochaine période.
-  Bonne reception,
+Merci de trouver ci-joint le(s) appel(s) de loyer(s) pour la prochaine période.
+Bonne reception,
 
-  Pierre MARGERIT`,
+Pierre MARGERIT`,
         attachments: attachments,
         sandbox: environment.sandbox
       }))

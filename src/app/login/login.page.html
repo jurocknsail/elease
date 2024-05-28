@@ -19,7 +19,7 @@
           <ion-item class="login-item">
             <ion-input type="password" [(ngModel)]="password" name="password" required label="Mot de passe" labelPlacement="floating"></ion-input>
           </ion-item>
-          <ion-button expand="block" type="submit" class="login-button">Se connecter</ion-button>
+          <ion-button color="warning" expand="block" type="submit" class="login-button">Se connecter</ion-button>
         </form>
         <ion-text color="danger" *ngIf="errorMessage">{{ errorMessage }}</ion-text>
       </ion-card-content>
