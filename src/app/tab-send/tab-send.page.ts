@@ -69,6 +69,12 @@ export class TabSendPage implements OnInit {
         path: USER_DATA_FOLDER,
         recursive: true
       });
+    } else {
+      await Filesystem.mkdir({
+      directory: APP_DIRECTORY,
+      path: USER_DATA_FOLDER,
+      recursive: true
+    });
     }
 
   }
