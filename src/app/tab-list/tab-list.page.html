@@ -12,7 +12,7 @@
         <ion-icon aria-hidden="true" name="cloud-download" slot="start" color="success"></ion-icon>
         <ion-label>Sauvegarde</ion-label>
       </ion-item>
-      <ion-item button detail="false" (click)="import()">
+      <ion-item button detail="false" (click)="triggerFileInput()">
         <ion-icon aria-hidden="true" name="cloud-upload" slot="start" color="success"></ion-icon>
         <ion-label>Importer</ion-label>
       </ion-item>
@@ -37,6 +37,8 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" id="main-content">
+
+  <input type="file" id="fileInput" (change)="handleFileInput($event)" style="display: none;" />
 
   <ion-card *ngFor="let leaseholder of leaseholders" [routerLink]="['/leaseholder-details', leaseholder.objectId]" color="light">
     <ion-card-header>

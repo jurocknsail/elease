@@ -59,13 +59,50 @@ export class TabListPage implements OnInit {
   }
 
   private downloadFile(data: Leaseholder[]) {
-    const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
-    window.open(URL.createObjectURL(blob), "_blank");
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    //window.open(URL.createObjectURL(blob), "_blank");
+    
+    const url = URL.createObjectURL(blob);
+
+    // Create a link element
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'elease-backup-'+ Parse.User.current()?.getUsername() + "-" + new Date().toLocaleString().replace(" ", "-").trim(); + '.json'; // File name
+    document.body.appendChild(a);
+    a.click();
+
+    // Clean up
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
-  async import() {
-    console.log("Import")
+
+  // Method to trigger the file input click
+  async triggerFileInput() {
     await this.menuController.close();
+    const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+    fileInput.click();
+  }
+
+  // Method to handle file input change event
+  handleFileInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          if( e.target != null) {
+            const json = JSON.parse(e.target.result as string);
+            console.log('Imported JSON:', json);
+            // Do something with the JSON data
+          }
+        } catch (error) {
+          console.error('Error parsing JSON:', error);
+        }
+      };
+      reader.readAsText(file);
+    }
   }
 
   cancel() {
