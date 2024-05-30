@@ -43,7 +43,7 @@ export class ParseService {
     this.leaseholders = [];
   }
 
-  async createLeaseholder(leaseholder: Leaseholder): Promise<void> {
+  async createLeaseholder(leaseholder: Leaseholder): Promise<Leaseholder> {
     const leaseholderObject = new Parse.Object('Leaseholder');
     leaseholderObject.set('name', leaseholder.name);
     leaseholderObject.set('description', leaseholder.description);
@@ -65,6 +65,8 @@ export class ParseService {
       this.getLeaseholders().push(lh);
 
       console.log("Leaseholder created : " + lh.objectId);
+      
+      return lh;
 
     } catch (error) {
       console.error('Error creating leaseholder: ', error);
