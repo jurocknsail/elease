@@ -1,13 +1,13 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { LeaseHolderClass, Leaseholder } from '../leaseholder';
-import { IonModal, LoadingController, ToastController } from '@ionic/angular';
-import { OverlayEventDetail } from '@ionic/core/components';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Lease } from '../lease';
-import { ParseService } from "../parse-service.service";
+import {Component, OnInit, ViewChild} from '@angular/core';
+import {LeaseHolderClass, Leaseholder} from '../leaseholder';
+import {IonModal, LoadingController, ToastController} from '@ionic/angular';
+import {OverlayEventDetail} from '@ionic/core/components';
+import {FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {Lease} from '../lease';
+import {ParseService} from "../parse-service.service";
 import * as Parse from 'parse';
-import { Router } from "@angular/router";
-import { MenuController } from '@ionic/angular';
+import {Router} from "@angular/router";
+import {MenuController} from '@ionic/angular';
 
 @Component({
   selector: 'app-tab-list',
@@ -30,7 +30,8 @@ export class TabListPage implements OnInit {
     private menuController: MenuController,
     private loadingController: LoadingController,
     private toastController: ToastController
-  ) { }
+  ) {
+  }
 
   async ngOnInit() {
 
@@ -61,7 +62,7 @@ export class TabListPage implements OnInit {
   }
 
   private downloadFile(data: Leaseholder[]) {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
     //window.open(URL.createObjectURL(blob), "_blank");
 
     const url = URL.createObjectURL(blob);
@@ -69,7 +70,8 @@ export class TabListPage implements OnInit {
     // Create a link element
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'elease-backup-' + Parse.User.current()?.getUsername() + "-" + new Date().toLocaleString().replace(" ", "-").trim(); + '.json'; // File name
+    a.download = 'elease-backup-' + Parse.User.current()?.getUsername() + "-" + new Date().toLocaleString().replace(" ", "-").trim();
+    +'.json'; // File name
     document.body.appendChild(a);
     a.click();
 
@@ -111,52 +113,53 @@ export class TabListPage implements OnInit {
             // Save the JSON data in DB
 
             let leaseholderPromises: Promise<void>[] = []
-            let leasePromises: Promise<void>[] = []
-
             leaseHolders.forEach((lh) => {
-              const myLeaseHolderPromise: Promise<void> = new Promise(async (resolveLeaseholder) => {
-                this.parseService.createLeaseholder(lh).then((createdLH) => {
-                  lh.leases.forEach((l) => {
-                    const myLeasePromise: Promise<void> = new Promise(async (resolveLease) => {
-                      if (createdLH.objectId) {
-                        await this.parseService.addLeaseToHolder(createdLH.objectId, l);
-                        resolveLease();
-                      }
-                    });
-                    leasePromises.push(myLeasePromise);
+              const myLeaseholderPromise: Promise<void> = new Promise(async (resolveLeaseHolder) => {
+                let createdLeases: Lease[] = []
+                let leasePromises: Promise<void>[] = []
+                lh.leases.forEach((l) => {
+                  const myLeasePromise: Promise<void> = new Promise(async (resolveLease) => {
+                    let createdLease = await this.parseService.createLease(l);
+                    createdLeases.push(createdLease);
+                    resolveLease();
                   });
-                  resolveLeaseholder();
+                  leasePromises.push(myLeasePromise);
+                });
+
+                Promise.all(leasePromises).then(() => {
+                  lh.leases = createdLeases;
+                  console.log("creating leaseholder with leases " + lh.leases)
+                  this.parseService.createLeaseholder(lh).then((createdLH) => {
+                    resolveLeaseHolder();
+                    console.log("created leaseholder")
+                  });
                 });
               });
-              leaseholderPromises.push(myLeaseHolderPromise);
+              leaseholderPromises.push(myLeaseholderPromise);
             });
-
             Promise.all(leaseholderPromises).then(() => {
               console.log("Import Leaseholders terminated.");
-              Promise.all(leasePromises).then(() => {
-                console.log("Import Leases terminated.");
-                loading.dismiss();
 
-                // Show success message
-                const toast = this.toastController.create({
-                  message: 'Données importées avec succès ! 😊',
-                  duration: 2000,
-                  position: "middle",
-                  color: 'success',
-                  icon: "send"
-                });
+              loading.dismiss();
 
-                toast.then((t) => {
-                  t.onDidDismiss().then(() => {
-                    //Force refresh
-                    window.location.reload();
-                  });
-                  t.present();
-                })
-
+              // Show success message
+              const toast = this.toastController.create({
+                message: 'Données importées avec succès ! 😊',
+                duration: 2000,
+                position: "middle",
+                color: 'success',
+                icon: "send"
               });
-            });
 
+              toast.then((t) => {
+                t.onDidDismiss().then(() => {
+                  //Force refresh
+                  //window.location.reload();
+                });
+                t.present();
+              })
+
+            });
           }
         } catch (error) {
           console.error('Error parsing JSON:', error);

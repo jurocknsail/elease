@@ -49,8 +49,13 @@ export class ParseService {
     leaseholderObject.set('description', leaseholder.description);
     leaseholderObject.set('email', leaseholder.email);
     leaseholderObject.set('phone', leaseholder.phone);
-    const leases: Parse.Object[] = [];
-    leaseholderObject.set('leases', leases);
+
+    if(leaseholder.leases){
+      leaseholderObject.set('leases', leaseholder.leases);
+    } else {
+      const leases: Parse.Object[] = [];
+      leaseholderObject.set('leases', leases);
+    }
 
     try {
 
@@ -65,7 +70,7 @@ export class ParseService {
       this.getLeaseholders().push(lh);
 
       console.log("Leaseholder created : " + lh.objectId);
-      
+
       return lh;
 
     } catch (error) {
@@ -135,6 +140,48 @@ export class ParseService {
     }
   }
 
+  async createLease (lease: Lease): Promise<Lease> {
+
+    try {
+
+      console.log("Creating lease " + lease.name);
+
+      const leaseObject = new Parse.Object('Lease');
+
+      leaseObject.set('isSelected', lease.isSelected);
+      leaseObject.set('isPro', lease.isPro);
+      leaseObject.set('name', lease.name);
+      leaseObject.set('lot', lease.lot);
+      leaseObject.set('streetNumber', lease.streetNumber);
+      leaseObject.set('streetName', lease.streetName);
+      leaseObject.set('optionalAddressInfo', lease.optionalAddressInfo);
+      leaseObject.set('postalCode', lease.postalCode);
+      leaseObject.set('city', lease.city);
+      leaseObject.set('description', lease.description);
+      leaseObject.set('lastSendDate', lease.lastSendDate);
+      leaseObject.set('renewalDate', lease.renewalDate);
+      leaseObject.set('price', lease.price);
+      leaseObject.set('charge', lease.charge);
+      leaseObject.set('indexing', lease.indexing);
+
+      // Create an ACL object
+      const acl = new Parse.ACL(Parse.User.current());
+      acl.setPublicReadAccess(false);
+      acl.setPublicWriteAccess(false);
+      leaseObject.setACL(acl);
+
+      let leaseObj = await leaseObject.save();
+      // @ts-ignore
+      lease = leaseObj.toJSON() as Lease;
+      console.log("Created lease " + lease.objectId)
+      return lease;
+
+    } catch (error) {
+      console.error('Error creating lease: ', error);
+      throw error;
+    }
+
+  }
   async addLeaseToHolder(leaseholderId: string, lease: Lease): Promise<string> {
 
     try {
