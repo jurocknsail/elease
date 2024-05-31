@@ -59,7 +59,6 @@ export class LeaseholderDetailsPage implements OnInit {
     // Manage leaseholder form
     this.leaseholderForm = this.formBuilder.group({
       name: [this.leaseholder.name, [Validators.required]],
-      description: [this.leaseholder.description, [Validators.required]],
       phone: [this.leaseholder.phone, [Validators.required]],
       email: [this.leaseholder.email, [Validators.required, Validators.email]],
     });
@@ -183,7 +182,6 @@ export class LeaseholderDetailsPage implements OnInit {
     this.editButton.disabled = false;
 
     this.leaseholder.name = this.leaseholderForm.controls["name"].value,
-      this.leaseholder.description = this.leaseholderForm.controls["description"].value,
       this.leaseholder.email = this.leaseholderForm.controls["email"].value,
       this.leaseholder.phone = this.leaseholderForm.controls["phone"].value,
 
@@ -216,7 +214,6 @@ export class LeaseholderDetailsPage implements OnInit {
       this.newLeaseForm.controls["optionalAddressInfo"].value,
       this.newLeaseForm.controls["postalCode"].value,
       this.newLeaseForm.controls["city"].value,
-      "",
       0,
       new Date(this.newLeaseForm.controls["renewalDate"].value).getTime(),
       this.newLeaseForm.controls["indexing"].value,

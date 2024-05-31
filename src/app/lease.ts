@@ -10,7 +10,6 @@ export interface Lease {
   optionalAddressInfo: string;
   postalCode: number;
   city: string;
-  description: string;
   lastSendDate: number;
   renewalDate: number;
   indexing: number;
@@ -27,7 +26,6 @@ export class LeaseClass implements Lease {
   public optionalAddressInfo: string;
   public postalCode: number;
   public city: string;
-  public description: string;
   public lastSendDate: number;
   public renewalDate: number;
   public indexing: number;
@@ -45,7 +43,6 @@ export class LeaseClass implements Lease {
     optionalAddressInfo: string,
     postalCode: number,
     city: string,
-    description: string,
     lastSendDate: number,
     renewalDate: number,
     indexing: number,
@@ -62,7 +59,6 @@ export class LeaseClass implements Lease {
     this.optionalAddressInfo = optionalAddressInfo;
     this.postalCode = postalCode;
     this.city = city;
-    this.description = description;
     this.lastSendDate = lastSendDate;
     this.renewalDate = renewalDate;
     this.indexing = indexing;
@@ -80,7 +76,6 @@ export class LeaseClass implements Lease {
       + this.optionalAddressInfo + ' '
       + this.postalCode + ' '
       + this.city + ' '
-      + this.description + ' '
       + this.lastSendDate + ' ' +
       this.renewalDate + ' ' +
       this.indexing + ' ' +

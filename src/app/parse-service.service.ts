@@ -50,7 +50,6 @@ export class ParseService {
     async createLeaseholderAndLeases(leaseholder: Leaseholder, leases: Parse.Object []): Promise<Leaseholder> {
     const leaseholderObject = new Parse.Object('Leaseholder');
     leaseholderObject.set('name', leaseholder.name);
-    leaseholderObject.set('description', leaseholder.description);
     leaseholderObject.set('email', leaseholder.email);
     leaseholderObject.set('phone', leaseholder.phone);
     leaseholderObject.set('leases', leases);
@@ -88,7 +87,6 @@ export class ParseService {
 
         const leaseholderObject = await query.get(leaseholder.objectId);
         leaseholderObject.set('name', leaseholder.name);
-        leaseholderObject.set('description', leaseholder.description);
         leaseholderObject.set('email', leaseholder.email);
         leaseholderObject.set('phone', leaseholder.phone);
 
@@ -110,7 +108,6 @@ export class ParseService {
             leaseObject.set('optionalAddressInfo', lease.optionalAddressInfo);
             leaseObject.set('postalCode', lease.postalCode);
             leaseObject.set('city', lease.city);
-            leaseObject.set('description', lease.description);
             leaseObject.set('lastSendDate', lease.lastSendDate);
             leaseObject.set('renewalDate', lease.renewalDate);
             leaseObject.set('price', lease.price);
@@ -152,7 +149,6 @@ export class ParseService {
       leaseObject.set('optionalAddressInfo', lease.optionalAddressInfo);
       leaseObject.set('postalCode', lease.postalCode);
       leaseObject.set('city', lease.city);
-      leaseObject.set('description', lease.description);
       leaseObject.set('lastSendDate', lease.lastSendDate);
       leaseObject.set('renewalDate', lease.renewalDate);
       leaseObject.set('price', lease.price);

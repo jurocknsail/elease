@@ -44,7 +44,6 @@ export class TabListPage implements OnInit {
     // Manage new lease form
     this.newLeaseHolderForm = this.formBuilder.group({
       name: ["", [Validators.required]],
-      description: ["", [Validators.required]],
       phone: ["", [Validators.required]],
       email: ["", [Validators.required, Validators.email]],
     });
@@ -182,7 +181,6 @@ export class TabListPage implements OnInit {
       const emptyLeases: Lease[] = [];
       const leaseHolder = new LeaseHolderClass(
         this.newLeaseHolderForm.controls["name"].value,
-        this.newLeaseHolderForm.controls["description"].value,
         this.newLeaseHolderForm.controls["email"].value,
         this.newLeaseHolderForm.controls["phone"].value,
         emptyLeases,

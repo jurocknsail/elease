@@ -43,7 +43,7 @@
   <ion-card *ngFor="let leaseholder of leaseholders" [routerLink]="['/leaseholder-details', leaseholder.objectId]" color="light">
     <ion-card-header>
       <ion-card-title>{{ leaseholder.name }}</ion-card-title>
-      <ion-card-subtitle>{{ leaseholder.description }}</ion-card-subtitle>
+      <ion-card-subtitle>Dernier envoi : N/A </ion-card-subtitle>
     </ion-card-header>
 
     <ion-card-content>
@@ -83,9 +83,6 @@
           <ion-list>
             <ion-item>
               <ion-input labelPlacement="floating" label="Nom" formControlName="name" type="string"></ion-input>
-            </ion-item>
-            <ion-item>
-              <ion-input labelPlacement="floating" label="Description" formControlName="description" type="string"></ion-input>
             </ion-item>
             <ion-item>
               <ion-input labelPlacement="floating" label="Téléphone" formControlName="phone" type="string"></ion-input>
