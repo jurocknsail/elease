@@ -9,6 +9,8 @@ import * as Parse from 'parse';
 import {Router} from "@angular/router";
 import {MenuController} from '@ionic/angular';
 
+export type Position = "top" | "bottom" | "middle" | undefined;
+
 @Component({
   selector: 'app-tab-list',
   templateUrl: 'tab-list.page.html',
@@ -22,6 +24,7 @@ export class TabListPage implements OnInit {
   name: string | undefined;
   newLeaseHolderForm!: FormGroup;
   leaseholders: Leaseholder[] = [];
+  
 
   constructor(
     public parseService: ParseService,
@@ -117,16 +120,26 @@ export class TabListPage implements OnInit {
                 let leasePromises: Promise<void>[] = []
                 lh.leases.forEach((l) => {
                   const myLeasePromise: Promise<void> = new Promise(async (resolveLease) => {
-                    let createdLease = await this.parseService.createLease(l);
-                    createdLeases.push(createdLease);
-                    resolveLease();
-                  });
+                    this.parseService.createLease(l).then((createdLease) => {
+                      createdLeases.push(createdLease);
+                      resolveLease();
+                    }).catch( (err) => {
+                      console.log("ERROR creating lease : " + err)
+                      loading.dismiss();
+                      this.createToast("Une erreur est survenue, recommence !", 3000, 'middle', 'danger', "warning");
+                    });
+                    
+                  })
                   leasePromises.push(myLeasePromise);
                 });
 
                 Promise.all(leasePromises).then(() => {
                   this.parseService.createLeaseholderAndLeases(lh, createdLeases).then((createdLH) => {
                     resolveLeaseHolder();
+                  }).catch ((err) => {
+                    console.log("ERROR creating lease : " + err)
+                    loading.dismiss();
+                    this.createToast("Une erreur est survenue, recommence !", 3000, 'middle', 'danger', "warning");
                   });
                 });
               });
@@ -134,60 +147,22 @@ export class TabListPage implements OnInit {
             });
             Promise.all(leaseholderPromises).then(() => {
               console.log("Import Leaseholders terminated.");
-
               loading.dismiss();
-
               // Show success message
-              const toast = this.toastController.create({
-                message: 'Données importées avec succès ! 😊',
-                duration: 2000,
-                position: "top",
-                color: 'success',
-                icon: "send"
-              });
-
-              toast.then((t) => {
-                t.onDidDismiss().then(() => {
-                  //Force refresh
-                  //window.location.reload();
-                });
-                t.present();
-              })
-
+              this.createToast("Données importées avec succès ! 😊", 2000, 'top', 'success', "send");
             });
           }
         } catch (error) {
           console.error('Error parsing JSON:', error);
           loading.dismiss();
-
-          const toast = this.toastController.create({
-            message: "Une erreur est survenue, recommence !",
-            duration: 3000,
-            position: "middle",
-            color: 'danger',
-            icon: "warning"
-          });
-          toast.then((t) => {
-            t.present();
-          })
+          this.createToast("Une erreur est survenue, recommence !", 3000, 'middle', 'danger', "warning");
         }
       };
       reader.readAsText(file);
     } else {
       console.log("File picker unexpected error");
-
       loading.dismiss();
-
-      const toast = this.toastController.create({
-        message: "Une erreur est survenue, recommence !",
-        duration: 3000,
-        position: "middle",
-        color: 'danger',
-        icon: "warning"
-      });
-      toast.then((t) => {
-        t.present();
-      })
+      this.createToast("Une erreur est survenue, recommence !", 3000, 'middle', 'danger', "warning");
     }
 
     // Reset the input field to allow the same file to be selected again
@@ -222,5 +197,18 @@ export class TabListPage implements OnInit {
     if (ev.detail.role === 'confirm') {
       this.message = `Hello, ${ev.detail.data}!`;
     }
+  }
+
+  createToast(message: string, duration: number, position: Position, color: string, icon: string ) {
+    const toast = this.toastController.create({
+      message: message,
+      duration: duration,
+      position: position,
+      color: color,
+      icon: icon
+    });
+    toast.then((t) => {
+      t.present();
+    })
   }
 }
