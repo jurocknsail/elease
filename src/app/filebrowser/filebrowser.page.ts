@@ -228,8 +228,15 @@ export class FilebrowserPage implements OnInit {
       console.log('All leaseId sent :', allLeaseIds);
 
       allLeaseIds.forEach( lid => {
-        this.parseService.updateLeaseSendDate(lid)
-        //TODO manage res and update leases list
+        this.parseService.updateLeaseSendDate(lid).then ((lastSendDate) => {
+          this.parseService.getLeaseholders().forEach(leaseholder => {
+            leaseholder.leases.forEach(lease => {
+              if(lease.objectId == lid){
+                lease.lastSendDate = lastSendDate;
+              }
+            });
+          });
+        });
       });
 
       loading.dismiss();

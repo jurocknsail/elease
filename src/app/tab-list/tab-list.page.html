@@ -49,7 +49,7 @@
       <ion-list color="light">
         <ion-item *ngFor="let lease of leaseholder.leases">
           <ion-label class="left-label">{{ lease.name }}</ion-label>
-          <ion-label class="right-label">Dernier envoi : N/A</ion-label>
+          <ion-label class="right-label">Dernier envoi : {{ lease.lastSendDate !== 0 ? (lease.lastSendDate | date: "dd/MM/yyyy") : 'Jamais' }}</ion-label>
         </ion-item>
       </ion-list>
     </ion-card-content>
