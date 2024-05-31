@@ -1,7 +1,7 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Directory, Filesystem } from '@capacitor/filesystem';
-import {AlertController, isPlatform, LoadingController, Platform, ToastController} from '@ionic/angular';
+import { AlertController, isPlatform, LoadingController, Platform, ToastController } from '@ionic/angular';
 import { PreviewAnyFile } from '@awesome-cordova-plugins/preview-any-file/ngx';
 import { ParseService } from "../parse-service.service";
 
@@ -154,7 +154,7 @@ export class FilebrowserPage implements OnInit {
 
     this.toggleGreyOut();
 
-    if(this.parseService.getLeaseholdersPDFs().size == 0) {
+    if (this.parseService.getLeaseholdersPDFs().size == 0) {
       const toast = this.toastController.create({
         message: "Une erreur est survenue, recommence !",
         duration: 3000,
@@ -163,7 +163,7 @@ export class FilebrowserPage implements OnInit {
         icon: "warning"
       });
       toast.then((t) => {
-        t.onDidDismiss().then ( () => {
+        t.onDidDismiss().then(() => {
           this.router.navigate(['/']);
         });
         t.present();
@@ -172,7 +172,7 @@ export class FilebrowserPage implements OnInit {
       return;
     }
 
-    let promises: Promise<void>[] = []
+    let promises: Promise<string[]>[] = []
 
     // Show loading overlay
     const loading = await this.loadingController.create({
@@ -181,11 +181,18 @@ export class FilebrowserPage implements OnInit {
     await loading.present();
 
     this.parseService.getLeaseholdersPDFs().forEach((pdfDataList, recipientEmail) => {
-      const myPromise: Promise<void> = new Promise((resolve) => {
+      const myPromise: Promise<string[]> = new Promise((resolve) => {
         this.parseService.sendEmail(recipientEmail, pdfDataList).subscribe({
           next: (res) => {
             console.log('Email(s) sent successfully from ' + recipientEmail);
-            resolve();
+
+            let leaseObjectIds: string[] = []
+            pdfDataList.forEach((data) => {
+              if (data.leaseObjectId) {
+                leaseObjectIds.push(data.leaseObjectId);
+              }
+            });
+            resolve(leaseObjectIds);
           },
           error: (err) => {
             console.error('Error sending email(s) from ' + recipientEmail, err.message);
@@ -199,7 +206,7 @@ export class FilebrowserPage implements OnInit {
               icon: "warning"
             });
             toast.then((t) => {
-              t.onDidDismiss().then ( () => {
+              t.onDidDismiss().then(() => {
                 this.router.navigate(['/']);
                 this.toggleGreyOut();
               });
@@ -212,8 +219,14 @@ export class FilebrowserPage implements OnInit {
       promises.push(myPromise);
     });
 
-    Promise.all(promises).then(() => {
+    Promise.all(promises).then((results) => {
       console.log("All emails sent.");
+
+      // Update sendDate of each sent leases
+      // Flatten the array of arrays into a single array of strings
+      const allStrings: string[] = results.reduce((acc, val) => acc.concat(val), []);
+      console.log('All leaseId sent :', allStrings);
+
       loading.dismiss();
 
       // Show success message
@@ -226,13 +239,15 @@ export class FilebrowserPage implements OnInit {
       });
 
       toast.then((t) => {
-        t.onDidDismiss().then ( () => {
+        t.onDidDismiss().then(() => {
           this.router.navigate(['/']);
           this.toggleGreyOut();
         });
         t.present();
       })
 
+    }).catch((err) => {
+      console.log("ERROR Updating leases lastSendDate");
     });
 
   }

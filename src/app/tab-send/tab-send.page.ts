@@ -278,7 +278,7 @@ export class TabSendPage implements OnInit {
                 currentLeaseNb = currentLeaseNb +1;
 
                 // Add pdf to map of leaseholder email/pdfInfo
-                let pdfInfo = new LeasePdfInfoClass (this.generatePdfName(leaseholder, lease, this.periodMonth), this.periodMonth, data);
+                let pdfInfo = new LeasePdfInfoClass (this.generatePdfName(leaseholder, lease, this.periodMonth), this.periodMonth, data, lease.objectId);
                 this.parseService.addLeaseholderPDF(leaseholder.email, pdfInfo);
 
                 resolve();

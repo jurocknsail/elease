@@ -161,9 +161,9 @@ export class ParseService {
       acl.setPublicWriteAccess(false);
       leaseObject.setACL(acl);
 
-      let leaseObj = await leaseObject.save();
+      let leaseObj : Parse.Object = await leaseObject.save();
 
-      console.log("Created lease " + lease.objectId)
+      console.log("Created lease " + leaseObj.id)
       return leaseObj;
 
     } catch (error) {
@@ -178,7 +178,8 @@ export class ParseService {
 
       console.log("Adding lease " + lease.name + " to leaseholder with id : " + leaseholderId);
 
-      let leaseObj = await this.createLease(lease);
+      let leaseObj : Parse.Object = await this.createLease(lease);
+      lease.objectId = leaseObj.id;
 
       const LeaseholderObject = Parse.Object.extend('Leaseholder');
       const query = new Parse.Query(LeaseholderObject);
