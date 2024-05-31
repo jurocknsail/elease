@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import Parse from 'parse';
 import { Lease } from "./lease";
-import { LeaseHolderClass, Leaseholder } from "./leaseholder";
+import { Leaseholder } from "./leaseholder";
 import { Observable, from } from 'rxjs';
 import { environment } from "../environments/environment";
 import { LeasePdfInfo } from './leasepdfinfo';

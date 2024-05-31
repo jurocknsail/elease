@@ -23,6 +23,7 @@ export class FilebrowserPage implements OnInit {
   currentFolder = '';
   copyFile = null;
   @ViewChild('filepicker') uploader!: ElementRef;
+  isGreyedOut: boolean = false;
 
 
   constructor(
@@ -41,6 +42,10 @@ export class FilebrowserPage implements OnInit {
     this.currentFolder = this.route.snapshot.paramMap.get('folder') || '';
     this.loadDocuments();
     console.log("Platform type : " + this.platform.platforms())
+  }
+
+  toggleGreyOut() {
+    this.isGreyedOut = !this.isGreyedOut;
   }
 
   async loadDocuments() {
@@ -147,6 +152,8 @@ export class FilebrowserPage implements OnInit {
 
   async sendEmail() {
 
+    this.toggleGreyOut();
+
     if(this.parseService.getLeaseholdersPDFs().size == 0) {
       const toast = this.toastController.create({
         message: "Une erreur est survenue, recommence !",
@@ -160,6 +167,7 @@ export class FilebrowserPage implements OnInit {
           this.router.navigate(['/']);
         });
         t.present();
+        this.toggleGreyOut();
       })
       return;
     }
@@ -193,6 +201,7 @@ export class FilebrowserPage implements OnInit {
             toast.then((t) => {
               t.onDidDismiss().then ( () => {
                 this.router.navigate(['/']);
+                this.toggleGreyOut();
               });
               t.present();
             })
@@ -219,6 +228,7 @@ export class FilebrowserPage implements OnInit {
       toast.then((t) => {
         t.onDidDismiss().then ( () => {
           this.router.navigate(['/']);
+          this.toggleGreyOut();
         });
         t.present();
       })
