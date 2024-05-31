@@ -194,7 +194,7 @@ export class LeaseholderDetailsPage implements OnInit {
         this.leaseholder.leases[index].optionalAddressInfo = control.get("optionalAddressInfo")?.value;
         this.leaseholder.leases[index].postalCode = control.get("postalCode")?.value;
         this.leaseholder.leases[index].city = control.get("city")?.value;
-        this.leaseholder.leases[index].renewalDate = control.get("renewalDate")?.value;
+        this.leaseholder.leases[index].renewalDate = new Date(control.get("renewalDate")?.value).getTime();;
         this.leaseholder.leases[index].indexing = control.get("indexing")?.value;
         this.leaseholder.leases[index].price = control.get("price")?.value;
         this.leaseholder.leases[index].charge = control.get("charge")?.value;
@@ -218,8 +218,7 @@ export class LeaseholderDetailsPage implements OnInit {
       this.newLeaseForm.controls["city"].value,
       "",
       0,
-      //this.newLeaseForm.controls["renewalDate"].value,
-      0,
+      new Date(this.newLeaseForm.controls["renewalDate"].value).getTime(),
       this.newLeaseForm.controls["indexing"].value,
       this.newLeaseForm.controls["price"].value,
       this.newLeaseForm.controls["charge"].value,
@@ -266,6 +265,9 @@ export class LeaseholderDetailsPage implements OnInit {
 
   // Helper to add lease forms
   private addLeaseForm(lease: Lease): void {
+
+    const leaseDate = new  Date(lease.renewalDate).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+
     const leaseForm = this.formBuilder.group({
       streetNumber: [lease.streetNumber, [Validators.required]],
       streetName: [lease.streetName, [Validators.required]],
@@ -274,7 +276,7 @@ export class LeaseholderDetailsPage implements OnInit {
       city: [lease.city, [Validators.required]],
       lot: [lease.lot, [Validators.required]],
       lastSendDate: [lease.lastSendDate],
-      renewalDate: [lease.renewalDate, [Validators.required]],
+      renewalDate: [leaseDate, [Validators.required]],
       indexing: [lease.indexing, [Validators.required]],
       price: [lease.price, [Validators.required]],
       charge: [lease.charge, []],
