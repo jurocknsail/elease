@@ -1,7 +1,7 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Directory, Filesystem } from '@capacitor/filesystem';
-import { isPlatform, LoadingController, Platform, ToastController } from '@ionic/angular';
+import {AlertController, isPlatform, LoadingController, Platform, ToastController} from '@ionic/angular';
 import { PreviewAnyFile } from '@awesome-cordova-plugins/preview-any-file/ngx';
 import { ParseService } from "../parse-service.service";
 
@@ -32,7 +32,8 @@ export class FilebrowserPage implements OnInit {
     public platform: Platform,
     public parseService: ParseService,
     private loadingController: LoadingController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private alertController: AlertController
   ) {
   }
 
@@ -115,6 +116,34 @@ export class FilebrowserPage implements OnInit {
     return new Blob(byteArrays, { type: contentType });
   };
 
+
+  async presentSendAlert() {
+    const alert = await this.alertController.create({
+      header: "Confirmation d'envoi",
+      message: "Es-tu sûr(e) de vouloir envoyer les appels de loyers ?",
+      buttons: this.alertSendButtons,
+    });
+    await alert.present();
+  }
+
+  public alertSendButtons = [
+    {
+      text: 'Annuler',
+      role: 'cancel'
+    },
+    {
+      text: 'OK',
+      role: 'confirm',
+      handler: () => {
+        console.log('Alert confirmed');
+        this.sendEmail();
+      },
+    },
+  ];
+
+  sendEmailButton() {
+    this.presentSendAlert();
+  }
 
   async sendEmail() {
 
