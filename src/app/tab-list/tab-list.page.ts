@@ -84,7 +84,7 @@ export class TabListPage implements OnInit {
   // Method to trigger the file input click
   async triggerFileInput() {
     await this.menuController.close();
-    const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+    let fileInput = document.getElementById('fileInput') as HTMLInputElement;
     fileInput.click();
   }
 
@@ -109,13 +109,11 @@ export class TabListPage implements OnInit {
             leaseHolders = JSON.parse(e.target.result as string);
             console.log('Imported JSON:', leaseHolders);
 
-
             // Save the JSON data in DB
-
             let leaseholderPromises: Promise<void>[] = []
             leaseHolders.forEach((lh) => {
               const myLeaseholderPromise: Promise<void> = new Promise(async (resolveLeaseHolder) => {
-                let createdLeases: Lease[] = []
+                let createdLeases: Parse.Object[] = []
                 let leasePromises: Promise<void>[] = []
                 lh.leases.forEach((l) => {
                   const myLeasePromise: Promise<void> = new Promise(async (resolveLease) => {
@@ -127,11 +125,8 @@ export class TabListPage implements OnInit {
                 });
 
                 Promise.all(leasePromises).then(() => {
-                  lh.leases = createdLeases;
-                  console.log("creating leaseholder with leases " + lh.leases)
-                  this.parseService.createLeaseholder(lh).then((createdLH) => {
+                  this.parseService.createLeaseholderAndLeases(lh, createdLeases).then((createdLH) => {
                     resolveLeaseHolder();
-                    console.log("created leaseholder")
                   });
                 });
               });
@@ -146,7 +141,7 @@ export class TabListPage implements OnInit {
               const toast = this.toastController.create({
                 message: 'Données importées avec succès ! 😊',
                 duration: 2000,
-                position: "middle",
+                position: "top",
                 color: 'success',
                 icon: "send"
               });
@@ -178,7 +173,25 @@ export class TabListPage implements OnInit {
         }
       };
       reader.readAsText(file);
+    } else {
+      console.log("File picker unexpected error");
+
+      loading.dismiss();
+
+      const toast = this.toastController.create({
+        message: "Une erreur est survenue, recommence !",
+        duration: 3000,
+        position: "middle",
+        color: 'danger',
+        icon: "warning"
+      });
+      toast.then((t) => {
+        t.present();
+      })
     }
+
+    // Reset the input field to allow the same file to be selected again
+    input.value = '';
   }
 
   cancel() {

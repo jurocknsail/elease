@@ -7,6 +7,8 @@
   </ion-header>
   <ion-content class="ion-padding">
 
+    <input type="file" id="fileInput" (change)="handleFileInput($event)" style="display: none;" />
+
     <ion-list>
       <ion-item button detail="false" (click)="export()">
         <ion-icon aria-hidden="true" name="cloud-download" slot="start" color="success"></ion-icon>
@@ -37,8 +39,6 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" id="main-content">
-
-  <input type="file" id="fileInput" (change)="handleFileInput($event)" style="display: none;" />
 
   <ion-card *ngFor="let leaseholder of leaseholders" [routerLink]="['/leaseholder-details', leaseholder.objectId]" color="light">
     <ion-card-header>

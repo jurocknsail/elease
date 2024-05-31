@@ -44,18 +44,16 @@ export class ParseService {
   }
 
   async createLeaseholder(leaseholder: Leaseholder): Promise<Leaseholder> {
+    let emptyLeases : Parse.Object[] = [] ;
+    return this.createLeaseholderAndLeases(leaseholder, emptyLeases);
+  }
+    async createLeaseholderAndLeases(leaseholder: Leaseholder, leases: Parse.Object []): Promise<Leaseholder> {
     const leaseholderObject = new Parse.Object('Leaseholder');
     leaseholderObject.set('name', leaseholder.name);
     leaseholderObject.set('description', leaseholder.description);
     leaseholderObject.set('email', leaseholder.email);
     leaseholderObject.set('phone', leaseholder.phone);
-
-    if(leaseholder.leases){
-      leaseholderObject.set('leases', leaseholder.leases);
-    } else {
-      const leases: Parse.Object[] = [];
-      leaseholderObject.set('leases', leases);
-    }
+    leaseholderObject.set('leases', leases);
 
     try {
 
@@ -140,12 +138,9 @@ export class ParseService {
     }
   }
 
-  async createLease (lease: Lease): Promise<Lease> {
+  async createLease (lease: Lease): Promise<Parse.Object> {
 
     try {
-
-      console.log("Creating lease " + lease.name);
-
       const leaseObject = new Parse.Object('Lease');
 
       leaseObject.set('isSelected', lease.isSelected);
@@ -171,10 +166,9 @@ export class ParseService {
       leaseObject.setACL(acl);
 
       let leaseObj = await leaseObject.save();
-      // @ts-ignore
-      lease = leaseObj.toJSON() as Lease;
+
       console.log("Created lease " + lease.objectId)
-      return lease;
+      return leaseObj;
 
     } catch (error) {
       console.error('Error creating lease: ', error);
@@ -188,33 +182,7 @@ export class ParseService {
 
       console.log("Adding lease " + lease.name + " to leaseholder with id : " + leaseholderId);
 
-      const leaseObject = new Parse.Object('Lease');
-
-      leaseObject.set('isSelected', lease.isSelected);
-      leaseObject.set('isPro', lease.isPro);
-      leaseObject.set('name', lease.name);
-      leaseObject.set('lot', lease.lot);
-      leaseObject.set('streetNumber', lease.streetNumber);
-      leaseObject.set('streetName', lease.streetName);
-      leaseObject.set('optionalAddressInfo', lease.optionalAddressInfo);
-      leaseObject.set('postalCode', lease.postalCode);
-      leaseObject.set('city', lease.city);
-      leaseObject.set('description', lease.description);
-      leaseObject.set('lastSendDate', lease.lastSendDate);
-      leaseObject.set('renewalDate', lease.renewalDate);
-      leaseObject.set('price', lease.price);
-      leaseObject.set('charge', lease.charge);
-      leaseObject.set('indexing', lease.indexing);
-
-      // Create an ACL object
-      const acl = new Parse.ACL(Parse.User.current());
-      acl.setPublicReadAccess(false);
-      acl.setPublicWriteAccess(false);
-      leaseObject.setACL(acl);
-
-      let leaseObj = await leaseObject.save();
-      // @ts-ignore
-      lease = leaseObj.toJSON() as Lease;
+      let leaseObj = await this.createLease(lease);
 
       const LeaseholderObject = Parse.Object.extend('Leaseholder');
       const query = new Parse.Query(LeaseholderObject);
@@ -224,6 +192,10 @@ export class ParseService {
       leases.push(leaseObj);
       leaseholderObject.set('leases', leases);
 
+      // Create an ACL object
+      const acl = new Parse.ACL(Parse.User.current());
+      acl.setPublicReadAccess(false);
+      acl.setPublicWriteAccess(false);
       leaseholderObject.setACL(acl);
 
       await leaseholderObject.save();
