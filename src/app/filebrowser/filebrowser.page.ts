@@ -224,8 +224,13 @@ export class FilebrowserPage implements OnInit {
 
       // Update sendDate of each sent leases
       // Flatten the array of arrays into a single array of strings
-      const allStrings: string[] = results.reduce((acc, val) => acc.concat(val), []);
-      console.log('All leaseId sent :', allStrings);
+      const allLeaseIds: string[] = results.reduce((acc, val) => acc.concat(val), []);
+      console.log('All leaseId sent :', allLeaseIds);
+
+      allLeaseIds.forEach( lid => {
+        this.parseService.updateLeaseSendDate(lid)
+        //TODO manage res and update leases list
+      });
 
       loading.dismiss();
 

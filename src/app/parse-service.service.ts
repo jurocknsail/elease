@@ -172,6 +172,31 @@ export class ParseService {
     }
 
   }
+
+
+  async updateLeaseSendDate(leaseId: string): Promise<number> {
+    const LeaseObject = Parse.Object.extend('Lease');
+    const query = new Parse.Query(LeaseObject);
+
+    try {
+
+        console.log("Updating lease send date with id : " + leaseId)
+
+        const lastSendDate = new Date().getTime();
+        const leaseObject = await query.get(leaseId);
+        leaseObject.set('lastSendDate', lastSendDate);
+        let updatedLease : Parse.Object = await leaseObject.save();
+
+        console.log("Updated lease with id : " + leaseId + " last send date to " + lastSendDate)
+    
+        return lastSendDate;
+
+    } catch (error) {
+      console.error('Error updating lease last send date : ', error);
+      throw error;
+    }
+  }
+
   async addLeaseToHolder(leaseholderId: string, lease: Lease): Promise<string> {
 
     try {
