@@ -8,6 +8,7 @@ import {ParseService} from "../parse-service.service";
 import * as Parse from 'parse';
 import {Router} from "@angular/router";
 import {MenuController} from '@ionic/angular';
+import {InseeService} from "../insee.service";
 
 export type Position = "top" | "bottom" | "middle" | undefined;
 
@@ -24,10 +25,13 @@ export class TabListPage implements OnInit {
   name: string | undefined;
   newLeaseHolderForm!: FormGroup;
   leaseholders: Leaseholder[] = [];
-  
+
+  irlData: any;
+  ilcData: any;
 
   constructor(
     public parseService: ParseService,
+    public inseeService: InseeService,
     private formBuilder: FormBuilder,
     private router: Router,
     private menuController: MenuController,
@@ -47,6 +51,10 @@ export class TabListPage implements OnInit {
       phone: ["", [Validators.required]],
       email: ["", [Validators.required, Validators.email]],
     });
+
+    this.getIRLData();
+    this.getILCData();
+
 
   }
 
@@ -127,7 +135,7 @@ export class TabListPage implements OnInit {
                       loading.dismiss();
                       this.createToast("Une erreur est survenue, recommence !", 3000, 'middle', 'danger', "warning");
                     });
-                    
+
                   })
                   leasePromises.push(myLeasePromise);
                 });
@@ -209,4 +217,31 @@ export class TabListPage implements OnInit {
       t.present();
     })
   }
+
+  getIRLData(): void {
+    this.inseeService.getIRL().subscribe(
+      data => {
+        this.irlData = data;
+        // Traiter les données de l'IRL ici
+        console.log("INSEE Last IRL : " + JSON.stringify(this.irlData));
+      },
+      error => {
+        console.error('Erreur lors de la récupération des données de l\'IRL', error);
+      }
+    );
+  }
+
+  getILCData(): void {
+    this.inseeService.getILC().subscribe(
+      data => {
+        this.ilcData = data;
+        // Traiter les données de l'ILC ici
+        console.log("INSEE Last ILC : " + JSON.stringify(this.ilcData));
+      },
+      error => {
+        console.error('Erreur lors de la récupération des données de l\'ILC', error);
+      }
+    );
+  }
+
 }
