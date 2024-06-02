@@ -1,11 +1,11 @@
 // parse.service.ts
 import { Injectable } from '@angular/core';
 import Parse from 'parse';
-import { Lease } from "./lease";
-import { Leaseholder } from "./leaseholder";
+import { Lease } from "../model/lease";
+import { Leaseholder } from "../model/leaseholder";
 import { Observable, from } from 'rxjs';
-import { environment } from "../environments/environment";
-import { LeasePdfInfo } from './leasepdfinfo';
+import { environment } from "../../environments/environment";
+import { LeasePdfInfo } from '../model/leasepdfinfo';
 
 @Injectable({
   providedIn: 'root'
@@ -188,7 +188,7 @@ export class ParseService {
         let updatedLease : Parse.Object = await leaseObject.save();
 
         console.log("Updated lease with id : " + leaseId + " last send date to " + lastSendDate)
-    
+
         return lastSendDate;
 
     } catch (error) {

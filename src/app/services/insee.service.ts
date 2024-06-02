@@ -1,9 +1,9 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import {environment} from "../environments/environment";
-import { map } from 'rxjs/operators';
-import { xml2js } from 'xml-js';
+import {Injectable} from '@angular/core';
+import {HttpClient, HttpHeaders} from '@angular/common/http';
+import {Observable} from 'rxjs';
+import {environment} from "../../environments/environment";
+import {map} from 'rxjs/operators';
+import {XMLParser} from 'fast-xml-parser';
 
 @Injectable({
   providedIn: 'root'
@@ -16,8 +16,8 @@ export class InseeService {
 
 
   // Méthode pour récupérer les dernières valeurs de l'IRL
-  getIRL(): Observable<any> {
-    const url = `${this.apiUrl}/IRL`;
+  getIRL(): Observable<InseeDataRootObject> {
+    const url = `${this.apiUrl}/SERIES_BDM/001515333`;
     const headers = this.getHeaders();
     return this.http.get(url, { headers, responseType: 'text' }).pipe(
       map(response => this.parseXml(response))
@@ -25,8 +25,8 @@ export class InseeService {
   }
 
   // Méthode pour récupérer les dernières valeurs de l'ILC
-  getILC(): Observable<any> {
-    const url = `${this.apiUrl}/SERIES_BDM/001532540`;
+  getILC(): Observable<InseeDataRootObject> {
+    const url = `${this.apiUrl}/SERIES_BDM/001617112`;
     const headers = this.getHeaders();
     return this.http.get(url, { headers, responseType: 'text' }).pipe(
       map(response => this.parseXml(response))
@@ -38,6 +38,14 @@ export class InseeService {
   }
 
   private parseXml(xml: string): any {
-    return xml2js(xml, { compact: true });
+
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: ''
+    });
+    let jsonObject = parser.parse(xml);
+    //console.log(JSON.stringify(jsonObject));
+    return jsonObject;
+
   }
 }

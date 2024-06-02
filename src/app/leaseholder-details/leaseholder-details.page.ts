@@ -1,11 +1,11 @@
 import {Component, OnInit, ViewChild} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
 import {FormArray, FormBuilder, FormGroup, Validators} from '@angular/forms';
-import {Lease, LeaseClass} from '../lease';
+import {Lease, LeaseClass} from '../model/lease';
 import {AlertController, IonAccordionGroup, IonButton, IonModal} from '@ionic/angular';
 import {Location} from '@angular/common';
-import {ParseService} from '../parse-service.service';
-import {Leaseholder} from '../leaseholder';
+import {ParseService} from '../services/parse-service.service';
+import {Leaseholder} from '../model/leaseholder';
 
 @Component({
   selector: 'app-leaseholder-details',

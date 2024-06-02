@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { AlertController, isPlatform, LoadingController, Platform, ToastController } from '@ionic/angular';
 import { PreviewAnyFile } from '@awesome-cordova-plugins/preview-any-file/ngx';
-import { ParseService } from "../parse-service.service";
+import { ParseService } from "../services/parse-service.service";
 
 const APP_DIRECTORY = Directory.Documents;
 

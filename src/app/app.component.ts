@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
-import {ParseService} from "./parse-service.service";
-import {LeaseHolderClass} from "./leaseholder";
-import {Lease, LeaseClass} from "./lease";
+import {ParseService} from "./services/parse-service.service";
+import {LeaseHolderClass} from "./model/leaseholder";
+import {Lease, LeaseClass} from "./model/lease";
 import Parse from "parse";
 
 @Component({

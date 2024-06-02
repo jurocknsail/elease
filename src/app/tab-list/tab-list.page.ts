@@ -1,14 +1,15 @@
 import {Component, OnInit, ViewChild} from '@angular/core';
-import {LeaseHolderClass, Leaseholder} from '../leaseholder';
+import {LeaseHolderClass, Leaseholder} from '../model/leaseholder';
 import {IonModal, LoadingController, ToastController} from '@ionic/angular';
 import {OverlayEventDetail} from '@ionic/core/components';
 import {FormBuilder, FormGroup, Validators} from '@angular/forms';
-import {Lease} from '../lease';
-import {ParseService} from "../parse-service.service";
+import {Lease} from '../model/lease';
+import {ParseService} from "../services/parse-service.service";
 import * as Parse from 'parse';
 import {Router} from "@angular/router";
 import {MenuController} from '@ionic/angular';
-import {InseeService} from "../insee.service";
+import {InseeService} from "../services/insee.service";
+import "../model/insee-data"
 
 export type Position = "top" | "bottom" | "middle" | undefined;
 
@@ -25,9 +26,9 @@ export class TabListPage implements OnInit {
   name: string | undefined;
   newLeaseHolderForm!: FormGroup;
   leaseholders: Leaseholder[] = [];
+  lastIRL!: string;
+  lastILC!: string;
 
-  irlData: any;
-  ilcData: any;
 
   constructor(
     public parseService: ParseService,
@@ -45,16 +46,19 @@ export class TabListPage implements OnInit {
     await this.parseService.fetchLeaseholders();
     this.leaseholders = this.parseService.getLeaseholders()
 
+    try {
+      this.lastIRL = await this.getIRLData();
+      this.lastILC = await this.getILCData();
+    } catch (error) {
+      console.error('Error loading INSEE data', error);
+    }
+
     // Manage new lease form
     this.newLeaseHolderForm = this.formBuilder.group({
       name: ["", [Validators.required]],
       phone: ["", [Validators.required]],
       email: ["", [Validators.required, Validators.email]],
     });
-
-    this.getIRLData();
-    this.getILCData();
-
 
   }
 
@@ -218,30 +222,41 @@ export class TabListPage implements OnInit {
     })
   }
 
-  getIRLData(): void {
-    this.inseeService.getIRL().subscribe(
-      data => {
-        this.irlData = data;
-        // Traiter les données de l'IRL ici
-        console.log("INSEE Last IRL : " + JSON.stringify(this.irlData));
-      },
-      error => {
-        console.error('Erreur lors de la récupération des données de l\'IRL', error);
-      }
-    );
+  getIRLData(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.inseeService.getIRL().subscribe({
+        next: data => {
+          // Traiter les données de l'IRL ici
+          let lastIRL = data["message:StructureSpecificData"]["message:DataSet"].Series.Obs[0].OBS_VALUE;
+          let serieName = data["message:StructureSpecificData"]["message:DataSet"].Series.TITLE_FR;
+          console.log("Last INSEE IRL : " + lastIRL + " from INSEE Serie '" + serieName + "'");
+          resolve(lastIRL);
+        },
+        error: error => {
+          console.error('Erreur lors de la récupération des données de l\'IRL', error);
+          reject(error);
+        }
+      });
+    });
   }
 
-  getILCData(): void {
-    this.inseeService.getILC().subscribe(
-      data => {
-        this.ilcData = data;
-        // Traiter les données de l'ILC ici
-        console.log("INSEE Last ILC : " + JSON.stringify(this.ilcData));
-      },
-      error => {
-        console.error('Erreur lors de la récupération des données de l\'ILC', error);
-      }
-    );
+  getILCData(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.inseeService.getILC().subscribe({
+        next: data => {
+          // Traiter les données de l'ILC ici
+          let lastILC = data["message:StructureSpecificData"]["message:DataSet"].Series.Obs[0].OBS_VALUE;
+          let serieName = data["message:StructureSpecificData"]["message:DataSet"].Series.TITLE_FR;
+          console.log("Last INSEE ILC : " + lastILC + " from INSEE Serie '" + serieName + "'");
+          resolve(lastILC);
+        },
+        error: error => {
+          console.error('Erreur lors de la récupération des données de l\'ILC', error);
+          reject(error);
+        }
+      });
+    });
   }
+
 
 }

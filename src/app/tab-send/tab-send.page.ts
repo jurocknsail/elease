@@ -1,15 +1,15 @@
 import {Component, OnInit} from '@angular/core';
-import {Leaseholder} from '../leaseholder';
+import {Leaseholder} from '../model/leaseholder';
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import {TDocumentDefinitions} from 'pdfmake/interfaces';
 import {DatetimeCustomEvent, isPlatform, Platform} from '@ionic/angular';
 import {formatDate} from '@angular/common';
 import {Directory, Filesystem, StatOptions} from '@capacitor/filesystem';
-import {Lease} from '../lease';
+import {Lease} from '../model/lease';
 import {Router} from '@angular/router';
-import { ParseService } from '../parse-service.service';
-import { LeasePdfInfoClass } from '../leasepdfinfo';
+import { ParseService } from '../services/parse-service.service';
+import { LeasePdfInfoClass } from '../model/leasepdfinfo';
 
 (<any>pdfMake).vfs = pdfFonts.pdfMake.vfs;
 
