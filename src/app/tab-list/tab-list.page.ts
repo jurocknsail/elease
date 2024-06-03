@@ -83,7 +83,7 @@ export class TabListPage implements OnInit {
     // Create a link element
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'elease-backup-' + Parse.User.current()?.getUsername() + "-" + new Date().toLocaleString().replace(" ", "-").trim() +'.json'; // File name
+    a.download = 'elease-backup-' + Parse.User.current()?.getUsername() + "-" + new Date().toISOString().split('T')[0].trim() +'.json'; // File name
     document.body.appendChild(a);
     a.click();
 
