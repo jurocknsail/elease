@@ -10,6 +10,7 @@ import {Router} from "@angular/router";
 import {MenuController} from '@ionic/angular';
 import {InseeService} from "../services/insee.service";
 import "../model/insee-data"
+import { phoneNumberValidator } from '../validators/phone-number.validator';
 
 export type Position = "top" | "bottom" | "middle" | undefined;
 
@@ -55,8 +56,8 @@ export class TabListPage implements OnInit {
 
     // Manage new lease form
     this.newLeaseHolderForm = this.formBuilder.group({
-      name: ["", [Validators.required]],
-      phone: ["", [Validators.required]],
+      name: ["", [Validators.required, Validators.maxLength(30)]],
+      phone: ["", [Validators.required, phoneNumberValidator()]],
       email: ["", [Validators.required, Validators.email]],
     });
 
@@ -131,7 +132,7 @@ export class TabListPage implements OnInit {
                 let leasePromises: Promise<void>[] = []
                 lh.leases.forEach((l) => {
                   const myLeasePromise: Promise<void> = new Promise(async (resolveLease) => {
-                    this.parseService.createLease(l).then((createdLease) => {
+                    this.parseService.createLease(l, this.lastILC, this.lastIRL).then((createdLease) => {
                       createdLeases.push(createdLease);
                       resolveLease();
                     }).catch( (err) => {

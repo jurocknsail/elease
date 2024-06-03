@@ -47,6 +47,10 @@
           <div class="ion-padding" slot="content">
             <form [formGroupName]=i>
               <ion-list>
+                <ion-item *ngIf="isEditing">
+                  <ion-input labelPlacement="floating" label="Nom" formControlName="name"
+                    type="string"></ion-input>
+                </ion-item>
                 <ion-item>
                   <ion-input labelPlacement="floating" label="N° de rue" formControlName="streetNumber"
                     type="number"></ion-input>
@@ -71,15 +75,11 @@
                   <ion-input labelPlacement="floating" label="Lot" formControlName="lot" type="number"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input labelPlacement="floating" label="Dernier Envoi" formControlName="lastSendDate"
-                    type="date"></ion-input>
-                </ion-item>
-                <ion-item>
                   <ion-input labelPlacement="floating" label="Date anniversaire" formControlName="renewalDate"
                     type="date"></ion-input>
                 </ion-item>
                 <ion-item>
-                  <ion-input labelPlacement="floating" label="Indexation" formControlName="indexing"
+                  <ion-input labelPlacement="floating" [label]='leaseholder["leases"][i].isPro ? "Indexation (ILC)" : "Indexation (IRL)"' formControlName="indexing"
                     type="number"></ion-input>
                 </ion-item>
                 <ion-item>

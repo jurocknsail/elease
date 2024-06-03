@@ -184,6 +184,7 @@ export class LeaseholderDetailsPage implements OnInit {
       this.leaseholder.phone = this.leaseholderForm.controls["phone"].value,
 
       this.leases.controls.forEach((control, index) => {
+        this.leaseholder.leases[index].name = control.get("name")?.value;
         this.leaseholder.leases[index].lot = control.get("lot")?.value;
         this.leaseholder.leases[index].streetNumber = control.get("streetNumber")?.value;
         this.leaseholder.leases[index].streetName = control.get("streetName")?.value;
@@ -281,21 +282,14 @@ export class LeaseholderDetailsPage implements OnInit {
 
     const leaseAnniversaryDate = new  Date(lease.renewalDate).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
 
-    let leaseLastSendDate;
-    if(lease.lastSendDate != 0){
-      leaseLastSendDate = new  Date(lease.lastSendDate).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
-    } else {
-      leaseLastSendDate = 'YYYY-MM-DD';
-    }
-
     const leaseForm = this.formBuilder.group({
+      name: [lease.name, [Validators.required]],
       streetNumber: [lease.streetNumber, [Validators.required]],
       streetName: [lease.streetName, [Validators.required]],
       optionalAddressInfo: [lease.optionalAddressInfo, []],
       postalCode: [lease.postalCode, [Validators.required]],
       city: [lease.city, [Validators.required]],
       lot: [lease.lot, [Validators.required]],
-      lastSendDate: [leaseLastSendDate],
       renewalDate: [leaseAnniversaryDate, [Validators.required]],
       indexing: [lease.indexing, [Validators.required]],
       price: [lease.price, [Validators.required]],

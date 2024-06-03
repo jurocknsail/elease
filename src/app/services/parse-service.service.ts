@@ -135,7 +135,7 @@ export class ParseService {
     }
   }
 
-  async createLease (lease: Lease): Promise<Parse.Object> {
+  async createLease (lease: Lease, lastILCValue: number, lastIRLValue: number): Promise<Parse.Object> {
 
     try {
       const leaseObject = new Parse.Object('Lease');
@@ -149,11 +149,22 @@ export class ParseService {
       leaseObject.set('optionalAddressInfo', lease.optionalAddressInfo);
       leaseObject.set('postalCode', lease.postalCode);
       leaseObject.set('city', lease.city);
-      leaseObject.set('lastSendDate', lease.lastSendDate);
+      leaseObject.set('lastSendDate', 0);
       leaseObject.set('renewalDate', lease.renewalDate);
       leaseObject.set('price', lease.price);
       leaseObject.set('charge', lease.charge);
-      leaseObject.set('indexing', lease.indexing);
+
+      if(lease.indexing <= 10) { // Then it was a fake index from previous version, so get a real one
+        let index;
+        if(lease.isPro) {
+          index = lastIRLValue;
+        } else {
+          index = lastIRLValue
+        }
+        leaseObject.set('indexing', index);
+      } else {
+        leaseObject.set('indexing', lease.indexing);
+      }
 
       // Create an ACL object
       const acl = new Parse.ACL(Parse.User.current());
@@ -203,7 +214,7 @@ export class ParseService {
 
       console.log("Adding lease " + lease.name + " to leaseholder with id : " + leaseholderId);
 
-      let leaseObj : Parse.Object = await this.createLease(lease);
+      let leaseObj : Parse.Object = await this.createLease(lease, 0, 0);
       lease.objectId = leaseObj.id;
 
       const LeaseholderObject = Parse.Object.extend('Leaseholder');
