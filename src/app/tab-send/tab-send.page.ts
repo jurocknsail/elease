@@ -298,7 +298,7 @@ export class TabSendPage implements OnInit {
   }
 
   private generatePdfName(leaseholder: Leaseholder, lease: Lease, periodMonth: string): string {
-    return leaseholder.name.replace(" ", "_").trim().toLowerCase() + "-" + lease.name.replace(" ", "_").trim().toLowerCase() + "-" + periodMonth.replace("/", "_")+".pdf"
+    return leaseholder.name.trim().replace(" ", "_").toLowerCase() + "-" + lease.name.trim().replace(" ", "_").toLowerCase() + "-" + periodMonth.trim().replace("/", "_")+".pdf"
   }
 
   async writePDF(data: string, leaseholder: Leaseholder, lease: Lease) {

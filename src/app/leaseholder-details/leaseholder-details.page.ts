@@ -263,7 +263,8 @@ export class LeaseholderDetailsPage implements OnInit {
   // Helper to add lease forms
   private addLeaseForm(lease: Lease): void {
 
-    const leaseDate = new  Date(lease.renewalDate).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+    const leaseAnniversaryDate = new  Date(lease.renewalDate).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+    const leaseLastSendDate = new  Date(lease.lastSendDate).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
 
     const leaseForm = this.formBuilder.group({
       streetNumber: [lease.streetNumber, [Validators.required]],
@@ -272,8 +273,8 @@ export class LeaseholderDetailsPage implements OnInit {
       postalCode: [lease.postalCode, [Validators.required]],
       city: [lease.city, [Validators.required]],
       lot: [lease.lot, [Validators.required]],
-      lastSendDate: [lease.lastSendDate],
-      renewalDate: [leaseDate, [Validators.required]],
+      lastSendDate: [leaseLastSendDate],
+      renewalDate: [leaseAnniversaryDate, [Validators.required]],
       indexing: [lease.indexing, [Validators.required]],
       price: [lease.price, [Validators.required]],
       charge: [lease.charge, []],
