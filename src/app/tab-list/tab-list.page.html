@@ -81,9 +81,15 @@
 
         <form (keydown.enter)="$event.preventDefault()" id="newLeaseHolderForm" [formGroup]="newLeaseHolderForm" (ngSubmit)="onSubmit()">
           <ion-list>
-              <ion-input labelPlacement="floating" label="Nom" formControlName="name" type="text" errorText="Nom invalide !"></ion-input>            
-              <ion-input labelPlacement="floating" label="Téléphone" formControlName="phone" type="tel" errorText="Numéro invalide !" type="string"></ion-input>
+            <ion-item lines="none">
+              <ion-input labelPlacement="floating" label="Nom" formControlName="name" type="text" errorText="Nom invalide !"></ion-input>
+            </ion-item>
+            <ion-item lines="none">
+              <ion-input labelPlacement="floating" label="Téléphone" formControlName="phone" type="tel" errorText="Numéro invalide !"></ion-input>
+            </ion-item>
+            <ion-item lines="none">
               <ion-input labelPlacement="floating" label="Email" formControlName="email" type="email" errorText="Email invalide !"></ion-input>
+            </ion-item>
           </ion-list>
 
         </form>

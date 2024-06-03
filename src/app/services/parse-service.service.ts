@@ -157,7 +157,7 @@ export class ParseService {
       if(lease.indexing <= 10) { // Then it was a fake index from previous version, so get a real one
         let index;
         if(lease.isPro) {
-          index = lastIRLValue;
+          index = lastILATValue;
         } else {
           index = lastIRLValue
         }

@@ -7,6 +7,7 @@ import {Location} from '@angular/common';
 import {ParseService} from '../services/parse-service.service';
 import {Leaseholder} from '../model/leaseholder';
 import { InseeService } from '../services/insee.service';
+import {phoneNumberValidator} from "../validators/phone-number.validator";
 
 @Component({
   selector: 'app-leaseholder-details',
@@ -59,7 +60,7 @@ export class LeaseholderDetailsPage implements OnInit {
     // Manage leaseholder form
     this.leaseholderForm = this.formBuilder.group({
       name: [this.leaseholder.name, [Validators.required]],
-      phone: [this.leaseholder.phone, [Validators.required]],
+      phone: [this.leaseholder.phone, [Validators.required, phoneNumberValidator()]],
       email: [this.leaseholder.email, [Validators.required, Validators.email]],
     });
 
