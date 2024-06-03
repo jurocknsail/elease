@@ -26,8 +26,8 @@ export class TabListPage implements OnInit {
   name: string | undefined;
   newLeaseHolderForm!: FormGroup;
   leaseholders: Leaseholder[] = [];
-  lastIRL!: string;
-  lastILC!: string;
+  lastIRL!: number;
+  lastILC!: number;
 
 
   constructor(
@@ -47,8 +47,8 @@ export class TabListPage implements OnInit {
     this.leaseholders = this.parseService.getLeaseholders()
 
     try {
-      this.lastIRL = await this.getIRLData();
-      this.lastILC = await this.getILCData();
+      this.lastIRL = await this.inseeService.getIRLData();
+      this.lastILC = await this.inseeService.getILCData();
     } catch (error) {
       console.error('Error loading INSEE data', error);
     }
@@ -221,42 +221,5 @@ export class TabListPage implements OnInit {
       t.present();
     })
   }
-
-  getIRLData(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      this.inseeService.getIRL().subscribe({
-        next: data => {
-          // Traiter les données de l'IRL ici
-          let lastIRL = data["message:StructureSpecificData"]["message:DataSet"].Series.Obs[0].OBS_VALUE;
-          let serieName = data["message:StructureSpecificData"]["message:DataSet"].Series.TITLE_FR;
-          console.log("Last INSEE IRL : " + lastIRL + " from INSEE Serie '" + serieName + "'");
-          resolve(lastIRL);
-        },
-        error: error => {
-          console.error('Erreur lors de la récupération des données de l\'IRL', error);
-          reject(error);
-        }
-      });
-    });
-  }
-
-  getILCData(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      this.inseeService.getILC().subscribe({
-        next: data => {
-          // Traiter les données de l'ILC ici
-          let lastILC = data["message:StructureSpecificData"]["message:DataSet"].Series.Obs[0].OBS_VALUE;
-          let serieName = data["message:StructureSpecificData"]["message:DataSet"].Series.TITLE_FR;
-          console.log("Last INSEE ILC : " + lastILC + " from INSEE Serie '" + serieName + "'");
-          resolve(lastILC);
-        },
-        error: error => {
-          console.error('Erreur lors de la récupération des données de l\'ILC', error);
-          reject(error);
-        }
-      });
-    });
-  }
-
 
 }

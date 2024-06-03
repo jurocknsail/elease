@@ -12,6 +12,9 @@ export class InseeService {
   private apiUrl = 'https://api.insee.fr/series/BDM/V1/data';
   private apiKey = environment.inseeApiKey;
 
+  public lastIRLValue : number = 0;
+  public lastILCValue : number = 0;
+
   constructor(private http: HttpClient) { }
 
 
@@ -47,5 +50,43 @@ export class InseeService {
     //console.log(JSON.stringify(jsonObject));
     return jsonObject;
 
+  }
+
+  getIRLData(): Promise<number> {
+    return new Promise((resolve, reject) => {
+      this.getIRL().subscribe({
+        next: data => {
+          // Traiter les données de l'IRL ici
+          let lastIRL = data["message:StructureSpecificData"]["message:DataSet"].Series.Obs[0].OBS_VALUE;
+          let serieName = data["message:StructureSpecificData"]["message:DataSet"].Series.TITLE_FR;
+          this.lastIRLValue = Number(lastIRL);
+          console.log("Last INSEE IRL : " + this.lastIRLValue + " from INSEE Serie '" + serieName + "'");
+          resolve(this.lastIRLValue);
+        },
+        error: error => {
+          console.error('Erreur lors de la récupération des données de l\'IRL', error);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  getILCData(): Promise<number> {
+    return new Promise((resolve, reject) => {
+      this.getILC().subscribe({
+        next: data => {
+          // Traiter les données de l'ILC ici
+          let lastILC = data["message:StructureSpecificData"]["message:DataSet"].Series.Obs[0].OBS_VALUE;
+          let serieName = data["message:StructureSpecificData"]["message:DataSet"].Series.TITLE_FR;
+          this.lastILCValue = Number(lastILC);
+          console.log("Last INSEE ILC : " + this.lastILCValue + " from INSEE Serie '" + serieName + "'");
+          resolve(this.lastILCValue);
+        },
+        error: error => {
+          console.error('Erreur lors de la récupération des données de l\'ILC', error);
+          reject(error);
+        }
+      });
+    });
   }
 }

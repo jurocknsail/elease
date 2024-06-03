@@ -6,6 +6,7 @@ import {AlertController, IonAccordionGroup, IonButton, IonModal} from '@ionic/an
 import {Location} from '@angular/common';
 import {ParseService} from '../services/parse-service.service';
 import {Leaseholder} from '../model/leaseholder';
+import { InseeService } from '../services/insee.service';
 
 @Component({
   selector: 'app-leaseholder-details',
@@ -35,14 +36,13 @@ export class LeaseholderDetailsPage implements OnInit {
     private route: ActivatedRoute,
     private formBuilder: FormBuilder,
     private parseService: ParseService,
+    private inseeService: InseeService,
     private location: Location,
     private alertController: AlertController,
   ) {
   }
 
   async ngOnInit() {
-
-    console.log(this.route.snapshot.paramMap)
 
     // First get the leaseholder id from the current route.
     const routeParams = this.route.snapshot.paramMap;
@@ -80,8 +80,6 @@ export class LeaseholderDetailsPage implements OnInit {
       optionalAddressInfo: ["", []],
       postalCode: ["", [Validators.required]],
       city: ["", [Validators.required]],
-      renewalDate: ["", [Validators.required]],
-      indexing: ["", [Validators.required]],
       price: ["", [Validators.required]],
       charge: ["", []],
       isPro: [false, []],
@@ -205,6 +203,24 @@ export class LeaseholderDetailsPage implements OnInit {
   // On ADD form Submit actions
   async onAdd() {
 
+    const isPro : boolean = this.newLeaseForm.controls["isPro"].value;
+    let indexing : number = 0;
+    if(isPro){
+      if(this.inseeService.lastILCValue != 0 ) {
+        indexing = this.inseeService.lastILCValue;
+      } else {
+        indexing = await this.inseeService.getILCData();
+      }
+      console.log("Lease is set as Pro, using ILC Index : " + indexing);
+    } else {
+      if(this.inseeService.lastIRLValue != 0 ) {
+        indexing = this.inseeService.lastIRLValue;
+      } else {
+        indexing = await this.inseeService.getIRLData();
+      }      
+      console.log("Lease is NOT set as Pro, using IRL Index : " + indexing);
+    } 
+
     // Add lease to model
     let addedLease = new LeaseClass(
       this.newLeaseForm.controls["name"].value,
@@ -215,8 +231,8 @@ export class LeaseholderDetailsPage implements OnInit {
       this.newLeaseForm.controls["postalCode"].value,
       this.newLeaseForm.controls["city"].value,
       0,
-      new Date(this.newLeaseForm.controls["renewalDate"].value).getTime(),
-      this.newLeaseForm.controls["indexing"].value,
+      new Date().getTime(),
+      indexing,
       this.newLeaseForm.controls["price"].value,
       this.newLeaseForm.controls["charge"].value,
       this.newLeaseForm.controls["isPro"].value,
@@ -264,7 +280,13 @@ export class LeaseholderDetailsPage implements OnInit {
   private addLeaseForm(lease: Lease): void {
 
     const leaseAnniversaryDate = new  Date(lease.renewalDate).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
-    const leaseLastSendDate = new  Date(lease.lastSendDate).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+
+    let leaseLastSendDate;
+    if(lease.lastSendDate != 0){
+      leaseLastSendDate = new  Date(lease.lastSendDate).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+    } else {
+      leaseLastSendDate = 'YYYY-MM-DD';
+    }
 
     const leaseForm = this.formBuilder.group({
       streetNumber: [lease.streetNumber, [Validators.required]],
