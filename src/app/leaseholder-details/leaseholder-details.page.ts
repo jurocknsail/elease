@@ -207,20 +207,20 @@ export class LeaseholderDetailsPage implements OnInit {
     const isPro : boolean = this.newLeaseForm.controls["isPro"].value;
     let indexing : number = 0;
     if(isPro){
-      if(this.inseeService.lastILCValue != 0 ) {
-        indexing = this.inseeService.lastILCValue;
+      if(this.inseeService.lastILATValue != 0 ) {
+        indexing = this.inseeService.lastILATValue;
       } else {
-        indexing = await this.inseeService.getILCData();
+        indexing = await this.inseeService.getILATData();
       }
-      console.log("Lease is set as Pro, using ILC Index : " + indexing);
+      console.log("Lease is set as Pro, using ILAT Index : " + indexing);
     } else {
       if(this.inseeService.lastIRLValue != 0 ) {
         indexing = this.inseeService.lastIRLValue;
       } else {
         indexing = await this.inseeService.getIRLData();
-      }      
+      }
       console.log("Lease is NOT set as Pro, using IRL Index : " + indexing);
-    } 
+    }
 
     // Add lease to model
     let addedLease = new LeaseClass(

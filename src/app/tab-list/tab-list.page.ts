@@ -28,7 +28,7 @@ export class TabListPage implements OnInit {
   newLeaseHolderForm!: FormGroup;
   leaseholders: Leaseholder[] = [];
   lastIRL!: number;
-  lastILC!: number;
+  lastILAT!: number;
 
 
   constructor(
@@ -49,7 +49,7 @@ export class TabListPage implements OnInit {
 
     try {
       this.lastIRL = await this.inseeService.getIRLData();
-      this.lastILC = await this.inseeService.getILCData();
+      this.lastILAT = await this.inseeService.getILATData();
     } catch (error) {
       console.error('Error loading INSEE data', error);
     }
@@ -132,7 +132,7 @@ export class TabListPage implements OnInit {
                 let leasePromises: Promise<void>[] = []
                 lh.leases.forEach((l) => {
                   const myLeasePromise: Promise<void> = new Promise(async (resolveLease) => {
-                    this.parseService.createLease(l, this.lastILC, this.lastIRL).then((createdLease) => {
+                    this.parseService.createLease(l, this.lastILAT, this.lastIRL).then((createdLease) => {
                       createdLeases.push(createdLease);
                       resolveLease();
                     }).catch( (err) => {

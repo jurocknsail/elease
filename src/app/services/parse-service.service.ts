@@ -135,7 +135,7 @@ export class ParseService {
     }
   }
 
-  async createLease (lease: Lease, lastILCValue: number, lastIRLValue: number): Promise<Parse.Object> {
+  async createLease (lease: Lease, lastILATValue: number, lastIRLValue: number): Promise<Parse.Object> {
 
     try {
       const leaseObject = new Parse.Object('Lease');
