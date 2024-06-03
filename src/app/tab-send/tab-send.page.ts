@@ -148,7 +148,7 @@ export class TabSendPage implements OnInit {
 
     let totalLeases = 0;
     this.parseService.getLeaseholders().forEach(leaseholder => {
-      leaseholder.leases.forEach(lease => {
+      leaseholder.leases.forEach(() => {
         totalLeases = totalLeases + 1;
       });
     });

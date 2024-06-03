@@ -78,15 +78,12 @@ export class TabListPage implements OnInit {
 
   private downloadFile(data: Leaseholder[]) {
     const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-    //window.open(URL.createObjectURL(blob), "_blank");
-
     const url = URL.createObjectURL(blob);
 
     // Create a link element
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'elease-backup-' + Parse.User.current()?.getUsername() + "-" + new Date().toLocaleString().replace(" ", "-").trim();
-    +'.json'; // File name
+    a.download = 'elease-backup-' + Parse.User.current()?.getUsername() + "-" + new Date().toLocaleString().replace(" ", "-").trim() +'.json'; // File name
     document.body.appendChild(a);
     a.click();
 
@@ -120,13 +117,13 @@ export class TabListPage implements OnInit {
         try {
           if (e.target != null) {
 
-            let leaseHolders = [] as Leaseholder[];
+            let leaseHolders;
             leaseHolders = JSON.parse(e.target.result as string);
             console.log('Imported JSON:', leaseHolders);
 
             // Save the JSON data in DB
             let leaseholderPromises: Promise<void>[] = []
-            leaseHolders.forEach((lh) => {
+            leaseHolders.forEach((lh: Leaseholder) => {
               const myLeaseholderPromise: Promise<void> = new Promise(async (resolveLeaseHolder) => {
                 let createdLeases: Parse.Object[] = []
                 let leasePromises: Promise<void>[] = []
@@ -146,7 +143,7 @@ export class TabListPage implements OnInit {
                 });
 
                 Promise.all(leasePromises).then(() => {
-                  this.parseService.createLeaseholderAndLeases(lh, createdLeases).then((createdLH) => {
+                  this.parseService.createLeaseholderAndLeases(lh, createdLeases).then(() => {
                     resolveLeaseHolder();
                   }).catch ((err) => {
                     console.log("ERROR creating lease : " + err)

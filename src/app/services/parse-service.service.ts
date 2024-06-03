@@ -191,18 +191,19 @@ export class ParseService {
 
     try {
 
-        console.log("Updating lease send date with id : " + leaseId)
+      console.log("Updating lease send date with id : " + leaseId)
 
-        const lastSendDate = new Date().getTime();
-        const leaseObject = await query.get(leaseId);
-        leaseObject.set('lastSendDate', lastSendDate);
-        let updatedLease : Parse.Object = await leaseObject.save();
+      const lastSendDate = new Date().getTime();
+      const leaseObject = await query.get(leaseId);
+      leaseObject.set('lastSendDate', lastSendDate);
+      await leaseObject.save();
 
-        console.log("Updated lease with id : " + leaseId + " last send date to " + lastSendDate)
+      console.log("Updated lease with id : " + leaseId + " last send date to " + lastSendDate)
 
-        return lastSendDate;
+      return lastSendDate;
 
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Error updating lease last send date : ', error);
       throw error;
     }
@@ -317,7 +318,7 @@ export class ParseService {
 
         await leaseholderObject.save();
         // The delete lease object
-        this.deleteLease(_l.objectId)
+        await this.deleteLease(_l.objectId)
       }
       this.getLeaseholder(holderId)?.leases.splice(leaseIndex, 1)
     }

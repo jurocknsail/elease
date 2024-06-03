@@ -183,7 +183,7 @@ export class FilebrowserPage implements OnInit {
     this.parseService.getLeaseholdersPDFs().forEach((pdfDataList, recipientEmail) => {
       const myPromise: Promise<string[]> = new Promise((resolve) => {
         this.parseService.sendEmail(recipientEmail, pdfDataList).subscribe({
-          next: (res) => {
+          next: () => {
             console.log('Email(s) sent successfully from ' + recipientEmail);
 
             let leaseObjectIds: string[] = []
@@ -258,7 +258,7 @@ export class FilebrowserPage implements OnInit {
         t.present();
       })
 
-    }).catch((err) => {
+    }).catch(() => {
       console.log("ERROR Updating leases lastSendDate");
     });
 

@@ -1,5 +1,5 @@
 import {Component, OnInit, ViewChild} from '@angular/core';
-import {ActivatedRoute, Router} from '@angular/router';
+import {ActivatedRoute} from '@angular/router';
 import {FormArray, FormBuilder, FormGroup, Validators} from '@angular/forms';
 import {Lease, LeaseClass} from '../model/lease';
 import {AlertController, IonAccordionGroup, IonButton, IonModal} from '@ionic/angular';
@@ -102,7 +102,7 @@ export class LeaseholderDetailsPage implements OnInit {
   }
 
   async onDelete() {
-    this.presentDeleteLeaseHolderAlert();
+    await this.presentDeleteLeaseHolderAlert();
   }
 
   async presentDeleteLeaseHolderAlert() {
@@ -130,7 +130,7 @@ export class LeaseholderDetailsPage implements OnInit {
   ];
 
   async deleteLeaseHolder() {
-    this.parseService.deleteLeaseholder(this.leaseholder.objectId);
+    await this.parseService.deleteLeaseholder(this.leaseholder.objectId);
     this.location.back();
   }
 
@@ -140,7 +140,7 @@ export class LeaseholderDetailsPage implements OnInit {
       this.currentLeaserId = deletingLease.objectId;
       this.currentLeaseFormIndexId = leaseFormIndex;
       this.currentLeaseName = deletingLease.name;
-      this.presentDeleteLeaseAlert();
+      await this.presentDeleteLeaseAlert();
     }
   }
 
@@ -180,9 +180,9 @@ export class LeaseholderDetailsPage implements OnInit {
     this.toogleEdit(this.isEditing);
     this.editButton.disabled = false;
 
-    this.leaseholder.name = this.leaseholderForm.controls["name"].value,
-      this.leaseholder.email = this.leaseholderForm.controls["email"].value,
-      this.leaseholder.phone = this.leaseholderForm.controls["phone"].value,
+    this.leaseholder.name = this.leaseholderForm.controls["name"].value;
+    this.leaseholder.email = this.leaseholderForm.controls["email"].value;
+    this.leaseholder.phone = this.leaseholderForm.controls["phone"].value;
 
       this.leases.controls.forEach((control, index) => {
         this.leaseholder.leases[index].name = control.get("name")?.value;
@@ -192,7 +192,7 @@ export class LeaseholderDetailsPage implements OnInit {
         this.leaseholder.leases[index].optionalAddressInfo = control.get("optionalAddressInfo")?.value;
         this.leaseholder.leases[index].postalCode = control.get("postalCode")?.value;
         this.leaseholder.leases[index].city = control.get("city")?.value;
-        this.leaseholder.leases[index].renewalDate = new Date(control.get("renewalDate")?.value).getTime();;
+        this.leaseholder.leases[index].renewalDate = new Date(control.get("renewalDate")?.value).getTime();
         this.leaseholder.leases[index].indexing = control.get("indexing")?.value;
         this.leaseholder.leases[index].price = control.get("price")?.value;
         this.leaseholder.leases[index].charge = control.get("charge")?.value;
@@ -206,7 +206,7 @@ export class LeaseholderDetailsPage implements OnInit {
   async onAdd() {
 
     const isPro : boolean = this.newLeaseForm.controls["isPro"].value;
-    let indexing : number = 0;
+    let indexing : number;
     if(isPro){
       if(this.inseeService.lastILATValue != 0 ) {
         indexing = this.inseeService.lastILATValue;
@@ -263,7 +263,7 @@ export class LeaseholderDetailsPage implements OnInit {
       });
       Object.keys(this.leases.controls).forEach(key => {
         Object.keys((this.leases.get(key) as FormGroup).controls).forEach(controlKey => {
-          if (controlKey != "lastSendDate") {
+          if (controlKey != "isPro" && controlKey != "indexing") {
             (this.leases.get(key) as FormGroup).get(controlKey)?.enable();
           }
         });
