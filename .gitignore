@@ -68,3 +68,16 @@ Thumbs.db
 
 /src/environments/environment.ts
 /src/environments/environment.prod.ts
+
+# Environment files with secrets (NEVER COMMIT THESE)
+.env
+.env.*
+*.env
+.env.local
+.env.development
+.env.production
+secrets.json
+credentials.json
+
+# SonarQube malformed directory (variable not expanded)
+${HOMEPATH}/
