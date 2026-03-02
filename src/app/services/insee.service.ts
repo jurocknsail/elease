@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {HttpClient, HttpHeaders} from '@angular/common/http';
+import {HttpClient} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from "../../environments/environment";
 import {map} from 'rxjs/operators';
@@ -10,7 +10,6 @@ import {XMLParser} from 'fast-xml-parser';
 })
 export class InseeService {
   private apiUrl = 'https://api.insee.fr/series/BDM/V1/data';
-  private apiKey = environment.inseeApiKey;
 
   public lastIRLValue : number = 0;
   public lastILATValue : number = 0;
@@ -21,8 +20,7 @@ export class InseeService {
   // Méthode pour récupérer les dernières valeurs de l'IRL
   getIRL(): Observable<InseeDataRootObject> {
     const url = `${this.apiUrl}/SERIES_BDM/001515333`;
-    const headers = this.getHeaders();
-    return this.http.get(url, { headers, responseType: 'text' }).pipe(
+    return this.http.get(url, { responseType: 'text' }).pipe(
       map(response => this.parseXml(response))
     );
   }
@@ -30,14 +28,9 @@ export class InseeService {
   // Méthode pour récupérer les dernières valeurs de l'ILAT
   getILAT(): Observable<InseeDataRootObject> {
     const url = `${this.apiUrl}/SERIES_BDM/001617112`;
-    const headers = this.getHeaders();
-    return this.http.get(url, { headers, responseType: 'text' }).pipe(
+    return this.http.get(url, { responseType: 'text' }).pipe(
       map(response => this.parseXml(response))
     );
-  }
-
-  private getHeaders(): HttpHeaders {
-    return new HttpHeaders().set('Authorization', `Bearer ${this.apiKey}`);
   }
 
   private parseXml(xml: string): any {
