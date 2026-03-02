@@ -3,7 +3,7 @@ import {Leaseholder} from '../model/leaseholder';
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import {TDocumentDefinitions} from 'pdfmake/interfaces';
-import {DatetimeCustomEvent, isPlatform, Platform} from '@ionic/angular';
+import {DatetimeCustomEvent, isPlatform, Platform, LoadingController, ToastController} from '@ionic/angular';
 import {formatDate} from '@angular/common';
 import {Directory, Filesystem, StatOptions} from '@capacitor/filesystem';
 import {Lease} from '../model/lease';
@@ -34,6 +34,8 @@ export class TabSendPage implements OnInit {
     public platform: Platform,
     private router: Router,
     public parseService: ParseService,
+    private loadingController: LoadingController,
+    private toastController: ToastController,
   ) {
     this.now = new Date();
     this.defaultSendDate = this.computeDefaultSendDate();
@@ -139,33 +141,54 @@ export class TabSendPage implements OnInit {
   }
 
   async generatePdf() {
-
-    await Filesystem.rmdir({
-      directory: APP_DIRECTORY,
-      path: USER_DATA_FOLDER,
-      recursive: true
+    const loading = await this.loadingController.create({
+      message: 'Génération des PDFs...',
+      backdropDismiss: false
     });
-    await Filesystem.mkdir({
-      directory: APP_DIRECTORY,
-      path: USER_DATA_FOLDER,
-      recursive: true
-    });
-    this.parseService.getLeaseholdersPDFs().clear();
+    await loading.present();
 
-    let promises: Promise<void>[] = []
-
-    let totalLeases = 0;
-    this.parseService.getLeaseholders().forEach(leaseholder => {
-      leaseholder.leases.forEach(() => {
-        totalLeases = totalLeases + 1;
+    try {
+      await Filesystem.rmdir({
+        directory: APP_DIRECTORY,
+        path: USER_DATA_FOLDER,
+        recursive: true
       });
-    });
-    let currentLeaseNb = 1;
+      await Filesystem.mkdir({
+        directory: APP_DIRECTORY,
+        path: USER_DATA_FOLDER,
+        recursive: true
+      });
+      this.parseService.getLeaseholdersPDFs().clear();
 
-    this.parseService.getLeaseholders().forEach(leaseholder => {
-      leaseholder.leases.forEach(lease => {
+      let promises: Promise<void>[] = []
 
-        if (lease.isSelected) {
+      let totalLeases = 0;
+      this.parseService.getLeaseholders().forEach(leaseholder => {
+        leaseholder.leases.forEach(lease => {
+          if (lease.isSelected) {
+            totalLeases = totalLeases + 1;
+          }
+        });
+      });
+
+      if (totalLeases === 0) {
+        await loading.dismiss();
+        const toast = await this.toastController.create({
+          message: 'Aucun bail sélectionné',
+          duration: 2000,
+          color: 'warning',
+          position: 'bottom'
+        });
+        await toast.present();
+        return;
+      }
+
+      let currentLeaseNb = 1;
+
+      this.parseService.getLeaseholders().forEach(leaseholder => {
+        leaseholder.leases.forEach(lease => {
+
+          if (lease.isSelected) {
 
           const docDefinition: TDocumentDefinitions = {
             info: {
@@ -300,12 +323,31 @@ export class TabSendPage implements OnInit {
       });
     });
 
-    Promise.all(promises).then(() => {
-      this.router.navigate(['/filebrowser/' + USER_DATA_FOLDER]);
-      this.progress = 0;
-    });
+    await Promise.all(promises);
 
+    const toast = await this.toastController.create({
+      message: 'PDFs générés avec succès !',
+      duration: 2000,
+      color: 'success',
+      position: 'bottom'
+    });
+    await toast.present();
+
+    this.router.navigate(['/filebrowser/' + USER_DATA_FOLDER]);
+    this.progress = 0;
+  } catch (error) {
+    console.error('Error generating PDFs:', error);
+    const toast = await this.toastController.create({
+      message: 'Erreur lors de la génération des PDFs',
+      duration: 3000,
+      color: 'danger',
+      position: 'bottom'
+    });
+    await toast.present();
+  } finally {
+    await loading.dismiss();
   }
+}
 
   private generatePdfName(leaseholder: Leaseholder, lease: Lease, periodMonth: string): string {
     return leaseholder.name.trim().replace(" ", "_").toLowerCase() + "-" + lease.name.trim().replace(" ", "_").toLowerCase() + "-" + periodMonth.trim().replace("/", "_")+".pdf"

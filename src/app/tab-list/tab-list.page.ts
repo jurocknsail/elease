@@ -186,16 +186,34 @@ export class TabListPage implements OnInit {
     this.modal?.dismiss(this.name, 'confirm');
   }
 
-  onSubmit() {
+  async onSubmit() {
     if (this.newLeaseHolderForm.valid) {
-      const emptyLeases: Lease[] = [];
-      const leaseHolder = new LeaseHolderClass(
-        this.newLeaseHolderForm.controls["name"].value,
-        this.newLeaseHolderForm.controls["email"].value,
-        this.newLeaseHolderForm.controls["phone"].value,
-        emptyLeases,
-      );
-      this.parseService.createLeaseholder(leaseHolder);
+      const loading = await this.loadingController.create({
+        message: 'Création...',
+        backdropDismiss: false
+      });
+      await loading.present();
+
+      try {
+        const emptyLeases: Lease[] = [];
+        const leaseHolder = new LeaseHolderClass(
+          this.newLeaseHolderForm.controls["name"].value,
+          this.newLeaseHolderForm.controls["email"].value,
+          this.newLeaseHolderForm.controls["phone"].value,
+          emptyLeases,
+        );
+        await this.parseService.createLeaseholder(leaseHolder);
+
+        this.newLeaseHolderForm.reset();
+        await this.modal?.dismiss(null, 'confirm');
+
+        this.createToast("Locataire ajouté avec succès ! 😊", 2000, 'top', 'success', "checkmark-circle");
+      } catch (error) {
+        console.error('Error creating leaseholder:', error);
+        this.createToast("Erreur lors de la création", 3000, 'middle', 'danger', "warning");
+      } finally {
+        await loading.dismiss();
+      }
     }
   }
 

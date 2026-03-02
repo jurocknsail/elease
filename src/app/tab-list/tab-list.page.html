@@ -39,30 +39,38 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" id="main-content">
+  <div class="ion-padding-horizontal ion-padding-top">
+    <h1 class="ion-no-margin ion-margin-bottom" style="font-weight: 700; color: var(--ion-color-dark);">Mes Locataires</h1>
+  </div>
 
-  <ion-card *ngFor="let leaseholder of leaseholders" [routerLink]="['/leaseholder-details', leaseholder.objectId]" color="light">
+  <ion-card *ngFor="let leaseholder of leaseholders" [routerLink]="['/leaseholder-details', leaseholder.objectId]" class="premium-card ion-no-margin ion-margin-bottom">
     <ion-card-header>
-      <ion-card-title>{{ leaseholder.name }}</ion-card-title>
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <ion-card-title style="font-size: 1.2rem; font-weight: 600;">{{ leaseholder.name }}</ion-card-title>
+        <ion-badge color="success" mode="ios">{{ leaseholder.leases.length }} {{ leaseholder.leases.length > 1 ? 'baux' : 'bail' }}</ion-badge>
+      </div>
     </ion-card-header>
 
-    <ion-card-content>
-      <ion-list color="light">
-        <ion-item *ngFor="let lease of leaseholder.leases">
-          <ion-label class="left-label">{{ lease.name }}</ion-label>
-          <ion-label class="right-label">Dernier envoi : {{ lease.lastSendDate !== 0 ? (lease.lastSendDate | date: "dd/MM/yyyy") : 'Jamais' }}</ion-label>
+    <ion-card-content class="ion-no-padding">
+      <ion-list lines="none" class="ion-no-padding ion-padding-start ion-padding-end">
+        <ion-item *ngFor="let lease of leaseholder.leases" class="ion-no-padding">
+          <ion-icon name="home-outline" slot="start" color="medium" size="small" style="margin-inline-end: 16px;"></ion-icon>
+          <ion-label>
+            <h3 style="font-weight: 500;">{{ lease.name }}</h3>
+            <p style="font-size: 0.8rem;">Dernier envoi : {{ lease.lastSendDate !== 0 ? (lease.lastSendDate | date: "dd/MM/yyyy") : 'Jamais' }}</p>
+          </ion-label>
+          <ion-icon name="chevron-forward-outline" slot="end" color="light"></ion-icon>
         </ion-item>
       </ion-list>
     </ion-card-content>
-
   </ion-card>
 
-  <ion-card id="open-modal" color="success" button="true" style="text-align:center">
-
-    <ion-button color="light" shape="round" fill="outline" size="large" disabled="true" >
-      <ion-icon slot="icon-only" name="add"></ion-icon>
+  <div class="ion-padding">
+    <ion-button id="open-modal" expand="block" color="success" shape="round" style="height: 56px; --box-shadow: 0 4px 16px rgba(45, 211, 111, 0.3);">
+      <ion-icon slot="start" name="add-circle"></ion-icon>
+      Ajouter un Locataire
     </ion-button>
-
-  </ion-card>
+  </div>
 
   <ion-modal trigger="open-modal">
     <ng-template>

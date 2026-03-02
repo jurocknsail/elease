@@ -7,39 +7,61 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-progress-bar [value]="progress"></ion-progress-bar>
+  <ion-progress-bar [value]="progress" color="primary" *ngIf="progress > 0"></ion-progress-bar>
 
+  <div class="ion-padding-horizontal ion-padding-top">
+    <h1 class="ion-no-margin ion-margin-bottom" style="font-weight: 700; color: var(--ion-color-dark);">Envois PDF</h1>
+  </div>
 
-  <br>
-  <ion-item>
-    <ion-label>Date par défaut</ion-label>
-    <ion-datetime-button datetime="datetime"></ion-datetime-button>
-  </ion-item>
+  <div class="premium-card">
+    <ion-item lines="none">
+      <ion-icon name="calendar-outline" slot="start" color="primary"></ion-icon>
+      <ion-label>
+        <h3 style="font-weight: 500;">Période de facturation</h3>
+        <p>Date d'échéance par défaut</p>
+      </ion-label>
+      <ion-datetime-button datetime="datetime"></ion-datetime-button>
+    </ion-item>
+  </div>
 
   <ion-modal [keepContentsMounted]="true">
     <ng-template>
       <ion-datetime locale="fr-FR" (ionChange)="setDate($event)" value="{{ defaultSendDate  | date:'YYYY-MM-dd'}}" presentation="date" [showDefaultButtons]="true" id="datetime">
-        <span slot="title">Date d'envoi</span>
+        <span slot="title">Date d'échéance</span>
       </ion-datetime>
     </ng-template>
   </ion-modal>
 
+  <div class="ion-padding-horizontal">
+    <p style="color: var(--ion-color-medium); font-size: 0.9rem; font-weight: 500;">SÉLECTION DES BAUX</p>
+  </div>
 
-  <ion-list [inset]="true" lines="none">
-    <ion-item-group *ngFor="let leaseholder of leaseholders">
-      <ion-item-divider >
-        <ion-label>{{ leaseholder.name }} - {{ leaseholder.email }}</ion-label>
-      </ion-item-divider>
-        <ion-item *ngFor="let lease of leaseholder.leases">
-          <ion-checkbox [(ngModel)]="lease.isSelected" slot="start" aria-label="Toggle selection" labelPlacement="end">{{ lease.name }}</ion-checkbox>
-        </ion-item>
-    </ion-item-group>
-  </ion-list>
+  <div *ngFor="let leaseholder of leaseholders" class="premium-card ion-no-margin ion-margin-bottom">
+    <ion-item-divider sticky="true" class="ion-no-border" style="background: transparent;">
+      <ion-icon name="person-outline" slot="start" size="small" color="medium"></ion-icon>
+      <ion-label>
+        <h2 style="font-weight: 600; font-size: 1rem;">{{ leaseholder.name }}</h2>
+        <p style="font-size: 0.8rem;">{{ leaseholder.email }}</p>
+      </ion-label>
+    </ion-item-divider>
+
+    <ion-list lines="full">
+      <ion-item *ngFor="let lease of leaseholder.leases" class="ion-no-padding-start">
+        <ion-checkbox [(ngModel)]="lease.isSelected" slot="start" mode="ios"></ion-checkbox>
+        <ion-label>
+          <h3 style="font-weight: 500;">{{ lease.name }}</h3>
+          <p style="font-size: 0.8rem;">{{ lease.city }}</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  </div>
+
+  <div style="height: 80px;"></div>
 
   <ion-fab slot="fixed" vertical="bottom" horizontal="center">
-    <ion-fab-button>
-      <ion-icon (click)="generatePdf()" name="document-text-outline"></ion-icon>
-    </ion-fab-button>
+    <ion-button (click)="generatePdf()" color="primary" shape="round" style="height: 56px; width: 220px; --box-shadow: 0 4px 16px rgba(var(--ion-color-primary-rgb), 0.3);">
+      <ion-icon name="document-text-outline" slot="start"></ion-icon>
+      Générer les PDFs
+    </ion-button>
   </ion-fab>
-
 </ion-content>

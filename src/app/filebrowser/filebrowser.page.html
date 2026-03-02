@@ -30,9 +30,10 @@
 	</ion-list>
 
   <ion-fab slot="fixed" vertical="bottom" horizontal="center">
-    <ion-fab-button>
-      <ion-icon (click)="sendEmailButton()" name="mail-outline"></ion-icon>
-    </ion-fab-button>
+    <ion-button (click)="sendEmailButton()" color="primary" shape="round" style="height: 56px; width: 220px; --box-shadow: 0 4px 16px rgba(var(--ion-color-primary-rgb), 0.3);">
+      <ion-icon name="mail-outline" slot="start"></ion-icon>
+      Envoyer les mails
+    </ion-button>
   </ion-fab>
 
 </ion-content>

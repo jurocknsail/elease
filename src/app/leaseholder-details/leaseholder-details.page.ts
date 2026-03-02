@@ -2,7 +2,7 @@ import {Component, OnInit, ViewChild} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {FormArray, FormBuilder, FormGroup, Validators} from '@angular/forms';
 import {AdditionalCharge, Lease, LeaseClass} from '../model/lease';
-import {AlertController, IonAccordionGroup, IonButton, IonModal} from '@ionic/angular';
+import {ActionSheetController, AlertController, IonAccordionGroup, IonButton, IonModal, LoadingController, ToastController} from '@ionic/angular';
 import {Location} from '@angular/common';
 import {ParseService} from '../services/parse-service.service';
 import {Leaseholder} from '../model/leaseholder';
@@ -29,6 +29,7 @@ export class LeaseholderDetailsPage implements OnInit {
   leaseForm!: FormGroup;
   newLeaseForm!: FormGroup;
   isEditing = false;
+  selectedSegment = 'leases';
   currentLeaserId!: string;
   currentLeaseFormIndexId!: number;
   currentLeaseName!: string;
@@ -40,6 +41,9 @@ export class LeaseholderDetailsPage implements OnInit {
     private inseeService: InseeService,
     private location: Location,
     private alertController: AlertController,
+    private loadingController: LoadingController,
+    private toastController: ToastController,
+    private actionSheetController: ActionSheetController,
   ) {
   }
 
@@ -112,6 +116,28 @@ export class LeaseholderDetailsPage implements OnInit {
     this.editButton.disabled = true;
   }
 
+  async presentActionSheet() {
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Actions',
+      buttons: [
+        {
+          text: 'Supprimer le locataire',
+          role: 'destructive',
+          icon: 'trash',
+          handler: () => {
+            this.onDelete();
+          },
+        },
+        {
+          text: 'Annuler',
+          role: 'cancel',
+          icon: 'close',
+        },
+      ],
+    });
+    await actionSheet.present();
+  }
+
   async onDelete() {
     await this.presentDeleteLeaseHolderAlert();
   }
@@ -141,8 +167,34 @@ export class LeaseholderDetailsPage implements OnInit {
   ];
 
   async deleteLeaseHolder() {
-    await this.parseService.deleteLeaseholder(this.leaseholder.objectId);
-    this.location.back();
+    const loading = await this.loadingController.create({
+      message: 'Suppression...',
+      backdropDismiss: false
+    });
+    await loading.present();
+
+    try {
+      await this.parseService.deleteLeaseholder(this.leaseholder.objectId);
+      const toast = await this.toastController.create({
+        message: 'Locataire supprimé',
+        duration: 2000,
+        color: 'success',
+        position: 'bottom'
+      });
+      await toast.present();
+      this.location.back();
+    } catch (error) {
+      console.error('Error deleting leaseholder:', error);
+      const toast = await this.toastController.create({
+        message: 'Erreur lors de la suppression',
+        duration: 3000,
+        color: 'danger',
+        position: 'bottom'
+      });
+      await toast.present();
+    } finally {
+      await loading.dismiss();
+    }
   }
 
   async onDeleteLease(leaseFormIndex: number) {
@@ -206,21 +258,55 @@ export class LeaseholderDetailsPage implements OnInit {
     },
   ];
 
-  deleteLease(leaseId: string, leaseFormIndex: number) {
-    console.log(leaseId + "/" + leaseFormIndex)
-    this.leases.controls.splice(leaseFormIndex, 1);
-    this.parseService.deleteLeaseFromHolder(this.leaseholder.objectId, leaseId);
+  async deleteLease(leaseId: string, leaseFormIndex: number) {
+    const loading = await this.loadingController.create({
+      message: 'Suppression du bail...',
+      backdropDismiss: false
+    });
+    await loading.present();
+
+    try {
+      console.log(leaseId + "/" + leaseFormIndex)
+      this.leases.controls.splice(leaseFormIndex, 1);
+      await this.parseService.deleteLeaseFromHolder(this.leaseholder.objectId, leaseId);
+
+      const toast = await this.toastController.create({
+        message: 'Bail supprimé',
+        duration: 2000,
+        color: 'success',
+        position: 'bottom'
+      });
+      await toast.present();
+    } catch (error) {
+      console.error('Error deleting lease:', error);
+      const toast = await this.toastController.create({
+        message: 'Erreur lors de la suppression du bail',
+        duration: 3000,
+        color: 'danger',
+        position: 'bottom'
+      });
+      await toast.present();
+    } finally {
+      await loading.dismiss();
+    }
   }
 
   // On edit lease/leaseholder form save
-  onSave(): void {
-    this.isEditing = !this.isEditing!;
-    this.toogleEdit(this.isEditing);
-    this.editButton.disabled = false;
+  async onSave(): Promise<void> {
+    const loading = await this.loadingController.create({
+      message: 'Enregistrement...',
+      backdropDismiss: false
+    });
+    await loading.present();
 
-    this.leaseholder.name = this.leaseholderForm.controls["name"].value;
-    this.leaseholder.email = this.leaseholderForm.controls["email"].value;
-    this.leaseholder.phone = this.leaseholderForm.controls["phone"].value;
+    try {
+      this.isEditing = !this.isEditing!;
+      this.toogleEdit(this.isEditing);
+      this.editButton.disabled = false;
+
+      this.leaseholder.name = this.leaseholderForm.controls["name"].value;
+      this.leaseholder.email = this.leaseholderForm.controls["email"].value;
+      this.leaseholder.phone = this.leaseholderForm.controls["phone"].value;
 
       this.leases.controls.forEach((control, index) => {
         this.leaseholder.leases[index].name = control.get("name")?.value;
@@ -249,11 +335,35 @@ export class LeaseholderDetailsPage implements OnInit {
         this.leaseholder.leases[index].additionalCharges = additionalCharges;
       });
 
-    this.parseService.updateLeaseholder(this.leaseholder);
+      await this.parseService.updateLeaseholder(this.leaseholder);
+
+      const toast = await this.toastController.create({
+        message: 'Modifications enregistrées !',
+        duration: 2000,
+        color: 'success',
+        position: 'bottom'
+      });
+      await toast.present();
+    } catch (error) {
+      console.error('Error saving leaseholder:', error);
+      const toast = await this.toastController.create({
+        message: 'Erreur lors de l\'enregistrement',
+        duration: 3000,
+        color: 'danger',
+        position: 'bottom'
+      });
+      await toast.present();
+    } finally {
+      await loading.dismiss();
+    }
   }
 
   // On ADD form Submit actions
   async onAdd() {
+    const loading = await this.loadingController.create({
+      message: 'Ajout du bail...',
+      backdropDismiss: false
+    });
 
     const isPro : boolean = this.newLeaseForm.controls["isPro"].value;
     let indexing : number = 0;
@@ -263,6 +373,7 @@ export class LeaseholderDetailsPage implements OnInit {
         if(this.inseeService.lastILATValue != 0 ) {
           indexing = this.inseeService.lastILATValue;
         } else {
+          await loading.present();
           indexing = await this.inseeService.getILATData();
         }
         console.log("Lease is set as Pro, using ILAT Index : " + indexing);
@@ -270,62 +381,86 @@ export class LeaseholderDetailsPage implements OnInit {
         if(this.inseeService.lastIRLValue != 0 ) {
           indexing = this.inseeService.lastIRLValue;
         } else {
+          await loading.present();
           indexing = await this.inseeService.getIRLData();
         }
         console.log("Lease is NOT set as Pro, using IRL Index : " + indexing);
       }
     } catch (error) {
       console.error("Failed to fetch INSEE data:", error);
+      if (loading) await loading.dismiss();
       const confirmed = await this.presentInseeErrorAlert();
       if (!confirmed) {
-        // If user cancelled, we might want to close the accordion or reset
         return;
       }
-      // If user accepted, indexing remains 0
     }
 
-    // Build additional charges array from form
-    const additionalCharges: AdditionalCharge[] = [];
-    this.newLeaseAdditionalCharges.controls.forEach((chargeControl) => {
-      const title = chargeControl.get("title")?.value;
-      const amount = chargeControl.get("amount")?.value;
-      if (title && amount) {
-        additionalCharges.push({ title, amount });
-      }
-    });
+    if (!loading.parentElement) {
+      await loading.present();
+    }
 
-    // Add lease to model
-    let addedLease = new LeaseClass(
-      this.newLeaseForm.controls["name"].value,
-      this.newLeaseForm.controls["lot"].value,
-      this.newLeaseForm.controls["streetNumber"].value,
-      this.newLeaseForm.controls["streetName"].value,
-      this.newLeaseForm.controls["optionalAddressInfo"].value,
-      this.newLeaseForm.controls["postalCode"].value,
-      this.newLeaseForm.controls["city"].value,
-      0,
-      new Date().getTime(),
-      indexing,
-      this.newLeaseForm.controls["price"].value,
-      this.newLeaseForm.controls["charge"].value,
-      this.newLeaseForm.controls["isPro"].value,
-      additionalCharges,
-    );
+    try {
+      // Build additional charges array from form
+      const additionalCharges: AdditionalCharge[] = [];
+      this.newLeaseAdditionalCharges.controls.forEach((chargeControl) => {
+        const title = chargeControl.get("title")?.value;
+        const amount = chargeControl.get("amount")?.value;
+        if (title && amount) {
+          additionalCharges.push({ title, amount });
+        }
+      });
 
-    // Push to DB
-    // Add lease to local holder
-    (addedLease as Lease).objectId = await this.parseService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
-    this.leaseholder.leases.push(addedLease);
+      // Add lease to model
+      let addedLease = new LeaseClass(
+        this.newLeaseForm.controls["name"].value,
+        this.newLeaseForm.controls["lot"].value,
+        this.newLeaseForm.controls["streetNumber"].value,
+        this.newLeaseForm.controls["streetName"].value,
+        this.newLeaseForm.controls["optionalAddressInfo"].value,
+        this.newLeaseForm.controls["postalCode"].value,
+        this.newLeaseForm.controls["city"].value,
+        0,
+        new Date().getTime(),
+        indexing,
+        this.newLeaseForm.controls["price"].value,
+        this.newLeaseForm.controls["charge"].value,
+        this.newLeaseForm.controls["isPro"].value,
+        additionalCharges,
+      );
 
-    // Add corresponding form
-    this.addLeaseForm(addedLease);
+      // Push to DB
+      // Add lease to local holder
+      (addedLease as Lease).objectId = await this.parseService.addLeaseToHolder(this.leaseholder.objectId, addedLease);
+      this.leaseholder.leases.push(addedLease);
 
-    // Expand it
-    this.accordionGroup.value = `${this.leases.length - 1}`;
+      // Add corresponding form
+      this.addLeaseForm(addedLease);
 
-    // Clear the form
-    this.newLeaseForm.reset();
+      // Expand it
+      this.accordionGroup.value = `${this.leases.length - 1}`;
 
+      // Clear the form
+      this.newLeaseForm.reset();
+
+      const toast = await this.toastController.create({
+        message: 'Bail ajouté avec succès !',
+        duration: 2000,
+        color: 'success',
+        position: 'bottom'
+      });
+      await toast.present();
+    } catch (error) {
+      console.error('Error adding lease:', error);
+      const toast = await this.toastController.create({
+        message: 'Erreur lors de l\'ajout du bail',
+        duration: 3000,
+        color: 'danger',
+        position: 'bottom'
+      });
+      await toast.present();
+    } finally {
+      await loading.dismiss();
+    }
   }
 
   private toogleEdit(edit: boolean) {
