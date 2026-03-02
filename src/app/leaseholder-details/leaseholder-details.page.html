@@ -8,15 +8,12 @@
         <ion-back-button text="Retour" default-href="#"></ion-back-button>
       </ion-buttons>
       <ion-buttons slot="primary">
-
         <ion-button (click)="presentActionSheet()">
           <ion-icon slot="icon-only" name="ellipsis-vertical" color="dark"></ion-icon>
         </ion-button>
-
-        <ion-button #editButton (click)="onEdit()">
-          <ion-icon slot="icon-only" name="create" color="success"></ion-icon>
+        <ion-button #editButton (click)="onEdit()" [color]="isEditing ? 'danger' : 'success'">
+          <ion-icon slot="icon-only" [name]="isEditing ? 'close' : 'create'"></ion-icon>
         </ion-button>
-
       </ion-buttons>
     </ion-toolbar>
   </ion-header>
@@ -73,9 +70,9 @@
                 <div class="ion-padding" slot="content">
                   <form [formGroupName]=i>
                     <ion-list style="padding: 0;">
-                      <ion-item *ngIf="isEditing" lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
+                      <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
                         <ion-input labelPlacement="floating" label="Nom" formControlName="name"
-                                   type="text" errorText="Saisie invalide !"></ion-input>
+                                   type="text" errorText="Saisie invalide !" [readonly]="!isEditing"></ion-input>
                       </ion-item>
                       <ion-grid fixed="true" class="ion-no-padding">
                         <ion-row>
@@ -92,28 +89,24 @@
                             </ion-item>
                           </ion-col>
                         </ion-row>
-                      </ion-grid>
-                      <ion-grid fixed="true" class="ion-no-padding">
                         <ion-row>
                           <ion-col size="8">
                             <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Complément d'adresse"
+                              <ion-input labelPlacement="floating" label="Complément"
                                          formControlName="optionalAddressInfo"
                                          type="text" errorText="Saisie invalide !"></ion-input>
                             </ion-item>
                           </ion-col>
                           <ion-col size="4">
                             <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Lot / Appt" formControlName="lot" type="number" errorText="Saisie invalide !"></ion-input>
+                              <ion-input labelPlacement="floating" label="Lot" formControlName="lot" type="number" errorText="Saisie invalide !"></ion-input>
                             </ion-item>
                           </ion-col>
                         </ion-row>
-                      </ion-grid>
-                      <ion-grid fixed="true" class="ion-no-padding">
                         <ion-row>
                           <ion-col size="4">
                             <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Code Postal" formControlName="postalCode"
+                              <ion-input labelPlacement="floating" label="CP" formControlName="postalCode"
                                          type="number" errorText="Saisie invalide !"></ion-input>
                             </ion-item>
                           </ion-col>
@@ -162,7 +155,7 @@
 
                       <ion-item-divider class="ion-margin-top" style="--padding-start: 0;">
                         <ion-label color="medium">Suppléments</ion-label>
-                        <ion-button slot="end" fill="clear" (click)="addAdditionalChargeToLease(i)" color="success">
+                        <ion-button slot="end" fill="clear" (click)="addAdditionalChargeToLease(i)" color="success" [disabled]="!isEditing">
                           <ion-icon slot="icon-only" name="add-circle"></ion-icon>
                         </ion-button>
                       </ion-item-divider>
@@ -173,7 +166,7 @@
                                        type="text" errorText="Saisie invalide !" style="flex: 2;"></ion-input>
                             <ion-input labelPlacement="floating" label="Montant" formControlName="amount"
                                        type="number" errorText="Saisie invalide !" style="flex: 1;"></ion-input>
-                            <ion-button fill="clear" color="danger" (click)="removeAdditionalChargeFromLease(i, j)">
+                            <ion-button fill="clear" color="danger" (click)="removeAdditionalChargeFromLease(i, j)" [disabled]="!isEditing">
                               <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
                             </ion-button>
                           </div>
@@ -220,28 +213,24 @@
                             </ion-item>
                           </ion-col>
                         </ion-row>
-                      </ion-grid>
-                      <ion-grid fixed="true" class="ion-no-padding">
                         <ion-row>
                           <ion-col size="8">
                             <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Complément d'adresse"
+                              <ion-input labelPlacement="floating" label="Complément"
                                          formControlName="optionalAddressInfo"
                                          type="text" errorText="Saisie invalide !"></ion-input>
                             </ion-item>
                           </ion-col>
                           <ion-col size="4">
                             <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Lot / Appt" formControlName="lot" type="number" errorText="Saisie invalide !"></ion-input>
+                              <ion-input labelPlacement="floating" label="Lot" formControlName="lot" type="number" errorText="Saisie invalide !"></ion-input>
                             </ion-item>
                           </ion-col>
                         </ion-row>
-                      </ion-grid>
-                      <ion-grid fixed="true" class="ion-no-padding">
                         <ion-row>
                           <ion-col size="4">
                             <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Code Postal" formControlName="postalCode"
+                              <ion-input labelPlacement="floating" label="CP" formControlName="postalCode"
                                          type="number" errorText="Saisie invalide !"></ion-input>
                             </ion-item>
                           </ion-col>

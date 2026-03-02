@@ -55,11 +55,13 @@
       <ion-list lines="none" class="ion-no-padding ion-padding-start ion-padding-end">
         <ion-item *ngFor="let lease of leaseholder.leases" class="ion-no-padding">
           <ion-icon name="home-outline" slot="start" color="medium" size="small" style="margin-inline-end: 16px;"></ion-icon>
-          <ion-label>
-            <h3 style="font-weight: 500;">{{ lease.name }}</h3>
-            <p style="font-size: 0.8rem;">Dernier envoi : {{ lease.lastSendDate !== 0 ? (lease.lastSendDate | date: "dd/MM/yyyy") : 'Jamais' }}</p>
+          <ion-label style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <h3 style="font-weight: 500; margin: 0;">{{ lease.name }}</h3>
+            <p style="font-size: 0.8rem; margin: 0; color: var(--ion-color-medium);">
+              Dernier envoi : {{ lease.lastSendDate !== 0 ? (lease.lastSendDate | date: "dd/MM/yyyy") : 'Jamais' }}
+            </p>
           </ion-label>
-          <ion-icon name="chevron-forward-outline" slot="end" color="light"></ion-icon>
+          <ion-icon name="chevron-forward-outline" slot="end" color="light" style="margin-inline-start: 8px;"></ion-icon>
         </ion-item>
       </ion-list>
     </ion-card-content>

@@ -111,9 +111,19 @@ export class LeaseholderDetailsPage implements OnInit {
   }
 
   onEdit() {
-    this.isEditing = !this.isEditing!;
-    this.toogleEdit(this.isEditing);
-    this.editButton.disabled = true;
+    if (this.isEditing) {
+      this.onCancel();
+    } else {
+      this.isEditing = true;
+      this.toogleEdit(true);
+    }
+  }
+
+  onCancel() {
+    this.isEditing = false;
+    this.toogleEdit(false);
+    // Re-initialize forms with current leaseholder data to revert changes
+    this.ngOnInit();
   }
 
   async presentActionSheet() {
@@ -470,9 +480,7 @@ export class LeaseholderDetailsPage implements OnInit {
       });
       Object.keys(this.leases.controls).forEach(key => {
         Object.keys((this.leases.get(key) as FormGroup).controls).forEach(controlKey => {
-          if (controlKey != "isPro" && controlKey != "indexing") {
-            (this.leases.get(key) as FormGroup).get(controlKey)?.enable();
-          }
+          (this.leases.get(key) as FormGroup).get(controlKey)?.enable();
         });
       });
     } else {

@@ -140,6 +140,14 @@ export class TabSendPage implements OnInit {
     return totalPrice;
   }
 
+  async onSelectionChange(leaseholder: Leaseholder) {
+    try {
+      await this.parseService.updateLeaseholder(leaseholder);
+    } catch (error) {
+      console.error('Error saving selection state:', error);
+    }
+  }
+
   async generatePdf() {
     const loading = await this.loadingController.create({
       message: 'Génération des PDFs...',
