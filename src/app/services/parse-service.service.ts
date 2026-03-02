@@ -112,6 +112,7 @@ export class ParseService {
             leaseObject.set('renewalDate', lease.renewalDate);
             leaseObject.set('price', lease.price);
             leaseObject.set('charge', lease.charge);
+            leaseObject.set('additionalCharges', lease.additionalCharges);
             leaseObject.set('indexing', lease.indexing);
             leases?.push(leaseObject);
           }
@@ -153,6 +154,7 @@ export class ParseService {
       leaseObject.set('renewalDate', lease.renewalDate);
       leaseObject.set('price', lease.price);
       leaseObject.set('charge', lease.charge);
+      leaseObject.set('additionalCharges', lease.additionalCharges);
 
       if(lease.indexing <= 10) { // Then it was a fake index from previous version, so get a real one
         let index;

@@ -127,7 +127,15 @@ export class TabSendPage implements OnInit {
   }
   computeTotalPrice ( lease: Lease): number {
     let noChargesPrice = lease.isPro ? lease.price + this.computeTVA(lease) : lease.price;
-    return (lease.charge != null && lease.charge != 0) ? noChargesPrice + lease.charge : noChargesPrice;
+    let totalPrice = (lease.charge != null && lease.charge != 0) ? noChargesPrice + lease.charge : noChargesPrice;
+
+    if (lease.additionalCharges) {
+      lease.additionalCharges.forEach(charge => {
+        totalPrice += charge.amount;
+      });
+    }
+
+    return totalPrice;
   }
 
   async generatePdf() {
@@ -223,19 +231,21 @@ export class TabSendPage implements OnInit {
                   {
                     text: [
                       { text: "Libellé\n" , bold: true},
-                      "Loyer HT" +
-                      (lease.isPro ? "\nT.V.A. 20%" : "\n" ),
-                      { text: (lease.charge != null && lease.charge != 0) ? "\nAvance sur charges" : "\n", style: [ 'black' ] },
-                      { text: "\nTotal TTC", bold: true },
+                      "Loyer HT\n" +
+                      (lease.isPro ? "T.V.A. 20%\n" : "" ) +
+                      ((lease.charge != null && lease.charge != 0) ? "Avance sur charges\n" : ""),
+                      ... (lease.additionalCharges || []).map(c => ({ text: c.title + "\n", style: ['black'] })),
+                      { text: "Total TTC", bold: true },
                     ]
                   },
                   {
                     alignment: 'right',
                     text: [
                       { text: "Montant\n" , bold: true},
-                      lease.price.toFixed(2) + "\n"
-                      + (lease.isPro ? this.computeTVA(lease).toFixed(2)  + "\n" : "\n" ),
-                      { text: (lease.charge != null && lease.charge != 0) ? lease.charge.toFixed(2)  + "\n" : "\n", style: [ 'black' ] },
+                      lease.price.toFixed(2) + "\n" +
+                      (lease.isPro ? this.computeTVA(lease).toFixed(2)  + "\n" : "" ) +
+                      ((lease.charge != null && lease.charge != 0) ? lease.charge.toFixed(2)  + "\n" : ""),
+                      ... (lease.additionalCharges || []).map(c => ({ text: c.amount.toFixed(2) + "\n", style: ['black'] })),
                       { text: this.computeTotalPrice(lease).toFixed(2) + "€", bold: true }
                     ]
                   }

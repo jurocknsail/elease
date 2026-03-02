@@ -1,7 +1,7 @@
 import {Component, OnInit, ViewChild} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {FormArray, FormBuilder, FormGroup, Validators} from '@angular/forms';
-import {Lease, LeaseClass} from '../model/lease';
+import {AdditionalCharge, Lease, LeaseClass} from '../model/lease';
 import {AlertController, IonAccordionGroup, IonButton, IonModal} from '@ionic/angular';
 import {Location} from '@angular/common';
 import {ParseService} from '../services/parse-service.service';
@@ -84,6 +84,7 @@ export class LeaseholderDetailsPage implements OnInit {
       price: ["", [Validators.required]],
       charge: ["", []],
       isPro: [false, []],
+      additionalCharges: this.formBuilder.array([] as FormGroup[]),
     });
 
     this.toogleEdit(false);
@@ -93,6 +94,16 @@ export class LeaseholderDetailsPage implements OnInit {
   // Getter for leases forms
   get leases(): FormArray {
     return this.leaseForm.controls["leases"] as FormArray;
+  }
+
+  // Getter for new lease additional charges
+  get newLeaseAdditionalCharges(): FormArray {
+    return this.newLeaseForm.controls["additionalCharges"] as FormArray;
+  }
+
+  // Helper to get additional charges form array from a specific lease
+  getAdditionalCharges(leaseIndex: number): FormArray {
+    return this.leases.at(leaseIndex).get("additionalCharges") as FormArray;
   }
 
   onEdit() {
@@ -153,6 +164,33 @@ export class LeaseholderDetailsPage implements OnInit {
     await alert.present();
   }
 
+  async presentInseeErrorAlert(): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      const alert = await this.alertController.create({
+        header: 'Erreur Indice INSEE',
+        message: 'Impossible de récupérer l\'indice INSEE (clé API non configurée ou erreur réseau). Voulez-vous créer le bail sans cette information ?',
+        buttons: [
+          {
+            text: 'Annuler',
+            role: 'cancel',
+            handler: () => {
+              this.accordionGroup.value = undefined; // Close the accordion
+              resolve(false);
+            }
+          },
+          {
+            text: 'Accepter',
+            role: 'confirm',
+            handler: () => {
+              resolve(true);
+            }
+          }
+        ]
+      });
+      await alert.present();
+    });
+  }
+
   public alertDeleteLeaseButtons = [
     {
       text: 'Annuler',
@@ -197,6 +235,18 @@ export class LeaseholderDetailsPage implements OnInit {
         this.leaseholder.leases[index].price = control.get("price")?.value;
         this.leaseholder.leases[index].charge = control.get("charge")?.value;
         this.leaseholder.leases[index].isPro = control.get("isPro")?.value;
+
+        // Save additional charges
+        const additionalChargesArray = this.getAdditionalCharges(index);
+        const additionalCharges: AdditionalCharge[] = [];
+        additionalChargesArray.controls.forEach((chargeControl) => {
+          const title = chargeControl.get("title")?.value;
+          const amount = chargeControl.get("amount")?.value;
+          if (title && amount) {
+            additionalCharges.push({ title, amount });
+          }
+        });
+        this.leaseholder.leases[index].additionalCharges = additionalCharges;
       });
 
     this.parseService.updateLeaseholder(this.leaseholder);
@@ -206,22 +256,43 @@ export class LeaseholderDetailsPage implements OnInit {
   async onAdd() {
 
     const isPro : boolean = this.newLeaseForm.controls["isPro"].value;
-    let indexing : number;
-    if(isPro){
-      if(this.inseeService.lastILATValue != 0 ) {
-        indexing = this.inseeService.lastILATValue;
+    let indexing : number = 0;
+
+    try {
+      if(isPro){
+        if(this.inseeService.lastILATValue != 0 ) {
+          indexing = this.inseeService.lastILATValue;
+        } else {
+          indexing = await this.inseeService.getILATData();
+        }
+        console.log("Lease is set as Pro, using ILAT Index : " + indexing);
       } else {
-        indexing = await this.inseeService.getILATData();
+        if(this.inseeService.lastIRLValue != 0 ) {
+          indexing = this.inseeService.lastIRLValue;
+        } else {
+          indexing = await this.inseeService.getIRLData();
+        }
+        console.log("Lease is NOT set as Pro, using IRL Index : " + indexing);
       }
-      console.log("Lease is set as Pro, using ILAT Index : " + indexing);
-    } else {
-      if(this.inseeService.lastIRLValue != 0 ) {
-        indexing = this.inseeService.lastIRLValue;
-      } else {
-        indexing = await this.inseeService.getIRLData();
+    } catch (error) {
+      console.error("Failed to fetch INSEE data:", error);
+      const confirmed = await this.presentInseeErrorAlert();
+      if (!confirmed) {
+        // If user cancelled, we might want to close the accordion or reset
+        return;
       }
-      console.log("Lease is NOT set as Pro, using IRL Index : " + indexing);
+      // If user accepted, indexing remains 0
     }
+
+    // Build additional charges array from form
+    const additionalCharges: AdditionalCharge[] = [];
+    this.newLeaseAdditionalCharges.controls.forEach((chargeControl) => {
+      const title = chargeControl.get("title")?.value;
+      const amount = chargeControl.get("amount")?.value;
+      if (title && amount) {
+        additionalCharges.push({ title, amount });
+      }
+    });
 
     // Add lease to model
     let addedLease = new LeaseClass(
@@ -238,6 +309,7 @@ export class LeaseholderDetailsPage implements OnInit {
       this.newLeaseForm.controls["price"].value,
       this.newLeaseForm.controls["charge"].value,
       this.newLeaseForm.controls["isPro"].value,
+      additionalCharges,
     );
 
     // Push to DB
@@ -283,6 +355,14 @@ export class LeaseholderDetailsPage implements OnInit {
 
     const leaseAnniversaryDate = new  Date(lease.renewalDate).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
 
+    // Build additional charges form array
+    const additionalChargesArray = this.formBuilder.array([] as FormGroup[]);
+    if (lease.additionalCharges) {
+      lease.additionalCharges.forEach((charge: AdditionalCharge) => {
+        additionalChargesArray.push(this.createAdditionalChargeFormGroup(charge));
+      });
+    }
+
     const leaseForm = this.formBuilder.group({
       name: [lease.name, [Validators.required]],
       streetNumber: [lease.streetNumber, [Validators.required]],
@@ -296,9 +376,38 @@ export class LeaseholderDetailsPage implements OnInit {
       price: [lease.price, [Validators.required]],
       charge: [lease.charge, []],
       isPro: [lease.isPro, [Validators.required]],
+      additionalCharges: additionalChargesArray,
     });
     this.leases.push(leaseForm);
     this.toogleEdit(false);
+  }
+
+  // Create form group for an additional charge
+  private createAdditionalChargeFormGroup(charge?: AdditionalCharge): FormGroup {
+    return this.formBuilder.group({
+      title: [charge?.title || '', [Validators.required]],
+      amount: [charge?.amount || '', [Validators.required]],
+    });
+  }
+
+  // Add additional charge to existing lease form
+  addAdditionalChargeToLease(leaseIndex: number): void {
+    this.getAdditionalCharges(leaseIndex).push(this.createAdditionalChargeFormGroup());
+  }
+
+  // Remove additional charge from existing lease form
+  removeAdditionalChargeFromLease(leaseIndex: number, chargeIndex: number): void {
+    this.getAdditionalCharges(leaseIndex).removeAt(chargeIndex);
+  }
+
+  // Add additional charge to new lease form
+  addAdditionalChargeToNewLease(): void {
+    this.newLeaseAdditionalCharges.push(this.createAdditionalChargeFormGroup());
+  }
+
+  // Remove additional charge from new lease form
+  removeAdditionalChargeFromNewLease(chargeIndex: number): void {
+    this.newLeaseAdditionalCharges.removeAt(chargeIndex);
   }
 
 }

@@ -94,6 +94,28 @@
                     <ion-input labelPlacement="floating" label="Charges" formControlName="charge"
                                type="number" errorText="Saisie invalide !"></ion-input>
                   </ion-item>
+
+                  <!-- Additional charges for existing lease -->
+                  <ion-item-divider>
+                    <ion-label>Suppléments</ion-label>
+                    <ion-button slot="end" fill="clear" (click)="addAdditionalChargeToLease(i)">
+                      <ion-icon slot="icon-only" name="add-circle"></ion-icon>
+                    </ion-button>
+                  </ion-item-divider>
+                  <div formArrayName="additionalCharges">
+                    <ion-item lines="none" *ngFor="let chargeCtrl of getAdditionalCharges(i).controls; let j = index">
+                      <div [formGroupName]="j" style="display: flex; width: 100%; gap: 8px;">
+                        <ion-input labelPlacement="floating" label="Libellé" formControlName="title"
+                                   type="text" errorText="Saisie invalide !" style="flex: 2;"></ion-input>
+                        <ion-input labelPlacement="floating" label="Montant" formControlName="amount"
+                                   type="number" errorText="Saisie invalide !" style="flex: 1;"></ion-input>
+                        <ion-button fill="clear" color="danger" (click)="removeAdditionalChargeFromLease(i, j)">
+                          <ion-icon slot="icon-only" name="trash"></ion-icon>
+                        </ion-button>
+                      </div>
+                    </ion-item>
+                  </div>
+
                   <ion-item lines="none">
                     <ion-checkbox formControlName="isPro" label-placement="floating" alignment="center">Pro ?
                     </ion-checkbox>
@@ -151,6 +173,28 @@
                     <ion-input formControlName="charge" labelPlacement="floating" label="Charges"
                                type="number" errorText="Saisie invalide !"></ion-input>
                   </ion-item>
+
+                  <!-- Additional charges for new lease -->
+                  <ion-item-divider>
+                    <ion-label>Suppléments</ion-label>
+                    <ion-button slot="end" fill="clear" (click)="addAdditionalChargeToNewLease()">
+                      <ion-icon slot="icon-only" name="add-circle"></ion-icon>
+                    </ion-button>
+                  </ion-item-divider>
+                  <div formArrayName="additionalCharges">
+                    <ion-item lines="none" *ngFor="let chargeCtrl of newLeaseAdditionalCharges.controls; let j = index">
+                      <div [formGroupName]="j" style="display: flex; width: 100%; gap: 8px;">
+                        <ion-input labelPlacement="floating" label="Libellé" formControlName="title"
+                                   type="text" errorText="Saisie invalide !" style="flex: 2;"></ion-input>
+                        <ion-input labelPlacement="floating" label="Montant" formControlName="amount"
+                                   type="number" errorText="Saisie invalide !" style="flex: 1;"></ion-input>
+                        <ion-button fill="clear" color="danger" (click)="removeAdditionalChargeFromNewLease(j)">
+                          <ion-icon slot="icon-only" name="trash"></ion-icon>
+                        </ion-button>
+                      </div>
+                    </ion-item>
+                  </div>
+
                   <ion-item lines="none">
                     <ion-checkbox checked=false formControlName="isPro" label-placement="floating" alignment="center">
                       Pro ?

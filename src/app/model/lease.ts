@@ -1,3 +1,8 @@
+export interface AdditionalCharge {
+  title: string;
+  amount: number;
+}
+
 export interface Lease {
   objectId?: string;
 
@@ -15,6 +20,7 @@ export interface Lease {
   indexing: number;
   price: number;
   charge: number;
+  additionalCharges?: AdditionalCharge[];
 }
 
 export class LeaseClass implements Lease {
@@ -31,6 +37,7 @@ export class LeaseClass implements Lease {
   public indexing: number;
   public price: number;
   public charge: number;
+  public additionalCharges?: AdditionalCharge[];
   public isSelected : boolean = true;
   public isPro: boolean = true;
 
@@ -50,6 +57,7 @@ export class LeaseClass implements Lease {
     charge: number,
     //isSelected: boolean,
     isPro: boolean,
+    additionalCharges?: AdditionalCharge[],
   ) {
 
     this.name = name;
@@ -66,6 +74,7 @@ export class LeaseClass implements Lease {
     this.isSelected = true;
     this.charge = charge;
     this.isPro = isPro;
+    this.additionalCharges = additionalCharges || [];
   }
 
   toString(): string {
@@ -82,6 +91,7 @@ export class LeaseClass implements Lease {
       this.price + ' ' +
       this.isSelected + ' ' +
       this.isPro + ' ' +
-      this.charge + ' '
+      this.charge + ' ' +
+      JSON.stringify(this.additionalCharges)
   }
 }
