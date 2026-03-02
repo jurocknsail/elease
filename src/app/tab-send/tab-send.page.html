@@ -36,24 +36,27 @@
     <p style="color: var(--ion-color-medium); font-size: 0.9rem; font-weight: 500;">SÉLECTION DES BAUX</p>
   </div>
 
-  <div *ngFor="let leaseholder of leaseholders" class="premium-card ion-no-margin ion-margin-bottom">
-    <ion-item-divider sticky="true" class="ion-no-border" style="background: transparent;">
-      <ion-icon name="person-outline" slot="start" size="small" color="medium"></ion-icon>
-      <ion-label>
-        <h2 style="font-weight: 600; font-size: 1rem;">{{ leaseholder.name }}</h2>
-        <p style="font-size: 0.8rem;">{{ leaseholder.email }}</p>
-      </ion-label>
-    </ion-item-divider>
-
-    <ion-list lines="full">
-      <ion-item *ngFor="let lease of leaseholder.leases" class="ion-no-padding-start">
-        <ion-checkbox [(ngModel)]="lease.isSelected" slot="start" mode="ios"></ion-checkbox>
-        <ion-label>
-          <h3 style="font-weight: 500;">{{ lease.name }}</h3>
-          <p style="font-size: 0.8rem;">{{ lease.city }}</p>
+  <div *ngFor="let leaseholder of leaseholders; let last = last" [class.ion-margin-bottom]="!last">
+    <div class="premium-card ion-no-margin">
+      <ion-item lines="none" class="ion-no-border">
+        <ion-icon name="person-outline" slot="start" size="small" color="medium" style="margin-right: 8px;"></ion-icon>
+        <ion-label style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <h2 style="font-weight: 600; font-size: 1rem; margin: 0;">{{ leaseholder.name }}</h2>
+          <p style="font-size: 0.8rem; margin: 0; color: var(--ion-color-medium);">{{ leaseholder.email }}</p>
         </ion-label>
       </ion-item>
-    </ion-list>
+
+      <ion-list lines="none">
+        <ion-item *ngFor="let lease of leaseholder.leases" class="ion-no-padding-start">
+          <ion-checkbox [(ngModel)]="lease.isSelected" slot="start" mode="ios"></ion-checkbox>
+          <ion-label style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <h3 style="font-weight: 500; margin: 0;">{{ lease.name }}</h3>
+            <p style="font-size: 0.8rem; margin: 0; color: var(--ion-color-medium);">{{ lease.city }}</p>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+    </div>
+    <hr *ngIf="!last" style="border: 0; border-top: 1px solid var(--ion-color-light); margin: 16px 0;">
   </div>
 
   <div style="height: 80px;"></div>

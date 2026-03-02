@@ -314,7 +314,7 @@ export class LeaseholderDetailsPage implements OnInit {
         this.leaseholder.leases[index].streetNumber = control.get("streetNumber")?.value;
         this.leaseholder.leases[index].streetName = control.get("streetName")?.value;
         this.leaseholder.leases[index].optionalAddressInfo = control.get("optionalAddressInfo")?.value;
-        this.leaseholder.leases[index].postalCode = control.get("postalCode")?.value;
+        this.leaseholder.leases[index].postalCode = Number(control.get("postalCode")?.value);
         this.leaseholder.leases[index].city = control.get("city")?.value;
         this.leaseholder.leases[index].renewalDate = new Date(control.get("renewalDate")?.value).getTime();
         this.leaseholder.leases[index].indexing = control.get("indexing")?.value;
@@ -417,7 +417,7 @@ export class LeaseholderDetailsPage implements OnInit {
         this.newLeaseForm.controls["streetNumber"].value,
         this.newLeaseForm.controls["streetName"].value,
         this.newLeaseForm.controls["optionalAddressInfo"].value,
-        this.newLeaseForm.controls["postalCode"].value,
+        Number(this.newLeaseForm.controls["postalCode"].value),
         this.newLeaseForm.controls["city"].value,
         0,
         new Date().getTime(),

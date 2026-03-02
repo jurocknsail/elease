@@ -325,6 +325,15 @@ export class TabSendPage implements OnInit {
 
     await Promise.all(promises);
 
+    // Save selection state
+    try {
+      for (const leaseholder of this.leaseholders) {
+        await this.parseService.updateLeaseholder(leaseholder);
+      }
+    } catch (error) {
+      console.error('Error saving selection state:', error);
+    }
+
     const toast = await this.toastController.create({
       message: 'PDFs générés avec succès !',
       duration: 2000,
