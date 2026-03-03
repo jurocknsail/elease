@@ -1,5 +1,16 @@
 # E-Lease
-Application de gestion de locataires et de biens locatifs avec génération automatique d'appels de loyers au format PDF.
+
+[![Docker Build](https://img.shields.io/github/actions/workflow/status/jurocknsail/elease/docker-build.yml?style=flat-square&logo=github&label=docker%20build)](https://github.com/jurocknsail/elease/actions/workflows/docker-build.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/jurocknsail/elease?style=flat-square&logo=docker&color=2496ED)](https://hub.docker.com/r/jurocknsail/elease)
+[![Docker Image](https://img.shields.io/badge/image-jurocknsail%2Felease-2496ED?style=flat-square&logo=docker)](https://hub.docker.com/r/jurocknsail/elease)
+[![Platforms](https://img.shields.io/badge/platforms-amd64%20%7C%20arm64-lightgrey?style=flat-square&logo=linux)](https://hub.docker.com/r/jurocknsail/elease)
+[![Angular](https://img.shields.io/badge/Angular-17-DD0031?style=flat-square&logo=angular)](https://angular.io)
+[![Ionic](https://img.shields.io/badge/Ionic-7-3880FF?style=flat-square&logo=ionic)](https://ionicframework.com)
+[![Capacitor](https://img.shields.io/badge/Capacitor-5-119EFF?style=flat-square&logo=capacitor)](https://capacitorjs.com)
+[![Node](https://img.shields.io/badge/Node-%3E%3D18-339933?style=flat-square&logo=nodedotjs)](https://nodejs.org)
+[![License](https://img.shields.io/badge/license-Private-lightgrey?style=flat-square)]()
+
+> Application de gestion de locataires et de biens locatifs avec génération automatique d'appels de loyers au format PDF.
 
 ## Fonctionnalités
 * Gestion des locataires (création, modification, suppression)
