@@ -10,7 +10,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (émulation ARM)
+      - name: Create environment.prod.ts
+        run: echo "${{ secrets.ENVIRONMENT_PROD }}" > src/environments/environment.prod.ts
+
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
@@ -28,6 +31,4 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            jurocknsail/elease:latest
-            jurocknsail/elease:${{ github.sha }}
+          tags: jurocknsail/elease:latest
