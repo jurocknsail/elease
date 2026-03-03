@@ -1,9 +1,23 @@
-# use the latest version of the official nginx image as the base image
-FROM nginx:latest
-# copy the custom nginx configuration file to the container in the 
-# default location
-COPY nginx.conf /etc/nginx/nginx.conf
-# copy the built Angular app files to the default nginx html directory
-COPY /www /usr/share/nginx/html
+# ---- Build Stage ----
+FROM node:20-alpine AS build
 
-# the paths are relative from the Docker file
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build -- --configuration=production
+
+# ---- Serve Stage ----
+FROM nginx:alpine
+
+# Remplace la config nginx
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Copie le build depuis l'étape précédente
+COPY --from=build /app/www /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

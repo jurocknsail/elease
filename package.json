@@ -34,6 +34,8 @@
     "@capacitor/ios": "5.5.1",
     "@capacitor/keyboard": "5.0.6",
     "@capacitor/status-bar": "5.0.6",
+    "@fontsource/material-icons": "^5.2.7",
+    "@fontsource/roboto": "^5.2.10",
     "@ionic/angular": "^7.0.0",
     "@ionic/storage-angular": "^4.0.0",
     "@types/pdfmake": "^0.2.8",

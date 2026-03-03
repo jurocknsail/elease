@@ -200,6 +200,101 @@ npm run start
 
 ---
 
+## Docker
+
+L'application est disponible en image Docker multi-architecture (amd64 + arm64) sur Docker Hub : `jurocknsail/elease:latest`
+
+### Lancer l'application avec Docker
+
+```bash
+docker pull jurocknsail/elease:latest
+docker run -p 80:80 jurocknsail/elease:latest
+```
+
+L'application est accessible sur `http://localhost`
+
+### Build manuel de l'image
+
+```bash
+# Build simple (architecture locale)
+docker build -t jurocknsail/elease:latest .
+
+# Build multi-architecture (amd64 + arm64)
+docker buildx build --platform linux/amd64,linux/arm64 -t jurocknsail/elease:latest --push .
+```
+
+> **Prérequis build multi-arch** : QEMU doit être installé pour l'émulation ARM. À faire une fois (à refaire après reboot) :
+> ```bash
+> docker run --privileged --rm tonistiigi/binfmt --install all
+> ```
+> Le CI GitHub Actions le gère automatiquement via `setup-qemu-action`.
+
+### Structure du build Docker
+
+Le build utilise un **multi-stage Dockerfile** :
+
+1. **Stage build** — Node 20 Alpine compile l'application Angular/Ionic (`npm ci` + `npm run build`)
+2. **Stage serve** — Nginx Alpine sert le dossier `www/` buildé
+
+La configuration Nginx est optimisée pour les SPA Angular avec une stratégie de cache adaptée :
+- `index.html` : jamais mis en cache (rechargement garanti à chaque déploiement)
+- Assets JS/CSS (avec hash) : cache navigateur 1 an (`immutable`)
+
+---
+
+## CI/CD — GitHub Actions
+
+Le build et le push Docker sont automatisés via GitHub Actions. Chaque push sur `main` déclenche un build multi-architecture et met à jour `jurocknsail/elease:latest` sur Docker Hub.
+
+### Configuration requise
+
+Dans **Settings → Secrets and variables → Actions** du repo GitHub, ajouter :
+
+| Secret | Valeur |
+|---|---|
+| `DOCKERHUB_USERNAME` | Login Docker Hub |
+| `DOCKERHUB_TOKEN` | Token Docker Hub (Account Settings → Personal Access Tokens) |
+
+### Workflow `.github/workflows/docker-build.yml`
+
+```yaml
+name: Docker Build & Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push multi-arch
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: jurocknsail/elease:latest
+```
+
+---
+
 ## Scripts disponibles
 
 | Commande | Description |
@@ -256,13 +351,19 @@ elease/
 │   └── assets/              # Ressources statiques
 ├── android/                 # Projet Android natif
 ├── ios/                     # Projet iOS natif
-└── www/                     # Build de production
+├── www/                     # Build de production
+├── Dockerfile               # Build multi-stage Docker
+├── nginx.conf               # Config Nginx pour SPA Angular
+└── .github/
+    └── workflows/
+        └── docker-build.yml # CI/CD GitHub Actions
 ```
 
 ## Sécurité
 * Les fichiers `environment.ts` et `environment.prod.ts` sont exclus du versioning
 * Chaque utilisateur a ses propres données via Parse ACL
 * Les credentials ne sont jamais commités
+* Les secrets Docker Hub sont stockés dans GitHub Secrets (jamais dans le code)
 
 ## Licence
 Projet privé - Tous droits réservés
