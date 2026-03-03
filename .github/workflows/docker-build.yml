@@ -10,10 +10,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
       - name: Create environment files
         run: |
           echo "export const environment = {};" > src/environments/environment.ts
           echo "${{ secrets.ENVIRONMENT_PROD }}" > src/environments/environment.prod.ts
+
+      - name: Install & Build
+        run: |
+          npm ci
+          npm run build -- --configuration=production
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
