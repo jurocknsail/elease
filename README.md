@@ -254,6 +254,22 @@ Dans **Settings → Secrets and variables → Actions** du repo GitHub, ajouter 
 |---|---|
 | `DOCKERHUB_USERNAME` | Login Docker Hub |
 | `DOCKERHUB_TOKEN` | Token Docker Hub (Account Settings → Personal Access Tokens) |
+| `ENVIRONMENT_PROD` | Contenu complet du fichier `src/environments/environment.prod.ts` |
+
+Exemple de valeur pour `ENVIRONMENT_PROD` :
+```typescript
+export const environment = {
+  production: true,
+  parseAppId: 'VOTRE_APP_ID',
+  parseJsKey: 'VOTRE_JS_KEY',
+  parseServerUrl: 'https://votre-parse-server.com/parse',
+  inseeApiKey: 'VOTRE_CLE_API_INSEE',
+  sandbox: false
+};
+```
+
+> Les fichiers `environment.ts` et `environment.prod.ts` sont git-ignorés. Le CI recrée automatiquement `environment.prod.ts` depuis le secret, et génère un `environment.ts` factice (remplacé par `environment.prod.ts` pendant le build Angular).
+
 
 ### Workflow `.github/workflows/docker-build.yml`
 
@@ -261,9 +277,7 @@ Dans **Settings → Secrets and variables → Actions** du repo GitHub, ajouter 
 name: Docker Build & Push
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -271,6 +285,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Create environment files
+        run: |
+          echo "export const environment = {};" > src/environments/environment.ts
+          echo "${{ secrets.ENVIRONMENT_PROD }}" > src/environments/environment.prod.ts
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -364,6 +383,7 @@ elease/
 * Chaque utilisateur a ses propres données via Parse ACL
 * Les credentials ne sont jamais commités
 * Les secrets Docker Hub sont stockés dans GitHub Secrets (jamais dans le code)
+* Le multi-stage Docker garantit que le code source et les clés ne se retrouvent pas dans l'image finale — seul le bundle `www/` buildé est embarqué
 
 ## Licence
 Projet privé - Tous droits réservés
