@@ -11,6 +11,11 @@
         <ion-button (click)="presentActionSheet()">
           <ion-icon slot="icon-only" name="ellipsis-vertical" color="dark"></ion-icon>
         </ion-button>
+        <ion-button *ngIf="isEditing || leaseForm.dirty || leaseholderForm.dirty"
+                    (click)="onSave()" color="success" size="small"
+                    [disabled]="!leaseForm.valid || !leaseholderForm.valid">
+          <ion-icon slot="icon-only" name="save"></ion-icon>
+        </ion-button>
         <ion-button #editButton (click)="onEdit()" [color]="isEditing ? 'danger' : 'success'">
           <ion-icon slot="icon-only" [name]="isEditing ? 'close' : 'create'"></ion-icon>
         </ion-button>
@@ -32,8 +37,8 @@
     <div [ngSwitch]="selectedSegment" class="ion-padding-top">
 
       <!-- Contact Segment -->
-      <div *ngSwitchCase="'contact'" class="premium-card">
-        <div class="ion-padding">
+      <div *ngSwitchCase="'contact'" class="premium-card" style="margin: 0 12px;">
+        <div style="padding: 28px;">
           <h2 class="ion-no-margin ion-margin-bottom">Informations de contact</h2>
           <form [formGroup]="leaseholderForm">
             <ion-item lines="none" class="ion-margin-bottom">
@@ -55,11 +60,15 @@
       </div>
 
       <!-- Leases Segment -->
-      <div *ngSwitchCase="'leases'">
+      <div *ngSwitchCase="'leases'" style="padding: 0 12px;">
         <ion-accordion-group #accordionGroup expand="inset">
           <div [formGroup]="leaseForm">
             <ng-container formArrayName="leases">
-              <ion-accordion toggleIconSlot="end" *ngFor="let leaseForm of leases.controls; let i = index" [value]="i.toString()" class="premium-card ion-no-margin ion-margin-bottom">
+              <ion-accordion toggleIconSlot="end"
+                             *ngFor="let leaseForm of leases.controls; let i = index"
+                             [value]="i.toString()"
+                             class="premium-card ion-no-margin ion-margin-bottom">
+
                 <ion-item slot="header" color="light">
                   <ion-icon name="business-outline" slot="start" color="success"></ion-icon>
                   <ion-label>
@@ -67,223 +76,241 @@
                     <p>{{ leaseholder["leases"][i].city }}</p>
                   </ion-label>
                 </ion-item>
-                <div class="ion-padding" slot="content">
+
+                <div style="padding: 28px;" slot="content">
                   <form [formGroupName]=i>
                     <ion-list style="padding: 0;">
-                      <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                        <ion-input labelPlacement="floating" label="Nom" formControlName="name"
-                                   type="text" errorText="Saisie invalide !" [readonly]="!isEditing"></ion-input>
-                      </ion-item>
-                      <ion-grid fixed="true" class="ion-no-padding">
-                        <ion-row>
-                          <ion-col size="4">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="N°" formControlName="streetNumber"
-                                         type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                          <ion-col size="8">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Rue" formControlName="streetName"
-                                         type="text" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                        </ion-row>
-                        <ion-row>
-                          <ion-col size="8">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Complément"
-                                         formControlName="optionalAddressInfo"
-                                         type="text" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                          <ion-col size="4">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Lot" formControlName="lot" type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                        </ion-row>
-                        <ion-row>
-                          <ion-col size="4">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="CP" formControlName="postalCode"
-                                         type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                          <ion-col size="8">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Ville" formControlName="city"
-                                         type="text" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                        </ion-row>
-                      </ion-grid>
-                      <ion-grid fixed="true" class="ion-no-padding">
-                        <ion-row>
-                          <ion-col size="7">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Date anniversaire" formControlName="renewalDate"
-                                         type="date" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                          <ion-col size="5">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating"
-                                         [label]='leaseholder["leases"][i].isPro ? "Indexation (ILAT)" : "Indexation (IRL)"'
-                                         formControlName="indexing"
-                                         type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                        </ion-row>
-                      </ion-grid>
-                      <ion-grid fixed="true" class="ion-no-padding">
-                        <ion-row>
-                          <ion-col size="6">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Loyer" formControlName="price"
-                                         type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                          <ion-col size="6">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Charges" formControlName="charge"
-                                         type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                        </ion-row>
-                      </ion-grid>
 
-                      <ion-item-divider class="ion-margin-top" style="--padding-start: 0;">
-                        <ion-label color="medium">Suppléments</ion-label>
-                        <ion-button slot="end" fill="clear" (click)="addAdditionalChargeToLease(i)" color="success" [disabled]="!isEditing">
-                          <ion-icon slot="icon-only" name="add-circle"></ion-icon>
-                        </ion-button>
-                      </ion-item-divider>
-                      <div formArrayName="additionalCharges" style="display: flex; flex-direction: column; gap: 8px;">
-                        <ion-item lines="none" *ngFor="let chargeCtrl of getAdditionalCharges(i).controls; let j = index" style="--padding-start: 0; --inner-padding-end: 0;">
-                          <div [formGroupName]="j" style="display: flex; width: 100%; gap: 8px;">
-                            <ion-input labelPlacement="floating" label="Libellé" formControlName="title"
-                                       type="text" errorText="Saisie invalide !" style="flex: 2;"></ion-input>
-                            <ion-input labelPlacement="floating" label="Montant" formControlName="amount"
-                                       type="number" errorText="Saisie invalide !" style="flex: 1;"></ion-input>
-                            <ion-button fill="clear" color="danger" (click)="removeAdditionalChargeFromLease(i, j)" [disabled]="!isEditing">
-                              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-                            </ion-button>
-                          </div>
-                        </ion-item>
+                      <!-- Nom — pleine largeur -->
+                      <div style="padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">Nom</ion-label>
+                        <ion-input *ngIf="isEditing" formControlName="name" type="text" errorText="Saisie invalide !"></ion-input>
+                        <p *ngIf="!isEditing" style="margin:4px 0 0;">{{ leaseholder["leases"][i].name || '–' }}</p>
                       </div>
 
-                      <ion-item lines="none" class="ion-margin-top" style="--padding-start: 0; --inner-padding-end: 0;">
-                        <ion-checkbox formControlName="isPro" label-placement="end">Bail professionnel ?
-                        </ion-checkbox>
-                      </ion-item>
+                      <!-- Rue (gauche) + N° (droite) -->
+                      <div style="display:flex; gap:12px; padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <div style="flex:3;">
+                          <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">Rue</ion-label>
+                          <ion-input *ngIf="isEditing" formControlName="streetName" type="text" errorText="Saisie invalide !"></ion-input>
+                          <p *ngIf="!isEditing" style="margin:4px 0 0;">{{ leaseholder["leases"][i].streetName || '–' }}</p>
+                        </div>
+                        <div style="flex:1.5;">
+                          <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">N°</ion-label>
+                          <ion-input *ngIf="isEditing" formControlName="streetNumber" type="number" errorText="Saisie invalide !"></ion-input>
+                          <p *ngIf="!isEditing" style="margin:4px 0 0;">{{ leaseholder["leases"][i].streetNumber || '–' }}</p>
+                        </div>
+                      </div>
+
+                      <!-- Complément d'adresse (gauche) + Lot (droite) -->
+                      <div style="display:flex; gap:12px; padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <div style="flex:3;">
+                          <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">Complément d'adresse</ion-label>
+                          <ion-input *ngIf="isEditing" formControlName="optionalAddressInfo" type="text" errorText="Saisie invalide !"></ion-input>
+                          <p *ngIf="!isEditing" style="margin:4px 0 0;">{{ leaseholder["leases"][i].optionalAddressInfo || '–' }}</p>
+                        </div>
+                        <div style="flex:1.5;">
+                          <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">Lot</ion-label>
+                          <ion-input *ngIf="isEditing" formControlName="lot" type="number" errorText="Saisie invalide !"></ion-input>
+                          <p *ngIf="!isEditing" style="margin:4px 0 0;">{{ leaseholder["leases"][i].lot != null ? leaseholder["leases"][i].lot : '–' }}</p>
+                        </div>
+                      </div>
+
+                      <!-- Ville (gauche) + CP (droite) -->
+                      <div style="display:flex; gap:12px; padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <div style="flex:3;">
+                          <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">Ville</ion-label>
+                          <ion-input *ngIf="isEditing" formControlName="city" type="text" errorText="Saisie invalide !"></ion-input>
+                          <p *ngIf="!isEditing" style="margin:4px 0 0;">{{ leaseholder["leases"][i].city || '–' }}</p>
+                        </div>
+                        <div style="flex:1.5;">
+                          <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">CP</ion-label>
+                          <ion-input *ngIf="isEditing" formControlName="postalCode" type="number" errorText="Saisie invalide !"></ion-input>
+                          <p *ngIf="!isEditing" style="margin:4px 0 0;">{{ leaseholder["leases"][i].postalCode || '–' }}</p>
+                        </div>
+                      </div>
+
+                      <!-- Date anniversaire (gauche) + Indexation (droite) -->
+                      <div style="display:flex; gap:12px; padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <div style="flex:3;">
+                          <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">Date anniversaire</ion-label>
+                          <ion-input *ngIf="isEditing" formControlName="renewalDate" type="date" errorText="Saisie invalide !"></ion-input>
+                          <p *ngIf="!isEditing" style="margin:4px 0 0;">{{ leaseholder["leases"][i].renewalDate ? (leaseholder["leases"][i].renewalDate | date:'dd/MM/yyyy') : '–' }}</p>
+                        </div>
+                        <!-- Indexation : toujours readonly, valeur chargée depuis l'API -->
+                        <div style="flex:1.5;">
+                          <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">
+                            {{ leaseholder["leases"][i].isPro ? "ILAT" : "IRL" }}
+                          </ion-label>
+                          <p style="margin:4px 0 0; color: var(--ion-color-medium);">
+                            {{ leaseholder["leases"][i].indexing != null ? leaseholder["leases"][i].indexing : '–' }}
+                          </p>
+                        </div>
+                      </div>
+
+                      <!-- Loyer (gauche) + Charges (droite) -->
+                      <div style="display:flex; gap:12px; padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <div style="flex:3;">
+                          <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">Loyer</ion-label>
+                          <ion-input *ngIf="isEditing" formControlName="price" type="number" errorText="Saisie invalide !"></ion-input>
+                          <p *ngIf="!isEditing" style="margin:4px 0 0;">{{ leaseholder["leases"][i].price != null ? leaseholder["leases"][i].price : '–' }}</p>
+                        </div>
+                        <div style="flex:1.5;">
+                          <ion-label color="medium" style="font-size:0.72rem; display:block; margin-bottom:4px;">Charges</ion-label>
+                          <ion-input *ngIf="isEditing" formControlName="charge" type="number" errorText="Saisie invalide !"></ion-input>
+                          <p *ngIf="!isEditing" style="margin:4px 0 0;">{{ leaseholder["leases"][i].charge != null ? leaseholder["leases"][i].charge : '–' }}</p>
+                        </div>
+                      </div>
+
+                      <!-- Suppléments -->
+                      <div style="padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <!-- En-tête Suppléments : déborde sur les paddings de la carte via margin négatif -->
+                        <div style="display:flex; gap:12px; align-items:center; padding: 11px 28px; margin: 0 -28px; border-top: 1px solid var(--ion-color-step-300); border-bottom: 1px solid var(--ion-color-step-300); background: var(--ion-color-step-100);">
+                          <ion-label style="flex:3; margin:0; font-size:0.9rem; font-weight:500;" color="medium">Suppléments</ion-label>
+                          <!-- col droite : bouton + à droite, aligné avec les corbeilles, même taille que la pastille checkbox (20px) -->
+                          <div style="flex:1.5; min-width:0; display:flex; align-items:center; justify-content:flex-end; padding-right:4px;">
+                            <ion-button *ngIf="isEditing" fill="clear" (click)="addAdditionalChargeToLease(i)" color="success"
+                                        style="margin:0; --padding-start:8px; --padding-end:8px; height:36px;">
+                              <ion-icon slot="icon-only" name="add-circle" style="font-size:25px;"></ion-icon>
+                            </ion-button>
+                          </div>
+                        </div>
+                        <div formArrayName="additionalCharges" style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+                          <ng-container *ngFor="let chargeCtrl of getAdditionalCharges(i).controls; let j = index">
+                            <!-- Mode édition -->
+                            <div *ngIf="isEditing" [formGroupName]="j" style="display:flex; gap:12px; align-items:flex-end;">
+                              <div style="flex:3; min-width:0;">
+                                <ion-input labelPlacement="floating" label="Libellé" formControlName="title"
+                                           type="text" errorText="Saisie invalide !"></ion-input>
+                              </div>
+                              <div style="flex:1.5; min-width:0; display:flex; align-items:flex-end;">
+                                <div style="flex:1; min-width:0;">
+                                  <ion-input labelPlacement="floating" label="Montant" formControlName="amount"
+                                             type="number" errorText="Saisie invalide !"></ion-input>
+                                </div>
+                                <!-- corbeille à droite, même taille 20px -->
+                                <ion-button fill="clear" color="danger" (click)="removeAdditionalChargeFromLease(i, j)"
+                                            style="flex-shrink:0; width:20px; height:20px; --padding-start:0; --padding-end:0; margin-left:4px; margin-bottom:10px;">
+                                  <ion-icon slot="icon-only" name="trash-outline" style="font-size:20px;"></ion-icon>
+                                </ion-button>
+                              </div>
+                            </div>
+                            <!-- Mode lecture -->
+                            <div *ngIf="!isEditing" style="display:flex; gap:12px;">
+                              <p style="flex:3; margin:4px 0 0;">{{ chargeCtrl.get('title')?.value || '–' }}</p>
+                              <p style="flex:1.5; margin:4px 0 0;">{{ chargeCtrl.get('amount')?.value != null ? chargeCtrl.get('amount')?.value : '–' }}</p>
+                            </div>
+                          </ng-container>
+                          <p *ngIf="!isEditing && getAdditionalCharges(i).controls.length === 0"
+                             style="margin:4px 0 0; color:var(--ion-color-medium); font-size:0.9rem;">Aucun supplément</p>
+                        </div>
+                      </div>
+
+                      <!-- Bail professionnel -->
+                      <div style="display:flex; gap:12px; align-items:center; padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <ion-label style="flex:3; margin:0;">Bail professionnel</ion-label>
+                        <!-- checkbox alignée à gauche dans la colonne, comme les text inputs -->
+                        <div style="flex:1.5; min-width:0; display:flex; align-items:center;">
+                          <ion-checkbox *ngIf="isEditing" formControlName="isPro" color="success"
+                                        style="--size:20px;"></ion-checkbox>
+                          <ion-icon *ngIf="!isEditing && leaseholder['leases'][i].isPro"
+                                    name="checkmark-circle" color="success" style="font-size:20px;"></ion-icon>
+                          <ion-icon *ngIf="!isEditing && !leaseholder['leases'][i].isPro"
+                                    name="close-circle" color="medium" style="font-size:20px;"></ion-icon>
+                        </div>
+                      </div>
 
                       <ion-button expand="block" fill="outline" color="danger" class="ion-margin-top" (click)="onDeleteLease(i)">
                         <ion-icon name="trash-outline" slot="start"></ion-icon>
                         Supprimer ce bail
                       </ion-button>
+
                     </ion-list>
                   </form>
                 </div>
               </ion-accordion>
 
-              <ion-accordion toggleIcon="add" toggleIconSlot="end" [disabled]="isEditing" class="premium-card ion-no-margin ion-margin-bottom" style="--background: rgba(var(--ion-color-success-rgb), 0.1);">
+              <!-- Nouveau bail -->
+              <ion-accordion toggleIcon="add" toggleIconSlot="end"
+                             [disabled]="isEditing"
+                             class="premium-card ion-no-margin ion-margin-bottom"
+                             style="--background: rgba(var(--ion-color-success-rgb), 0.1);">
                 <ion-item slot="header" color="success">
                   <ion-icon name="add-circle-outline" slot="start"></ion-icon>
                   <ion-label>Nouveau bail</ion-label>
                 </ion-item>
-                <div class="ion-padding" slot="content">
+                <div style="padding: 28px;" slot="content">
                   <form [formGroup]="newLeaseForm" (ngSubmit)="onAdd()">
                     <ion-list style="padding: 0;">
-                      <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                        <ion-input formControlName="name" labelPlacement="floating" label="Nom" type="text" errorText="Saisie invalide !"></ion-input>
-                      </ion-item>
-                      <ion-grid fixed="true" class="ion-no-padding">
-                        <ion-row>
-                          <ion-col size="4">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="N°" formControlName="streetNumber"
-                                         type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                          <ion-col size="8">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Rue" formControlName="streetName"
-                                         type="text" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                        </ion-row>
-                        <ion-row>
-                          <ion-col size="8">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Complément"
-                                         formControlName="optionalAddressInfo"
-                                         type="text" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                          <ion-col size="4">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Lot" formControlName="lot" type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                        </ion-row>
-                        <ion-row>
-                          <ion-col size="4">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="CP" formControlName="postalCode"
-                                         type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                          <ion-col size="8">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input labelPlacement="floating" label="Ville" formControlName="city"
-                                         type="text" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                        </ion-row>
-                      </ion-grid>
-                      <ion-grid fixed="true" class="ion-no-padding">
-                        <ion-row>
-                          <ion-col size="6">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input formControlName="price" labelPlacement="floating" label="Loyer"
-                                         type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                          <ion-col size="6">
-                            <ion-item lines="none" style="--padding-start: 0; --inner-padding-end: 0;">
-                              <ion-input formControlName="charge" labelPlacement="floating" label="Charges"
-                                         type="number" errorText="Saisie invalide !"></ion-input>
-                            </ion-item>
-                          </ion-col>
-                        </ion-row>
-                      </ion-grid>
 
-                      <ion-item-divider class="ion-margin-top" style="--padding-start: 0;">
-                        <ion-label color="medium">Suppléments</ion-label>
-                        <ion-button slot="end" fill="clear" (click)="addAdditionalChargeToNewLease()" color="success">
-                          <ion-icon slot="icon-only" name="add-circle"></ion-icon>
-                        </ion-button>
-                      </ion-item-divider>
-                      <div formArrayName="additionalCharges" style="display: flex; flex-direction: column; gap: 8px;">
-                        <ion-item lines="none" *ngFor="let chargeCtrl of newLeaseAdditionalCharges.controls; let j = index" style="--padding-start: 0; --inner-padding-end: 0;">
-                          <div [formGroupName]="j" style="display: flex; width: 100%; gap: 8px;">
+                      <div style="padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <ion-input formControlName="name" labelPlacement="floating" label="Nom" type="text" errorText="Saisie invalide !"></ion-input>
+                      </div>
+
+                      <div style="display:flex; gap:12px; padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <ion-item lines="none" style="--padding-start:0; --inner-padding-end:0; flex:3;">
+                          <ion-input labelPlacement="floating" label="Rue" formControlName="streetName" type="text" errorText="Saisie invalide !"></ion-input>
+                        </ion-item>
+                        <ion-item lines="none" style="--padding-start:0; --inner-padding-end:0; flex:1.5;">
+                          <ion-input labelPlacement="floating" label="N°" formControlName="streetNumber" type="number" errorText="Saisie invalide !"></ion-input>
+                        </ion-item>
+                      </div>
+
+                      <div style="display:flex; gap:12px; padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <ion-item lines="none" style="--padding-start:0; --inner-padding-end:0; flex:3;">
+                          <ion-input labelPlacement="floating" label="Complément d'adresse" formControlName="optionalAddressInfo" type="text" errorText="Saisie invalide !"></ion-input>
+                        </ion-item>
+                        <ion-item lines="none" style="--padding-start:0; --inner-padding-end:0; flex:1.5;">
+                          <ion-input labelPlacement="floating" label="Lot" formControlName="lot" type="number" errorText="Saisie invalide !"></ion-input>
+                        </ion-item>
+                      </div>
+
+                      <div style="display:flex; gap:12px; padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <ion-item lines="none" style="--padding-start:0; --inner-padding-end:0; flex:3;">
+                          <ion-input labelPlacement="floating" label="Ville" formControlName="city" type="text" errorText="Saisie invalide !"></ion-input>
+                        </ion-item>
+                        <ion-item lines="none" style="--padding-start:0; --inner-padding-end:0; flex:1.5;">
+                          <ion-input labelPlacement="floating" label="CP" formControlName="postalCode" type="number" errorText="Saisie invalide !"></ion-input>
+                        </ion-item>
+                      </div>
+
+                      <div style="display:flex; gap:12px; padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <ion-item lines="none" style="--padding-start:0; --inner-padding-end:0; flex:3;">
+                          <ion-input formControlName="price" labelPlacement="floating" label="Loyer" type="number" errorText="Saisie invalide !"></ion-input>
+                        </ion-item>
+                        <ion-item lines="none" style="--padding-start:0; --inner-padding-end:0; flex:1.5;">
+                          <ion-input formControlName="charge" labelPlacement="floating" label="Charges" type="number" errorText="Saisie invalide !"></ion-input>
+                        </ion-item>
+                      </div>
+
+                      <div style="padding: 10px 0;" [style.border-bottom]="!isEditing ? '1px solid var(--ion-color-step-150)' : 'none'">
+                        <div style="display:flex; align-items:center; margin-bottom:6px;">
+                          <ion-label color="medium" style="font-size:0.72rem;">Suppléments</ion-label>
+                          <ion-button fill="clear" (click)="addAdditionalChargeToNewLease()" color="success" style="margin-left:auto; height:28px;">
+                            <ion-icon slot="icon-only" name="add-circle"></ion-icon>
+                          </ion-button>
+                        </div>
+                        <div formArrayName="additionalCharges" style="display:flex; flex-direction:column; gap:8px;">
+                          <div *ngFor="let chargeCtrl of newLeaseAdditionalCharges.controls; let j = index"
+                               [formGroupName]="j" style="display:flex; gap:8px; align-items:center;">
                             <ion-input labelPlacement="floating" label="Libellé" formControlName="title"
-                                       type="text" errorText="Saisie invalide !" style="flex: 2;"></ion-input>
+                                       type="text" errorText="Saisie invalide !" style="flex:3;"></ion-input>
                             <ion-input labelPlacement="floating" label="Montant" formControlName="amount"
-                                       type="number" errorText="Saisie invalide !" style="flex: 1;"></ion-input>
+                                       type="number" errorText="Saisie invalide !" style="flex:1.5;"></ion-input>
                             <ion-button fill="clear" color="danger" (click)="removeAdditionalChargeFromNewLease(j)">
                               <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
                             </ion-button>
                           </div>
-                        </ion-item>
+                        </div>
                       </div>
 
-                      <ion-item lines="none" class="ion-margin-top" style="--padding-start: 0; --inner-padding-end: 0;">
-                        <ion-checkbox checked=false formControlName="isPro" label-placement="end">
-                          Bail professionnel ?
-                        </ion-checkbox>
-                      </ion-item>
+                      <div style="display:flex; gap:12px; align-items:center; padding: 10px 0;">
+                        <ion-label style="flex:3; margin:0;">Bail professionnel</ion-label>
+                        <div style="flex:1.5;">
+                          <ion-checkbox checked=false formControlName="isPro"></ion-checkbox>
+                        </div>
+                      </div>
+
                     </ion-list>
                     <ion-button expand="block" color="success" type="submit" [disabled]="!newLeaseForm.valid" class="ion-margin-top">
                       <ion-icon name="add-outline" slot="start"></ion-icon>
@@ -299,13 +326,6 @@
       </div>
 
     </div>
-
-    <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-      <ion-fab-button (click)="onSave()" *ngIf="isEditing || leaseForm.dirty || leaseholderForm.dirty" color="success"
-                      type="submit" [disabled]="!leaseForm.valid || !leaseholderForm.valid">
-        <ion-icon name="save"></ion-icon>
-      </ion-fab-button>
-    </ion-fab>
 
   </ion-content>
 </ng-container>
