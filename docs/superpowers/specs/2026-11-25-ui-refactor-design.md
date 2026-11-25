@@ -73,7 +73,7 @@ Objectif : un look actuel, un parcours **très simple**, un **aperçu obligatoir
 
 - **Canal : e-mail** (choix utilisateur), au **propriétaire** (e-mail du compte Parse `_User`), jamais aux locataires.
 - **Quand** : le 25 de chaque mois à 9 h (Europe/Paris), via un **Cloud Job Back4App planifié** (`sendMonthlyReminder`) dans le cloud code, envoi par Mailjet (déjà utilisé).
-- **Contenu** : « N appels de loyer à envoyer pour <mois M+1> », liste des baux non encore envoyés pour cette période (même règle que le statut ci-dessus), montant total, lien vers `https://e-lease.smarthomeserver.online`. Aucun mail si tout est déjà envoyé.
+- **Contenu** : « N appels de loyer à envoyer pour <mois M+1> », liste des baux non encore envoyés pour cette période (même règle que le statut ci-dessus), montant total, lien vers `https://elease.smarthomeserver.online`. Aucun mail si tout est déjà envoyé.
 - **Pour qui** : chaque utilisateur ayant au moins un bail « À envoyer » (le job lit avec la master key, filtre par ACL propriétaire).
 - **Sécurité test** : le job accepte un paramètre `onlyUser` ; tous les tests se font avec `onlyUser=julien`. Ne jamais déclencher le job sans ce paramètre pendant le développement.
 - **Dans l'app** : bandeau sur l'accueil à partir du 25 tant qu'il reste des appels « À envoyer » pour M+1.
@@ -83,11 +83,12 @@ Objectif : un look actuel, un parcours **très simple**, un **aperçu obligatoir
 
 - La nouvelle app (statique) est hébergée sur **Cloudflare Pages** (gratuit, CDN, pas de cold start, HTTPS). Les rappels e-mail ne dépendent pas de l'hébergement (Cloud Jobs Back4App).
 - Build et déploiement par GitHub Actions : le workflow génère `environment.prod.ts` depuis le secret `ENVIRONMENT_PROD` comme aujourd'hui, build Node 24, puis `wrangler pages deploy` (secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`). Fallback SPA : `_redirects` `/* /index.html 200`.
-- **Cohabitation temporaire avec l'ancienne app** : le tunnel `cloudflared` de l'Odroid est géré par token (hostnames configurés dans le dashboard Cloudflare Zero Trust → Networks → Tunnels → Public hostnames, pas de fichier local).
+- **Cohabitation avec l'ancienne app** (décision utilisateur) : l'ancienne app garde son adresse **`e-lease.smarthomeserver.online`** (tunnel `cloudflared` de l'Odroid, géré par token dans le dashboard Cloudflare Zero Trust ; aucune modification). La nouvelle app reçoit un **nouveau nom définitif : `elease.smarthomeserver.online`** (domaine personnalisé du projet Pages ; nom à confirmer par l'utilisateur).
+  - Le nom doit être définitif dès le départ : une PWA installée est liée à son adresse ; changer d'adresse plus tard obligerait à réinstaller l'app sur chaque appareil.
   1. Déployer la nouvelle app ; la tester sur son URL `*.pages.dev`.
-  2. Dans le tunnel, renommer le hostname public `e-lease.smarthomeserver.online` → **`e-lease-old.smarthomeserver.online`** (même service, conteneur `elease`). Action faite par l'utilisateur dans le dashboard.
-  3. Attacher `e-lease.smarthomeserver.online` comme domaine personnalisé du projet Pages (possible seulement une fois le CNAME du tunnel libéré à l'étape 2).
-  4. Plus tard, quand l'ancienne app n'est plus utile : supprimer le hostname `e-lease-old`, le conteneur `elease` et l'ancien workflow Docker.
+  2. Attacher `elease.smarthomeserver.online` au projet Pages (aucun conflit avec le tunnel).
+  3. Plus tard, quand l'ancienne app n'est plus utile : supprimer le hostname `e-lease` du tunnel, le conteneur `elease` et l'ancien workflow Docker. Optionnel : redirection 301 `e-lease` → `elease`.
+  - Les liens dans les e-mails de rappel pointent vers la nouvelle adresse.
 - Le workflow Docker actuel est conservé (déclenchement manuel) tant que l'ancienne app tourne.
 
 ## Profil bailleur (ajout, décision utilisateur)
