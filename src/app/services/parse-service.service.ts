@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import Parse from 'parse';
 import { Lease } from "../model/lease";
 import { Leaseholder } from "../model/leaseholder";
-import { Observable, from } from 'rxjs';
+import { Observable, from, throwError } from 'rxjs';
 import { environment } from "../../environments/environment";
 import { LeasePdfInfo } from '../model/leasepdfinfo';
 
@@ -329,6 +329,17 @@ export class ParseService {
 
   sendEmail(recipientEmail: string, pdfDataList: LeasePdfInfo[]) : Observable<any>{
 
+    // Garde-fou hors production : on n'envoie qu'à l'adresse de test, et toujours en sandbox Mailjet.
+    if (!environment.production) {
+      const testRecipient = (environment as any).testRecipientEmail as string | undefined;
+      if (!testRecipient || recipientEmail.trim().toLowerCase() !== testRecipient.toLowerCase()) {
+        const msg = `[DEV] Envoi bloqué vers ${recipientEmail} : seul ${testRecipient ?? '(aucune adresse de test)'} est autorisé hors production.`;
+        console.warn(msg);
+        return throwError(() => new Error(msg));
+      }
+    }
+    const sandbox = environment.production ? environment.sandbox : true;
+
     let attachments: any[] = [];
     let attachment: { [key: string]: any };
 
@@ -356,7 +367,7 @@ Bonne reception,
 
 Pierre MARGERIT`,
         attachments: attachments,
-        sandbox: environment.sandbox
+        sandbox: sandbox
       }))
 
   }

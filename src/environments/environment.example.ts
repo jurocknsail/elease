@@ -39,5 +39,8 @@ export const environment = {
   // ------------------
   // true  = Emails are NOT sent, only logged to console (safe for development)
   // false = Real emails are sent (use for production)
-  sandbox: true
+  sandbox: true,
+
+  // Dev only: only emails to this address are allowed outside production
+  testRecipientEmail: 'you@example.com'
 };
