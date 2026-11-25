@@ -62,12 +62,51 @@ Objectif : un look actuel, un parcours **très simple**, un **aperçu obligatoir
 - **Export/Import JSON** (menu actuel) : conservés dans « Réglages ». Déconnexion dans le même menu.
 - **Login** : écran centré simple, même mécanisme Parse.
 - **Dates** : locale `fr-FR`, montants formatés `1 900 €`.
-- **Statut « Envoyé »** d'un bail = son `lastSendDate` tombe dans le mois de la période sélectionnée (déduite de la date d'échéance, comme aujourd'hui) ; sinon « À envoyer ».
+- **Statut « Envoyé »** d'un bail : les appels partent vers le 25 du mois M pour la période M+1 (données réelles : `lastSendDate` = 25/10 pour la période de novembre). Le statut se base donc sur la **période facturée**, pas sur la date d'envoi : nouveau champ additif `lastSentPeriod` (`"YYYY-MM"`) écrit à l'envoi ; pour les baux qui ne l'ont pas encore, repli sur `lastSendDate` ∈ mois précédant la période.
 - **Montant affiché** = celui que le PDF facture (loyer + charges + charges additionnelles), calculé par la même fonction que la génération PDF — une seule source de vérité.
 - **Regroupement des envois inchangé** : un e-mail par locataire, avec un PDF par bail en pièce jointe ; `lastSendDate` mis à jour après succès, comme aujourd'hui.
 - **« Révision dans N j »** : purement informatif (date anniversaire dans les 30 prochains jours). Aucune réindexation automatique (règle métier inchangée).
 - **Après envoi** : résumé (envoyés / échecs par locataire) affiché sur le même écran, sans redirection.
 - **Accessibilité** : contrastes AA dans les deux thèmes, navigation clavier sur la liste d'envoi.
+
+## Rappel mensuel d'envoi (ajout)
+
+- **Canal : e-mail** (choix utilisateur), au **propriétaire** (e-mail du compte Parse `_User`), jamais aux locataires.
+- **Quand** : le 25 de chaque mois à 9 h (Europe/Paris), via un **Cloud Job Back4App planifié** (`sendMonthlyReminder`) dans le cloud code, envoi par Mailjet (déjà utilisé).
+- **Contenu** : « N appels de loyer à envoyer pour <mois M+1> », liste des baux non encore envoyés pour cette période (même règle que le statut ci-dessus), montant total, lien vers `https://e-lease.smarthomeserver.online`. Aucun mail si tout est déjà envoyé.
+- **Pour qui** : chaque utilisateur ayant au moins un bail « À envoyer » (le job lit avec la master key, filtre par ACL propriétaire).
+- **Sécurité test** : le job accepte un paramètre `onlyUser` ; tous les tests se font avec `onlyUser=julien`. Ne jamais déclencher le job sans ce paramètre pendant le développement.
+- **Dans l'app** : bandeau sur l'accueil à partir du 25 tant qu'il reste des appels « À envoyer » pour M+1.
+- Le cloud code passe de 1 à 2 fonctions ; déploiement via le MCP Back4App ou le dashboard, en conservant `sendEmail` à l'identique.
+
+## Passe de cohérence (app actuelle) — corrections incluses dans la refonte
+
+Calculs et dates
+- `computeDefaultSendDate` construit `"2026-1-25"` (mois non complété) : **date invalide sur Safari/iPhone** → bug bloquant pour la PWA iOS. Utiliser `new Date(y, m, 25)`.
+- L'écran appelle « Date d'échéance » ce qui est en fait la **date de l'appel** (imprimée « La Ciotat, le … ») ; l'échéance réelle est le 1er du mois facturé. Renommer « Date de l'appel » et afficher « Échéance : 1er janvier 2027 ».
+- Objet du mail « Facture de loyer pour le mois de 01/2027 » → « Appel de loyer — janvier 2027 ».
+- Nom de fichier PDF : `replace(" ", "_")` ne remplace que le 1er espace → remplacer tous les espaces/accents.
+
+Envoi
+- Si un envoi échoue, la promesse ne se résout jamais : l'écran reste bloqué et **les envois réussis ne mettent pas à jour leur date**. Gérer chaque locataire indépendamment, puis résumé succès/échecs.
+- Cocher/décocher un bail réécrit tout le locataire et tous ses baux en base (`updateLeaseholder`). La sélection devient un état d'écran (non persisté) ; `isSelected` n'est plus écrit (champ conservé en base pour compatibilité).
+- Confirmation d'envoi : récapitulatif explicite (« 6 e-mails à 5 locataires, total 8 420 € ») au lieu de « Es-tu sûr(e) ? ».
+
+Données et formulaires
+- Ajout d'un bail : la **date anniversaire n'est pas demandée** et vaut la date de création → la demander (optionnelle).
+- `lot` obligatoire à la création alors que le PDF le traite comme optionnel (lot 0 = pas de lot, ex. « Restaurant ») → optionnel.
+- Téléphone : le validateur exige 10 chiffres collés, alors que le formulaire suggère « +33 6 00 00 00 00 » → accepter espaces/points/+33, normaliser à l'enregistrement ; téléphone optionnel (non utilisé ailleurs).
+- Code postal stocké en nombre : les codes `01xxx`–`09xxx` perdraient leur 0 → afficher/imprimer sur 5 chiffres (`padStart`), type de colonne inchangé (schéma Parse).
+- Nom limité à 30 caractères à la création mais pas à la modification → même règle partout (pas de limite stricte, 80 car.).
+- Import JSON : crée des doublons à chaque import et remet `lastSendDate` à 0 → l'import devient une **restauration contrôlée** (aperçu, ignore les objets déjà présents par `objectId`), ou est retiré (voir questions).
+
+Textes et ton
+- Mélange « tu » (« Es-tu sûr(e) », « recommence ! ») et « vous » ; emojis dans les toasts. → Vouvoiement neutre partout, sans emojis.
+- Vocabulaire unifié : « Appels de loyer » (pas « Envois », « Envois PDF », « Factures ») ; « Locataire », « Bail / Baux ».
+- Message d'erreur INSEE mentionnant une « clé API non configurée » alors qu'aucune clé n'est utilisée → message réseau simple. Retrait de `inseeApiKey` des environnements.
+
+Nettoyage technique
+- Code mort : `message`/`onWillDismiss` d'exemple Ionic, `isBrowser`, ouverture PDF commentée, dossier `elease_pdfs` sur disque.
 
 ## Laissé au builder
 
