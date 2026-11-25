@@ -79,6 +79,17 @@ Objectif : un look actuel, un parcours **très simple**, un **aperçu obligatoir
 - **Dans l'app** : bandeau sur l'accueil à partir du 25 tant qu'il reste des appels « À envoyer » pour M+1.
 - Le cloud code passe de 1 à 2 fonctions ; déploiement via le MCP Back4App ou le dashboard, en conservant `sendEmail` à l'identique.
 
+## Hébergement : Cloudflare Pages (décision utilisateur)
+
+- La nouvelle app (statique) est hébergée sur **Cloudflare Pages** (gratuit, CDN, pas de cold start, HTTPS). Les rappels e-mail ne dépendent pas de l'hébergement (Cloud Jobs Back4App).
+- Build et déploiement par GitHub Actions : le workflow génère `environment.prod.ts` depuis le secret `ENVIRONMENT_PROD` comme aujourd'hui, build Node 24, puis `wrangler pages deploy` (secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`). Fallback SPA : `_redirects` `/* /index.html 200`.
+- **Cohabitation temporaire avec l'ancienne app** : le tunnel `cloudflared` de l'Odroid est géré par token (hostnames configurés dans le dashboard Cloudflare Zero Trust → Networks → Tunnels → Public hostnames, pas de fichier local).
+  1. Déployer la nouvelle app ; la tester sur son URL `*.pages.dev`.
+  2. Dans le tunnel, renommer le hostname public `e-lease.smarthomeserver.online` → **`e-lease-old.smarthomeserver.online`** (même service, conteneur `elease`). Action faite par l'utilisateur dans le dashboard.
+  3. Attacher `e-lease.smarthomeserver.online` comme domaine personnalisé du projet Pages (possible seulement une fois le CNAME du tunnel libéré à l'étape 2).
+  4. Plus tard, quand l'ancienne app n'est plus utile : supprimer le hostname `e-lease-old`, le conteneur `elease` et l'ancien workflow Docker.
+- Le workflow Docker actuel est conservé (déclenchement manuel) tant que l'ancienne app tourne.
+
 ## Profil bailleur (ajout, décision utilisateur)
 
 - Aujourd'hui en dur : en-tête PDF « SCI LA CHARINE / 41 CHEMIN DES BAGNOLS / 13600 LA CIOTAT », lieu « LA CIOTAT, le … », auteur PDF, mentions légales (« SCI LA CHARINE au capital de 2000 euros, RCS MARSEILLE n° 507 834 117 »), signature du mail « Pierre MARGERIT ».
