@@ -1,0 +1,56 @@
+@import '@fontsource-variable/inter';
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  --color-bg: #ffffff;
+  --color-surface: #f6f7f9;
+  --color-border: #e2e5ea;
+  --color-text: #14171f;
+  --color-muted: #5b6270;
+  --color-accent: #4f46e5;
+  --color-accent-soft: #eef0ff;
+  --color-ok: #0f7a4a;
+  --color-ok-soft: #e6f6ee;
+  --color-warn: #8a5a00;
+  --color-warn-soft: #fff4dc;
+  --color-danger: #c62828;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #0f1115;
+  --color-surface: #181b22;
+  --color-border: #2a2f3a;
+  --color-text: #eceff4;
+  --color-muted: #a3abba;
+  --color-accent: #818cf8;
+  --color-accent-soft: #23264a;
+  --color-ok: #4ade80;
+  --color-ok-soft: #12301f;
+  --color-warn: #fbbf24;
+  --color-warn-soft: #33270b;
+  --color-danger: #f87171;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  @apply bg-[var(--color-bg)] text-[var(--color-text)] font-sans antialiased;
+  margin: 0;
+  min-height: 100dvh;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
+}

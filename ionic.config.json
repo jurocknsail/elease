@@ -1,7 +1,0 @@
-{
-  "name": "e-lease",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "angular"
-}
