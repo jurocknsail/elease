@@ -79,6 +79,38 @@ Objectif : un look actuel, un parcours **très simple**, un **aperçu obligatoir
 - **Dans l'app** : bandeau sur l'accueil à partir du 25 tant qu'il reste des appels « À envoyer » pour M+1.
 - Le cloud code passe de 1 à 2 fonctions ; déploiement via le MCP Back4App ou le dashboard, en conservant `sendEmail` à l'identique.
 
+## Profil bailleur (ajout, décision utilisateur)
+
+- Aujourd'hui en dur : en-tête PDF « SCI LA CHARINE / 41 CHEMIN DES BAGNOLS / 13600 LA CIOTAT », lieu « LA CIOTAT, le … », auteur PDF, mentions légales (« SCI LA CHARINE au capital de 2000 euros, RCS MARSEILLE n° 507 834 117 »), signature du mail « Pierre MARGERIT ».
+- Devient une fiche **« Profil bailleur »** dans Réglages, un par utilisateur : nom/raison sociale, adresse (lignes), ville d'émission, mentions légales, signature du mail.
+- Stockage : nouvelle classe Parse `LandlordProfile` (ACL propriétaire), pointeur vers l'utilisateur.
+- **Migration sans changement visible** : si l'utilisateur n'a pas de profil, l'app en crée un pré-rempli avec les valeurs actuelles exactes, de sorte que les PDF et mails restent identiques au caractère près.
+
+## PDF : contenu inchangé (décision utilisateur)
+
+Calculs, libellés (« Loyer HT », « T.V.A. 20% », « Avance sur charges », « Total TTC »), TVA sur le loyer seul pour les baux pro, mentions : **strictement identiques**. Seules les données du profil bailleur deviennent paramétrables.
+
+## Rappel de révision annuelle (ajout)
+
+But : ne plus oublier l'indexation annuelle, et proposer le nouveau loyer.
+
+Cadre légal retenu (à faire valider si besoin par un professionnel)
+- Habitation (IRL, loi du 6/7/1989 art. 17-1 modifiée ALUR) : révision une fois par an à la date prévue au bail ou à la date anniversaire ; le bailleur a **1 an** pour la demander, **sans rétroactivité** (effet à la date de la demande). Formule : loyer HC × IRL du trimestre de référence de l'année N ÷ IRL du même trimestre N-1.
+- Commercial / professionnel (ILC pour commerce-artisanat, ILAT pour les autres activités) : avec une clause d'échelle mobile, indexation **automatique** à la date prévue, sans formalité ; rappel des arriérés possible mais à ne pas laisser traîner (prescription débattue : 5 ans selon 2224 C. civ., 2 ans selon certains via L.145-60).
+- Conséquence pratique : aucun préavis légal à respecter, mais le nouveau loyer doit figurer dans l'**appel envoyé le 25 du mois précédant** l'anniversaire.
+
+Comportement
+- **E-mail au propriétaire à J-45** avant la date anniversaire (laisse au moins un cycle d'appel du 25 avant l'échéance), via un Cloud Job Back4App quotidien (`sendRevisionReminder`, 9 h) ; anti-doublon par champ `revisionReminderSentFor` (`"YYYY-MM-DD"` de l'anniversaire visé).
+- Contenu : bail, locataire, date anniversaire, indice applicable (type + trimestre), ancien indice → nouvel indice INSEE, **loyer actuel → loyer proposé**, lien vers l'app. Si l'indice du trimestre attendu n'est pas encore publié par l'INSEE, le mail le dit et donne la date de publication probable ; le job renvoie la proposition dès publication.
+- Dans l'app, sur le bloc du bail : étiquette « Révision le 01/03 », proposition « 1 091,08 € → 1 120,45 € (ILAT T2 2026) » et bouton **« Appliquer la révision »** (met à jour le loyer et l'indice de référence ; rien n'est appliqué automatiquement).
+- Même garde-fou de test que le rappel mensuel : paramètre `onlyUser=julien`.
+
+Données nécessaires (nouveaux champs additifs sur `Lease`)
+- `indexType` : `IRL` | `ILC` | `ILAT` (défaut proposé : IRL si habitation, ILAT si pro — à confirmer bail par bail).
+- `referenceIndexQuarter` (ex. `2025-T2`) et `referenceIndexValue` : l'indice de référence **inscrit au bail / de la dernière révision**. Le champ actuel `indexing` (même valeur 133,69 sur tous les baux pro, issue d'un import) n'est pas fiable : il est conservé en base mais ignoré.
+- Baux sans date anniversaire (5 sur 9 aujourd'hui) ou sans indice de référence : signalés « À compléter » dans l'app, pas de rappel tant que ce n'est pas renseigné.
+- Séries INSEE (API BDM publique) : IRL `001515333`, ILC `001532540`, ILAT `001617112`.
+
 ## Passe de cohérence (app actuelle) — corrections incluses dans la refonte
 
 Calculs et dates
@@ -104,6 +136,9 @@ Textes et ton
 - Mélange « tu » (« Es-tu sûr(e) », « recommence ! ») et « vous » ; emojis dans les toasts. → Vouvoiement neutre partout, sans emojis.
 - Vocabulaire unifié : « Appels de loyer » (pas « Envois », « Envois PDF », « Factures ») ; « Locataire », « Bail / Baux ».
 - Message d'erreur INSEE mentionnant une « clé API non configurée » alors qu'aucune clé n'est utilisée → message réseau simple. Retrait de `inseeApiKey` des environnements.
+
+Données
+- 3 baux orphelins (rattachés à aucun locataire) du compte de test `julien` : **supprimés le 2026-11-25** avec accord de l'utilisateur. Il reste 9 baux.
 
 Nettoyage technique
 - Code mort : `message`/`onWillDismiss` d'exemple Ionic, `isBrowser`, ouverture PDF commentée, dossier `elease_pdfs` sur disque.
