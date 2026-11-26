@@ -71,8 +71,21 @@ export abstract class ParseClient {
   /** ACL readable and writable by the signed-in user only; throws `NoSessionError` without a session. */
   abstract ownerAcl(): RemoteAcl;
   abstract currentUser(): RemoteObject | null;
+  /** Username of the signed-in user, or null without a session. */
+  abstract currentUsername(): string | null;
   /** E-mail of the signed-in user (the sender of the rent calls), or null without a session or e-mail. */
   abstract currentUserEmail(): string | null;
+  /**
+   * Signs in and makes the user the current one (the SDK keeps the session in the browser's local
+   * storage, so it survives a reload). Rejects with Parse error 101 for a wrong username or password,
+   * and 100 when the server cannot be reached. Never keeps or echoes the password.
+   */
+  abstract logIn(username: string, password: string): Promise<void>;
+  /**
+   * Ends the session. The local session is removed first, so it is gone even if the server cannot be
+   * reached (the returned promise then rejects, once the server call has failed).
+   */
+  abstract logOut(): Promise<void>;
   /**
    * Runs a Cloud Code function and gives its result. Returns a raw promise (callers add their own
    * timeout) and lets Parse errors propagate unchanged.
@@ -144,6 +157,21 @@ class SdkParseClient extends ParseClient {
   override currentUser(): RemoteObject | null {
     ensureSdk();
     return Parse.User.current() ?? null;
+  }
+
+  override currentUsername(): string | null {
+    ensureSdk();
+    return Parse.User.current()?.getUsername() || null;
+  }
+
+  override async logIn(username: string, password: string): Promise<void> {
+    ensureSdk();
+    await Parse.User.logIn(username, password);
+  }
+
+  override async logOut(): Promise<void> {
+    ensureSdk();
+    await Parse.User.logOut();
   }
 
   override currentUserEmail(): string | null {

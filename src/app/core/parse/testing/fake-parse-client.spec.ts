@@ -76,4 +76,43 @@ describe('FakeParseClient cloud functions', () => {
     fake.userId = null;
     expect(fake.currentUserEmail()).toBeNull();
   });
+  describe('sessions', () => {
+    it('signs in a registered account and then answers as that user', async () => {
+      const fake = new FakeParseClient();
+      fake.userId = null;
+      fake.addAccount('julien', 'secret', { email: 'julien@example.test' });
+      expect(fake.currentUsername()).toBeNull();
+
+      await fake.logIn('julien', 'secret');
+
+      expect(fake.currentUsername()).toBe('julien');
+      expect(fake.currentUserEmail()).toBe('julien@example.test');
+      expect(fake.ownerAcl().toJSON()).toEqual({ 'user-julien': { read: true, write: true } });
+    });
+
+    it('rejects an unknown user or a wrong password with Parse error 101 and records no password', async () => {
+      const fake = new FakeParseClient();
+      fake.userId = null;
+      fake.addAccount('julien', 'secret');
+
+      await expect(fake.logIn('julien', 'nope')).rejects.toMatchObject({ code: 101 });
+      await expect(fake.logIn('inconnu', 'secret')).rejects.toMatchObject({ code: 101 });
+
+      expect(fake.currentUsername()).toBeNull();
+      expect(fake.callsOf('login').map((call) => call.username)).toEqual(['julien', 'inconnu']);
+      expect(JSON.stringify(fake.calls)).not.toContain('secret');
+      expect(JSON.stringify(fake.calls)).not.toContain('nope');
+    });
+
+    it('removes the session before the server answers, so a failing sign-out still signs out', async () => {
+      const fake = new FakeParseClient();
+      fake.failWhen((call) => call.op === 'logout', parseError(100, 'offline'));
+
+      await expect(fake.logOut()).rejects.toMatchObject({ code: 100 });
+
+      expect(fake.currentUsername()).toBeNull();
+      expect(fake.currentUser()).toBeNull();
+      expect(fake.callsOf('logout')).toHaveLength(1);
+    });
+  });
 });

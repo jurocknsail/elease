@@ -206,7 +206,8 @@ describe('LeaseholderRepository', () => {
       const { fake, repo } = setup();
       await repo.load();
       const before = repo.leaseholders();
-      const error = parseError(209, 'invalid session token');
+      // Not 209: an expired session signs the user out, which empties the state (see repositories-session.spec.ts).
+      const error = parseError(141, 'Cloud Code script failed.');
       fake.failWhen((call) => call.op === 'find', error);
 
       await expect(repo.load()).rejects.toBe(error);
@@ -251,7 +252,8 @@ describe('LeaseholderRepository', () => {
         repo.createLeaseholder({ name: 'X', email: 'x@example.com', phone: '' }),
       ).rejects.toMatchObject({ code: 209 });
       expect(fake.callsOf('save')).toEqual([]);
-      expect(repo.leaseholders()).toHaveLength(3);
+      // No session means signed out: what was held in memory for that user goes too.
+      expect(repo.leaseholders()).toEqual([]);
     });
   });
 
@@ -604,7 +606,8 @@ describe('LeaseholderRepository', () => {
     it('leaves the state unchanged and rethrows when the save fails', async () => {
       const { fake, repo } = await loaded();
       const before = repo.leaseholders();
-      const error = parseError(209, 'invalid session token');
+      // Not 209: an expired session signs the user out, which empties the state (see repositories-session.spec.ts).
+      const error = parseError(141, 'Cloud Code script failed.');
       fake.failWhen((call) => call.op === 'save', error);
 
       await expect(repo.updateLease({ ...before[0].leases[0], name: 'X' })).rejects.toBe(error);

@@ -31,7 +31,7 @@ export interface FakeQueryParams {
 }
 
 export interface FakeCall {
-  op: 'find' | 'fetch' | 'save' | 'destroy' | 'cloud';
+  op: 'find' | 'fetch' | 'save' | 'destroy' | 'cloud' | 'login' | 'logout';
   /** Class of the object concerned; empty for a cloud function. */
   className: string;
   id?: string;
@@ -39,6 +39,8 @@ export interface FakeCall {
   functionName?: string;
   /** A copy of the parameters of a cloud function. */
   params?: Record<string, unknown>;
+  /** Username of a `login`. */
+  username?: string;
   /** Parameters of a `find`. */
   query?: FakeQueryParams;
   /** Field operations carried by a save. */
@@ -102,10 +104,13 @@ export class FakeParseClient implements ParseClient {
   userId: string | null = 'user-1';
   /** E-mail of the signed-in user. */
   userEmail: string | null = 'proprietaire@example.test';
+  /** Username of the signed-in user. */
+  userName: string | null = 'proprietaire';
   /** What a cloud function resolves with. */
   cloudResult: unknown = undefined;
 
   private readonly records = new Map<string, StoredRecord>();
+  private readonly accounts = new Map<string, { password: string; id: string; email: string }>();
   private readonly failures: Failure[] = [];
   private counter = 0;
 
@@ -138,6 +143,19 @@ export class FakeParseClient implements ParseClient {
 
   recordsOf(className: string): StoredRecord[] {
     return [...this.records.values()].filter((r) => r.className === className);
+  }
+
+  /** Registers an account that `logIn` accepts. Any other username or password gets Parse error 101. */
+  addAccount(
+    username: string,
+    password: string,
+    options: { id?: string; email?: string } = {},
+  ): void {
+    this.accounts.set(username, {
+      password,
+      id: options.id ?? `user-${username}`,
+      email: options.email ?? `${username}@example.test`,
+    });
   }
 
   /** Makes the next matching operation reject with `error`. */
@@ -193,6 +211,28 @@ export class FakeParseClient implements ParseClient {
 
   currentUserEmail(): string | null {
     return this.userId ? this.userEmail : null;
+  }
+
+  currentUsername(): string | null {
+    return this.userId ? this.userName : null;
+  }
+
+  async logIn(username: string, password: string): Promise<void> {
+    // The password is deliberately kept out of the recorded call.
+    await this.gate({ op: 'login', className: '_User', username });
+    const account = this.accounts.get(username);
+    if (!account || account.password !== password) {
+      throw parseError(OBJECT_NOT_FOUND, 'Invalid username/password.');
+    }
+    this.userId = account.id;
+    this.userName = username;
+    this.userEmail = account.email;
+  }
+
+  async logOut(): Promise<void> {
+    // Like the SDK: the local session is removed first, whatever the server then answers.
+    this.userId = null;
+    await this.gate({ op: 'logout', className: '_User' });
   }
 
   async runCloud(name: string, params: Record<string, unknown>): Promise<unknown> {

@@ -247,6 +247,57 @@ describe('ParseClient (SDK adapter)', () => {
     });
   });
 
+  describe('sign-in, sign-out and the current username', () => {
+    function userNamed(username: string | undefined): Parse.User {
+      const user = new Parse.User();
+      user.id = 'user-1';
+      if (username !== undefined) {
+        user.set('username', username);
+      }
+      return user;
+    }
+
+    it('signs in through the SDK with the credentials as given, and resolves with nothing', async () => {
+      const logIn = vi.spyOn(Parse.User, 'logIn').mockResolvedValue(userNamed('julien') as never);
+
+      await expect(
+        TestBed.inject(ParseClient).logIn('julien', 'a throw-away password'),
+      ).resolves.toBeUndefined();
+
+      expect(logIn).toHaveBeenCalledTimes(1);
+      expect(logIn).toHaveBeenCalledWith('julien', 'a throw-away password');
+    });
+
+    it('lets the SDK error of a failed sign-in propagate unchanged (101 wrong credentials)', async () => {
+      const error = Object.assign(new Error('Invalid username/password.'), { code: 101 });
+      vi.spyOn(Parse.User, 'logIn').mockRejectedValue(error);
+
+      await expect(TestBed.inject(ParseClient).logIn('julien', 'wrong')).rejects.toBe(error);
+    });
+
+    it('signs out through the SDK, which removes the stored session before calling the server', async () => {
+      const logOut = vi.spyOn(Parse.User, 'logOut').mockResolvedValue(undefined as never);
+
+      await expect(TestBed.inject(ParseClient).logOut()).resolves.toBeUndefined();
+
+      expect(logOut).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives the username of the current user, or null without a session or a username', () => {
+      const current = vi.spyOn(Parse.User, 'current');
+      const client = TestBed.inject(ParseClient);
+
+      current.mockReturnValue(userNamed('julien') as never);
+      expect(client.currentUsername()).toBe('julien');
+
+      current.mockReturnValue(null as never);
+      expect(client.currentUsername()).toBeNull();
+
+      current.mockReturnValue(userNamed(undefined) as never);
+      expect(client.currentUsername()).toBeNull();
+    });
+  });
+
   it('builds an owner-only ACL for the signed-in user, as the legacy app did', () => {
     const user = new Parse.User();
     user.id = 'user-1';
