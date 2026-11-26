@@ -1,5 +1,6 @@
 @import '@fontsource-variable/inter';
 @import 'tailwindcss' source('.');
+@source not "./**/*.spec.ts";
 @import '@angular/cdk/overlay-prebuilt.css';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
