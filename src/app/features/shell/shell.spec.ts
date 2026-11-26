@@ -193,6 +193,55 @@ describe('Shell', () => {
     });
   });
 
+  describe('scroll', () => {
+    it('scrolls the content back to the top on every navigation (the container is never re-created)', async () => {
+      const { root, harness } = await setup('/appels');
+      const main = root.querySelector('main') as HTMLElement;
+      main.scrollTop = 500;
+      expect(main.scrollTop).toBe(500);
+
+      await harness.navigateByUrl('/locataires', Shell);
+      harness.detectChanges();
+
+      expect(root.querySelector('main')).toBe(main);
+      expect(main.scrollTop).toBe(0);
+
+      main.scrollTop = 300;
+      await harness.navigateByUrl('/appels/envoi', Shell);
+      expect(main.scrollTop).toBe(0);
+    });
+
+    it('survives the first navigation, which ends before the shell has rendered', async () => {
+      // `setup` navigates once: no error was thrown by the NavigationEnd of that first navigation.
+      const { root } = await setup('/reglages');
+
+      expect(root.querySelector('main')).not.toBeNull();
+    });
+  });
+
+  describe('density on a computer (fine pointer, from 768 px)', () => {
+    it('keeps the 44 px touch targets and tightens them to 36 px for a mouse, on every nav item', async () => {
+      const { root } = await setup();
+
+      for (const link of navs(root).sidebar.querySelectorAll('a')) {
+        expect(link.classList.contains('min-h-11')).toBe(true);
+        expect(link.classList.contains('dense:min-h-9')).toBe(true);
+      }
+      for (const link of navs(root).tabs.querySelectorAll('a')) {
+        // The bottom bar is for fingers: never denser.
+        expect(link.className).not.toContain('dense:');
+      }
+    });
+
+    it('uses a light ghost button for the theme toggle of the sidebar', async () => {
+      const { root } = await setup();
+      const toggle = root.querySelector('aside app-theme-toggle button') as HTMLButtonElement;
+
+      expect(toggle.classList.contains('btn-ghost')).toBe(true);
+      expect(toggle.classList.contains('btn-secondary')).toBe(false);
+    });
+  });
+
   describe('user and theme', () => {
     it('shows who is signed in', async () => {
       const { root } = await setup();

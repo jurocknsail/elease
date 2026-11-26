@@ -3,6 +3,8 @@
 @import '@angular/cdk/overlay-prebuilt.css';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+/* A computer: a precise pointer and room to spare. Touch targets stay at 44 px everywhere else. */
+@custom-variant dense (@media (pointer: fine) and (min-width: 768px));
 
 @theme {
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
@@ -155,11 +157,40 @@ summary,
     filter: brightness(0.92);
   }
 
+  /* No outline: for a quiet control in a toolbar or a sidebar. Same padding as a nav item. */
+  .btn-ghost {
+    @apply bg-transparent px-3 text-muted;
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    @apply text-text;
+    background-color: color-mix(in srgb, var(--color-text) 7%, transparent);
+  }
+
   .field-input {
     @apply min-h-11 w-full rounded-lg border border-border-strong bg-bg px-3 text-text placeholder:text-muted;
   }
 
   .field-input[aria-invalid='true'] {
     @apply border-danger;
+  }
+
+  /*
+   * Density on a computer (fine pointer, from 768 px): a desktop tool, not an enlarged phone app.
+   * Buttons and nav items 36 px, fields 40 px, never below 24 px (WCAG 2.5.8). Last in the layer so
+   * that it wins over the 44 px defaults above. Phones and tablets keep 44 px.
+   */
+  @media (pointer: fine) and (min-width: 768px) {
+    .btn {
+      @apply min-h-9 min-w-9 px-3.5;
+    }
+
+    .btn-ghost {
+      @apply px-3;
+    }
+
+    .field-input {
+      @apply min-h-10;
+    }
   }
 }

@@ -1,12 +1,17 @@
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { Icon, IconName } from '../../shared/ui/icon';
 import { ThemeToggle } from '../../shared/ui/theme-toggle';
 
-/** Sidebar entry (>= 768 px). The active state hangs on `aria-current`, set by `routerLinkActive`. */
+/**
+ * Sidebar entry (>= 768 px): 44 px for a finger, 36 px for a mouse (`dense:`, see styles.css). The
+ * active state hangs on `aria-current`, set by `routerLinkActive`.
+ */
 const SIDEBAR_LINK =
-  'relative flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-transparent hover:bg-bg hover:text-text aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent aria-[current=page]:before:bg-accent';
+  'relative flex min-h-11 dense:min-h-9 items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-transparent hover:bg-bg hover:text-text aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent aria-[current=page]:before:bg-accent';
 
 /** Bottom-bar tab (< 768 px): at least 56 px tall. */
 const TAB_LINK =
@@ -48,7 +53,7 @@ interface NavItem {
       <aside class="hidden w-60 shrink-0 flex-col border-r border-border bg-surface md:flex">
         <a
           routerLink="/appels"
-          class="mx-3 mt-4 mb-2 flex min-h-11 items-center gap-3 rounded-lg px-3"
+          class="mx-3 mt-4 mb-2 flex min-h-11 items-center gap-3 rounded-lg px-3 dense:min-h-9"
           aria-label="E-Lease, Appels de loyer"
         >
           <img
@@ -100,7 +105,7 @@ interface NavItem {
               <span class="font-semibold text-text">{{ user.username }}</span>
             </p>
           }
-          <app-theme-toggle />
+          <app-theme-toggle variant="ghost" />
         </div>
       </aside>
 
@@ -142,7 +147,24 @@ export class Shell {
   protected readonly auth = inject(AuthService);
   protected readonly sidebarLink = SIDEBAR_LINK;
   protected readonly tabLink = TAB_LINK;
-  private readonly content = viewChild.required<ElementRef<HTMLElement>>('contenu');
+  /** Optional: the first navigation ends before the shell has rendered its first view. */
+  private readonly content = viewChild<ElementRef<HTMLElement>>('contenu');
+
+  constructor() {
+    // `main` is the only scroller and is never re-created: without this, a screen opened from a long,
+    // scrolled one would open scrolled too. `scrollTop` rather than `scrollTo()` (absent from jsdom).
+    inject(Router)
+      .events.pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => {
+        const element = this.content()?.nativeElement;
+        if (element) {
+          element.scrollTop = 0;
+        }
+      });
+  }
 
   protected readonly mainItems: readonly NavItem[] = [
     { path: '/appels', label: 'Appels de loyer', icon: 'mail' },
@@ -157,6 +179,6 @@ export class Shell {
    */
   protected skipToContent(event: Event): void {
     event.preventDefault();
-    this.content().nativeElement.focus();
+    this.content()?.nativeElement.focus();
   }
 }

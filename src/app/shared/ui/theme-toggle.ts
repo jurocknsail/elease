@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { ThemeMode, ThemeService } from '../../core/theme/theme.service';
 import { Icon, IconName } from './icon';
 
@@ -16,7 +16,7 @@ const ICONS: Record<ThemeMode, IconName> = { system: 'monitor', light: 'sun', da
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
-    <button type="button" class="btn btn-secondary w-full justify-start" (click)="cycle()">
+    <button type="button" [class]="buttonClass()" (click)="cycle()">
       <app-icon [name]="icon()" class="size-5" />
       <span>Thème : {{ label() }}</span>
       <span class="sr-only"> — passer à {{ nextLabel() }}</span>
@@ -25,6 +25,15 @@ const ICONS: Record<ThemeMode, IconName> = { system: 'monitor', light: 'sun', da
 })
 export class ThemeToggle {
   private readonly theme = inject(ThemeService);
+
+  /** `ghost`: no outline, for the sidebar footer. `outlined`: the default, for a settings page. */
+  readonly variant = input<'outlined' | 'ghost'>('outlined');
+
+  protected readonly buttonClass = computed(() =>
+    this.variant() === 'ghost'
+      ? 'btn btn-ghost w-full justify-start'
+      : 'btn btn-secondary w-full justify-start',
+  );
 
   protected readonly label = computed(() => LABELS[this.theme.mode()]);
   protected readonly nextLabel = computed(() => LABELS[NEXT[this.theme.mode()]]);
