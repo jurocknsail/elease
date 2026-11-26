@@ -443,6 +443,19 @@ describe('buildRentCallDefinition', () => {
       );
     });
 
+    it('trims each line of a notice with CRLF, stray spaces and a trailing line break', () => {
+      const def = build(FAR_AWAY, {
+        profile: { ...CUSTOM_PROFILE, legalNotice: 'Ligne 1.  \r\n   Ligne 2.\n' },
+      });
+      const conditions = allTexts(def).find((t) => t.includes('En application de la loi'));
+      expect(conditions).toBe(
+        `\nEn application de la loi n° 92.1482 Du 31/12/92, le règlement anticipé ne donnera pas lieu à escompte.\n` +
+          `${INDENT_20}En cas de réglement après échéance, il sera fait applications des dispositions légales après mise en demeure.\n` +
+          `${INDENT_20}Ligne 1.\n${INDENT_20}Ligne 2.\n${INDENT_20}\n`,
+      );
+      expect(JSON.stringify(def)).not.toContain('\\r');
+    });
+
     it('omits the legal notice line when the profile has none', () => {
       const def = build(FAR_AWAY, { profile: { ...CUSTOM_PROFILE, legalNotice: '  ' } });
       const conditions = allTexts(def).find((t) => t.includes('En application de la loi'));
