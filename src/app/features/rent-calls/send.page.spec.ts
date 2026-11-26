@@ -845,6 +845,24 @@ describe('SendPage', () => {
     });
   });
 
+  describe('the confirmed selection is the one that is sent', () => {
+    it('a check box toggled after the confirmation does not change the e-mails that go out', async () => {
+      const view = await setup({
+        onConfirm: () => {
+          // The user clicks on a row after confirming, while the data is read again.
+          dispatchKey(view.root.querySelector('[role="listbox"]')!, ' ');
+        },
+      });
+      await view.open();
+
+      sendButton(view.root).click();
+      await view.settle();
+
+      const sent = attachmentsOf(clouds(view.fake)[0]).map((a) => a.Filename);
+      expect(sent).toEqual(['dupont-studio-12_2026.pdf', 'martin-commerce-12_2026.pdf']);
+    });
+  });
+
   describe('byte identity: what is previewed is what is sent', () => {
     it('sends the base64 of the very render that was previewed, and never renders again', async () => {
       const view = await setup();

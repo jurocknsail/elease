@@ -296,7 +296,7 @@ function holdersLabel(names: readonly string[]): string {
                         >
                           {{ outcome.result.error }}
                         </p>
-                        <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div class="mt-2 flex flex-col items-start gap-2">
                           <button
                             type="button"
                             class="btn btn-secondary"
@@ -823,7 +823,7 @@ export class SendPage {
   );
   protected readonly bodyClass = computed(() =>
     this.wide()
-      ? 'grid min-h-0 flex-1 grid-cols-[minmax(22rem,28rem)_minmax(0,1fr)] gap-6'
+      ? 'grid min-h-0 flex-1 grid-cols-[20rem_minmax(0,1fr)] gap-4 xl:grid-cols-[26rem_minmax(0,1fr)] xl:gap-6'
       : 'flex min-h-0 flex-1 flex-col',
   );
   protected readonly listPaneClass = computed(() =>
@@ -958,10 +958,10 @@ export class SendPage {
   /** Selected leases whose PDF was dropped because the lease changed, since the last `takeChanged`. */
   private changedByLoad: string[] = [];
 
-  private takeChanged(): string[] {
+  private takeChanged(keys: ReadonlySet<string>): string[] {
     const changed = this.changedByLoad;
     this.changedByLoad = [];
-    return changed.filter((key) => this.selected().has(key));
+    return changed.filter((key) => keys.has(key));
   }
 
   private firstKey(): string | null {
@@ -1324,6 +1324,9 @@ export class SendPage {
     const period = this.period();
     const { emails, holders, total } = this.summary();
     const chosen = this.keyed().filter((entry) => this.selected().has(entry.key));
+    // What the confirmation announces is what is sent: the selection is frozen here. A click on a
+    // check box while the data is read again must not change the set of e-mails.
+    const confirmedKeys = new Set(chosen.map((entry) => entry.key));
     const maybe = this.maybeSentIds();
     const repeats = chosen.filter(
       ({ row }) => row.status === 'sent' || (!!row.lease.objectId && maybe.has(row.lease.objectId)),
@@ -1372,18 +1375,18 @@ export class SendPage {
     }
     // A lease whose information changed lost its PDF in that load (and a new one is being generated):
     // the user has not seen it, so nothing is sent.
-    if (this.takeChanged().length > 0 || this.reconcile().length > 0) {
+    if (this.takeChanged(confirmedKeys).length > 0 || this.reconcile().length > 0) {
       this.message.set(CHANGED_MESSAGE);
       return;
     }
     const profile = this.profile();
-    if (!profile || !canSend(this.selected(), this.previewed())) {
+    if (!profile || !canSend(confirmedKeys, this.previewed())) {
       this.message.set(CHANGED_MESSAGE);
       return;
     }
 
     // The previewed bytes ARE the bytes that are sent: the base64 of the very render kept for the preview.
-    const sending = this.keyed().filter((entry) => this.selected().has(entry.key));
+    const sending = this.keyed().filter((entry) => confirmedKeys.has(entry.key));
     const items = sending.flatMap(({ row, key }) => {
       const entry = this.pdfs().get(key);
       return entry?.status === 'ready'
