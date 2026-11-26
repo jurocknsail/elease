@@ -24,7 +24,7 @@ async function setup(url = '/appels') {
           component: Shell,
           children: [
             { path: 'appels', component: Page },
-            { path: 'appels/envoi', component: Page },
+            { path: 'appels/envoi', component: Page, data: { fullWidth: true } },
             { path: 'locataires', component: Page },
             { path: 'locataires/:id', component: Page },
             { path: 'reglages', component: Page },
@@ -303,6 +303,28 @@ describe('Shell', () => {
       expect(document.activeElement).toBe(root.querySelector('main#contenu'));
       expect(router.url).toBe('/locataires');
       root.remove();
+    });
+  });
+
+  describe('width', () => {
+    it('keeps a centred column of readable width by default', async () => {
+      const { root } = await setup('/appels');
+
+      const content = root.querySelector('main > div') as HTMLElement;
+      expect(content.classList.contains('max-w-6xl')).toBe(true);
+      expect(content.classList.contains('h-full')).toBe(false);
+    });
+
+    it('gives a screen that asks for it (route data fullWidth) the whole width and height, and takes it back on leaving', async () => {
+      const { root, harness } = await setup('/appels/envoi');
+
+      const content = () => root.querySelector('main > div') as HTMLElement;
+      expect(content().classList.contains('max-w-6xl')).toBe(false);
+      expect(content().classList.contains('h-full')).toBe(true);
+
+      await harness.navigateByUrl('/locataires');
+      harness.detectChanges();
+      expect(content().classList.contains('max-w-6xl')).toBe(true);
     });
   });
 });

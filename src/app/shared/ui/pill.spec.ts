@@ -22,7 +22,7 @@ describe('Pill', () => {
     expect(render().pill.textContent?.trim()).toBe('Révision le 01/03');
   });
 
-  it.each(['ok', 'warn', 'accent', 'neutral'] as PillTone[])(
+  it.each(['ok', 'warn', 'danger', 'accent', 'neutral'] as PillTone[])(
     'never wraps, never shrinks, is 11 px semibold and fully rounded (%s)',
     (tone) => {
       const { fixture, pill } = render();
@@ -45,6 +45,7 @@ describe('Pill', () => {
   it.each([
     ['ok', 'bg-ok-soft', 'text-ok'],
     ['warn', 'bg-warn-soft', 'text-warn'],
+    ['danger', 'bg-danger-soft', 'text-danger'],
     ['accent', 'bg-accent-soft', 'text-accent'],
     ['neutral', 'bg-surface', 'text-muted'],
   ] as Array<[PillTone, string, string]>)('uses the %s colours', (tone, background, text) => {

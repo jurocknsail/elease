@@ -1,6 +1,21 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import {
+  ActivatedRouteSnapshot,
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+} from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { Icon, IconName } from '../../shared/ui/icon';
@@ -16,6 +31,17 @@ const SIDEBAR_LINK =
 /** Bottom-bar tab (< 768 px): at least 56 px tall. */
 const TAB_LINK =
   'relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-xs font-medium text-muted before:absolute before:inset-x-6 before:top-0 before:h-[3px] before:rounded-b-full before:bg-transparent aria-[current=page]:font-semibold aria-[current=page]:text-accent aria-[current=page]:before:bg-accent';
+
+/** Whether the deepest active route asks for the full width (`data: { fullWidth: true }`). */
+function wantsFullWidth(route: ActivatedRouteSnapshot): boolean {
+  let current: ActivatedRouteSnapshot | null = route;
+  let wanted = false;
+  while (current) {
+    wanted = current.data['fullWidth'] === true;
+    current = current.firstChild;
+  }
+  return wanted;
+}
 
 interface NavItem {
   path: string;
@@ -115,7 +141,7 @@ interface NavItem {
         tabindex="-1"
         class="min-h-0 flex-1 overflow-y-auto focus:outline-none focus-visible:outline-none"
       >
-        <div class="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
+        <div [class]="contentClass()">
           <router-outlet />
         </div>
       </main>
@@ -150,15 +176,26 @@ export class Shell {
   /** Optional: the first navigation ends before the shell has rendered its first view. */
   private readonly content = viewChild<ElementRef<HTMLElement>>('contenu');
 
+  private readonly router = inject(Router);
+  /** The screen asked for the whole width and height (route data `fullWidth`): two-pane screens. */
+  private readonly fullWidth = signal(false);
+  protected readonly contentClass = computed(() =>
+    this.fullWidth()
+      ? 'h-full w-full px-4 py-4 md:px-6 md:py-5'
+      : 'mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8',
+  );
+
   constructor() {
+    this.fullWidth.set(wantsFullWidth(this.router.routerState.snapshot.root));
     // `main` is the only scroller and is never re-created: without this, a screen opened from a long,
     // scrolled one would open scrolled too. `scrollTop` rather than `scrollTo()` (absent from jsdom).
-    inject(Router)
-      .events.pipe(
+    this.router.events
+      .pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
       .subscribe(() => {
+        this.fullWidth.set(wantsFullWidth(this.router.routerState.snapshot.root));
         const element = this.content()?.nativeElement;
         if (element) {
           element.scrollTop = 0;

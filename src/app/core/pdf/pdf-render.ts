@@ -1,3 +1,4 @@
+import { InjectionToken } from '@angular/core';
 import type { TDocumentDefinitions, TFontDictionary } from 'pdfmake/interfaces';
 
 /** A rendered PDF: the file to preview or save, and the same bytes in base64 for the e-mail attachment. */
@@ -182,3 +183,9 @@ export async function renderPdf(
   }, timeoutMs);
   return { blob, base64: await blobToBase64(blob) };
 }
+
+/** The function that turns a definition into a PDF. Specs replace it by a fast, deterministic one. */
+export const PDF_RENDERER = new InjectionToken<(def: TDocumentDefinitions) => Promise<RenderedPdf>>(
+  'PDF_RENDERER',
+  { providedIn: 'root', factory: () => (def) => renderPdf(def) },
+);

@@ -30,7 +30,7 @@
               }
             ],
             "styles": ["src/styles.css"],
-            "allowedCommonJsDependencies": ["parse"],
+            "allowedCommonJsDependencies": ["parse", "pdfmake"],
             "outputPath": {
               "base": "www",
               "browser": ""

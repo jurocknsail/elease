@@ -1,7 +1,8 @@
 import { computeTotalPrice, sumAmounts } from '../../core/billing/amounts';
-import { BillingPeriod } from '../../core/billing/period';
+import { BillingPeriod, periodLabel } from '../../core/billing/period';
 import { leaseStatus } from '../../core/billing/send-status';
 import { recipientKey } from '../../core/email/rent-call-email';
+import { formatEuro } from '../../core/format/fr';
 import { Lease } from '../../core/models/lease';
 import { Leaseholder } from '../../core/models/leaseholder';
 
@@ -142,4 +143,73 @@ export function canSend(selected: ReadonlySet<string>, previewed: ReadonlySet<st
     }
   }
   return true;
+}
+
+/** `value` of an `<input type="date">` for a local date: 'yyyy-MM-dd'. */
+export function toDateInputValue(date: Date): string {
+  const pad = (n: number, width: number) => String(n).padStart(width, '0');
+  return `${pad(date.getFullYear(), 4)}-${pad(date.getMonth() + 1, 2)}-${pad(date.getDate(), 2)}`;
+}
+
+/**
+ * The local date of an `<input type="date">` value, or null when it is empty, not 'yyyy-MM-dd', not a
+ * real day (31 February) or out of a sensible range (2000-2100). Built from numbers, never parsed from a
+ * string by `Date` (UTC midnight would be the evening before west of Greenwich).
+ */
+export function parseDateInput(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) {
+    return null;
+  }
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  if (year < 2000 || year > 2100) {
+    return null;
+  }
+  const date = new Date(year, month - 1, day);
+  const real =
+    date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+  return real ? date : null;
+}
+
+/** « 1er janvier 2027 »: the rent of a period is due on its first day. */
+export function dueDateLabel(p: BillingPeriod): string {
+  return `1er ${periodLabel(p)}`;
+}
+
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** What the confirmation says before anything is sent. */
+export interface ConfirmFacts {
+  emails: number;
+  holders: number;
+  total: number;
+  /** Outside production: nothing reaches the tenants. */
+  testMode: boolean;
+  /** Selected leases already sent (or perhaps sent) for this period: sending them again is deliberate. */
+  repeats: number;
+  /** Selected tenants who have no e-mail address: they receive nothing. */
+  withoutAddress: number;
+}
+
+/** « 2 e-mails à 2 locataires, total 1 680 €. » plus the warnings that apply. */
+export function confirmMessage(facts: ConfirmFacts): string {
+  const parts = [
+    `${plural(facts.emails, 'e-mail', 'e-mails')} à ${plural(facts.holders, 'locataire', 'locataires')}, total ${formatEuro(facts.total)}.`,
+  ];
+  if (facts.withoutAddress > 0) {
+    parts.push(
+      `${plural(facts.withoutAddress, 'locataire sans adresse e-mail ne recevra', 'locataires sans adresse e-mail ne recevront')} rien.`,
+    );
+  }
+  if (facts.repeats > 0) {
+    parts.push(
+      `Attention : ${plural(facts.repeats, 'appel déjà envoyé ou peut-être envoyé', 'appels déjà envoyés ou peut-être envoyés')} pour cette période.`,
+    );
+  }
+  if (facts.testMode) {
+    parts.push('Mode test : aucun e-mail ne sera livré aux locataires.');
+  }
+  return parts.join(' ');
 }

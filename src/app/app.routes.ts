@@ -35,6 +35,8 @@ export const routes: Routes = [
       {
         path: 'appels/envoi',
         title: 'Envoi des appels de loyer',
+        // Two panes (list and PDF preview): the shell gives this screen the whole width.
+        data: { fullWidth: true },
         loadComponent: () => import('./features/rent-calls/send.page').then((m) => m.SendPage),
       },
       {

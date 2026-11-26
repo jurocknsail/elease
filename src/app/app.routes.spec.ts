@@ -51,7 +51,7 @@ describe('routes', () => {
 
   it.each([
     ['/appels', 'Décembre 2026'],
-    ['/appels/envoi', 'Envoi des appels de loyer'],
+    ['/appels/envoi', 'Appels de loyer — décembre 2026'],
     ['/locataires', 'Locataires'],
     ['/locataires/abc123', 'Locataire'],
     ['/reglages', 'Réglages'],

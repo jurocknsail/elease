@@ -8,7 +8,11 @@ import {
   RentCallRow,
   buildRows,
   canSend,
+  confirmMessage,
+  dueDateLabel,
   initialSelection,
+  parseDateInput,
+  toDateInputValue,
   rowKey,
   selectionSummary,
   showReminderBanner,
@@ -639,5 +643,79 @@ describe('canSend', () => {
 
   it('ignores PDFs of leases that are not selected', () => {
     expect(canSend(new Set(['a']), new Set(['a', 'b', 'c']))).toBe(true);
+  });
+});
+
+describe('date input helpers', () => {
+  it('formats and parses a local date without any time zone shift', () => {
+    expect(toDateInputValue(new Date(2026, 10, 25))).toBe('2026-11-25');
+    expect(toDateInputValue(new Date(2027, 0, 3))).toBe('2027-01-03');
+    const parsed = parseDateInput('2026-11-25');
+    expect(parsed?.getFullYear()).toBe(2026);
+    expect(parsed?.getMonth()).toBe(10);
+    expect(parsed?.getDate()).toBe(25);
+  });
+
+  it.each([
+    '',
+    '  ',
+    '2026-13-01',
+    '2026-02-30',
+    '25/11/2026',
+    '2026-1-5',
+    '1999-12-31',
+    '2101-01-01',
+    'abc',
+  ])('rejects %j', (value) => {
+    expect(parseDateInput(value)).toBeNull();
+  });
+
+  it('accepts a leap day', () => {
+    expect(parseDateInput('2028-02-29')).not.toBeNull();
+    expect(parseDateInput('2027-02-29')).toBeNull();
+  });
+
+  it('labels the due date with the ordinal « 1er »', () => {
+    expect(dueDateLabel({ year: 2027, month: 1 })).toBe('1er janvier 2027');
+    expect(dueDateLabel({ year: 2026, month: 12 })).toBe('1er décembre 2026');
+  });
+});
+
+describe('confirmMessage', () => {
+  const base = {
+    emails: 6,
+    holders: 5,
+    total: 8420,
+    testMode: false,
+    repeats: 0,
+    withoutAddress: 0,
+  };
+
+  it('says « N e-mails à M locataires, total T. »', () => {
+    expect(plainEuro(confirmMessage(base))).toBe('6 e-mails à 5 locataires, total 8 420 €.');
+  });
+
+  it('uses the singular for 1 e-mail and 1 tenant', () => {
+    expect(plainEuro(confirmMessage({ ...base, emails: 1, holders: 1, total: 1900 }))).toBe(
+      '1 e-mail à 1 locataire, total 1 900 €.',
+    );
+  });
+
+  it('adds the test-mode sentence outside production only', () => {
+    expect(confirmMessage({ ...base, testMode: true })).toContain(
+      'Mode test : aucun e-mail ne sera livré aux locataires.',
+    );
+    expect(confirmMessage(base)).not.toContain('Mode test');
+  });
+
+  it('warns about deliberate repeats and about tenants without an address', () => {
+    const message = confirmMessage({ ...base, repeats: 2, withoutAddress: 1 });
+    expect(message).toContain(
+      'Attention : 2 appels déjà envoyés ou peut-être envoyés pour cette période.',
+    );
+    expect(message).toContain('1 locataire sans adresse e-mail ne recevra rien.');
+    expect(confirmMessage({ ...base, repeats: 1 })).toContain(
+      '1 appel déjà envoyé ou peut-être envoyé',
+    );
   });
 });
