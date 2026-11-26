@@ -91,6 +91,14 @@ function ensureSdk(): void {
   // with that id (and a failed Remove op blocks the next AddUnique on the same field). Every object
   // here is independent: turn it off before any object exists. @types/parse does not declare it.
   (Parse.Object as unknown as { disableSingleInstance(): void }).disableSingleInstance();
+  // The SDK re-sends a request that failed with a 5xx status or a network error, up to 5 attempts,
+  // POST included, and keeps going after our timeout stopped waiting. For the `sendEmail` cloud call
+  // that means a backend answering 504 after a minute could deliver the same e-mail several times.
+  // So: no automatic retry at all. The screens offer « Réessayer » instead.
+  (Parse.CoreManager as unknown as { set(key: string, value: unknown): void }).set(
+    'REQUEST_ATTEMPT_LIMIT',
+    1,
+  );
   sdkInitialized = true;
 }
 

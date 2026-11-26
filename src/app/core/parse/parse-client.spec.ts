@@ -31,6 +31,10 @@ describe('ParseClient (SDK adapter)', () => {
     expect(initialize).toHaveBeenCalledTimes(1);
     expect(initialize.mock.calls[0].every((argument) => typeof argument === 'string')).toBe(true);
 
+    // No automatic re-sending of a failed request (a re-sent sendEmail could deliver twice).
+    const coreManager = Parse.CoreManager as unknown as { get(key: string): unknown };
+    expect(coreManager.get('REQUEST_ATTEMPT_LIMIT')).toBe(1);
+
     // A failed save leaves its changes pending on the object. They must not leak into an unrelated
     // object that merely has the same id (e.g. markLeasesSent after a failed updateLease).
     abandoned.set('name', 'CANCELLED EDIT');
