@@ -14,6 +14,7 @@ import {
   REMINDER_FROM_DAY,
   RentCallRow,
   buildRows,
+  rowKey,
   showReminderBanner,
   summary,
 } from './send-state';
@@ -39,7 +40,7 @@ interface RowView {
 
 function toView(row: RentCallRow, index: number): RowView {
   return {
-    key: row.lease.objectId ?? `${row.holder.objectId ?? 'holder'}:${index}`,
+    key: rowKey(row, index),
     lease: row.lease.name,
     holder: row.holder.name,
     sent: row.status === 'sent',

@@ -1,10 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthService } from '../../core/auth/auth.service';
 import { NOW } from '../../core/clock';
 import { formatEuro } from '../../core/format/fr';
+import { Lease } from '../../core/models/lease';
+import { Leaseholder } from '../../core/models/leaseholder';
 import { LeaseholderRepository } from '../../core/parse/leaseholder.repository';
 import { ParseClient } from '../../core/parse/parse-client';
 import { FakeParseClient, parseError, pointer } from '../../core/parse/testing/fake-parse-client';
@@ -141,6 +143,12 @@ const plain = (value: string) =>
     new RegExp('[' + String.fromCharCode(0xa0) + String.fromCharCode(0x202f) + ']', 'g'),
     ' ',
   );
+
+/** The first amount of a text, in cents: « 3 927,90 € sur 3 baux » -> 392790. */
+function euroCents(shown: string): number {
+  const found = /\d[\d\s]*,\d{2}/.exec(shown);
+  return found ? Math.round(Number(found[0].replace(/\s/g, '').replace(',', '.')) * 100) : NaN;
+}
 
 const rowsOf = (root: HTMLElement) => [
   ...root.querySelectorAll<HTMLElement>('ul[aria-label] > li'),
@@ -416,6 +424,40 @@ describe('RentCallsPage', () => {
       expect(plain(text(total))).toContain('2 333,80 €');
       // The exact string of formatEuro, with its no-break spaces.
       expect(raw(total)).toContain(formatEuro(600 + 80 + 1653.8));
+    });
+
+    it('adds the rows as they are printed: three leases at 1 309,30 € make 3 927,90 €, not 3 927,89 €', async () => {
+      // Each of these professional leases bills 1309.296 (1091.08 + 20 % VAT); the raw sum is 3927.888.
+      const view = await setup({
+        seed: (fake) => {
+          for (const id of ['a', 'b', 'c']) {
+            fake.seed(
+              'Lease',
+              `l-${id}`,
+              storedLease({ name: `Local ${id.toUpperCase()}`, isPro: true, price: 1091.08 }),
+            );
+          }
+          fake.seed('Leaseholder', 'h1', {
+            name: 'Dupont',
+            email: 'dupont@example.test',
+            phone: '',
+            leases: ['a', 'b', 'c'].map((id) => pointer('Lease', `l-${id}`)),
+          });
+        },
+      });
+      await view.open();
+
+      const shown = rowsOf(view.root).map((row) => text(row.children[3]));
+      expect(shown.map(plain)).toEqual(['1 309,30 €', '1 309,30 €', '1 309,30 €']);
+      const total = [...view.root.querySelectorAll('dt')].find(
+        (dt) => text(dt) === 'Total du mois',
+      )?.parentElement;
+      expect(plain(text(total))).toContain('3 927,90 €');
+      expect(plain(text(total))).not.toContain('3 927,89');
+      // The same sum a person makes from the rows on screen.
+      const fromRows = shown.reduce((sum, amount) => sum + euroCents(amount), 0);
+      expect(euroCents(text(total))).toBe(fromRows);
+      expect(fromRows).toBe(392790);
     });
 
     it('says « sur N baux » under the total, with a singular for one lease', async () => {
@@ -839,6 +881,28 @@ describe('RentCallsPage', () => {
       expect(view.fake.callsOf('find', 'Leaseholder')).toHaveLength(3);
     });
 
+    it("disables the notice's « Réessayer » while the reload it started runs, rows still on screen", async () => {
+      const view = await setup();
+      await view.open();
+      view.fake.failWhen((call) => call.op === 'find', parseError(100));
+      await leaveAndComeBack(view);
+      await view.settle();
+      expect(view.root.querySelector('[role="alert"]')).not.toBeNull();
+      view.fake.hangWhen((call) => call.op === 'find');
+
+      retryButton(view.root)?.click();
+      view.harness.detectChanges();
+
+      const button = retryButton(view.root) as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      expect(button.getAttribute('aria-busy')).toBe('true');
+      button.click();
+      await view.settle();
+      // The visit, the failing reload and the one retry: a second tap started nothing.
+      expect(view.fake.callsOf('find', 'Leaseholder')).toHaveLength(3);
+      expect(rowsOf(view.root)).toHaveLength(3);
+    });
+
     it('shows the skeleton on return when the account has no data in memory yet', async () => {
       const view = await setup({ seed: () => undefined });
       await view.open();
@@ -849,6 +913,92 @@ describe('RentCallsPage', () => {
       await view.settle();
 
       expect(isBusy(view.root)).toBe(true);
+    });
+  });
+
+  describe('one load at a time', () => {
+    it('does not start a second load while one is in flight', async () => {
+      const view = await setup({
+        before: (fake) => fake.hangWhen((call) => call.op === 'find', false),
+      });
+      const page = await view.harness.navigateByUrl('/appels', RentCallsPage);
+      await view.settle();
+      expect(view.fake.callsOf('find', 'Leaseholder')).toHaveLength(1);
+
+      const refresh = (page as unknown as { refresh(): Promise<void> }).refresh.bind(page);
+      void refresh();
+      void refresh();
+      await view.settle();
+
+      expect(view.fake.callsOf('find', 'Leaseholder')).toHaveLength(1);
+    });
+  });
+
+  describe('leases without an objectId', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('renders every one of them, with no duplicate-key warning even when the names are identical', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const bare = (price: number): Lease => ({
+        isPro: false,
+        name: 'Garage',
+        lot: null,
+        streetNumber: 1,
+        streetName: 'rue A',
+        optionalAddressInfo: '',
+        postalCode: 13600,
+        city: 'Ville-Test',
+        price,
+        charge: null,
+        additionalCharges: [],
+        lastSendDate: 0,
+        renewalDate: null,
+      });
+      const holders: Leaseholder[] = [
+        {
+          objectId: 'h1',
+          name: 'Dupont',
+          email: 'dupont@example.test',
+          phone: '',
+          leases: [bare(80), bare(90)],
+        },
+        { name: 'Dupont', email: 'autre@example.test', phone: '', leases: [bare(100)] },
+      ];
+      const source = signal(holders);
+      TestBed.configureTestingModule({
+        providers: [
+          {
+            provide: LeaseholderRepository,
+            useValue: { leaseholders: source.asReadonly(), load: async () => undefined },
+          },
+          { provide: NOW, useValue: () => new Date(2026, 10, 25) },
+          provideRouter([{ path: 'appels', component: RentCallsPage }]),
+        ],
+      });
+      const harness = await RouterTestingHarness.create('/appels');
+      for (let i = 0; i < 40; i++) {
+        await Promise.resolve();
+      }
+      harness.detectChanges();
+      const root = harness.routeNativeElement as HTMLElement;
+      const amounts = () => rowsOf(root).map((row) => plain(text(row.children[3])));
+
+      expect(amounts()).toEqual(['80 €', '90 €', '100 €']);
+
+      // A second render, from new objects with other amounts and one more lease: Angular compares the
+      // new keys with the previous ones, which is where duplicate keys are reported (NG0955).
+      source.set([
+        { ...holders[0], leases: [bare(85), bare(95), bare(70)] },
+        { ...holders[1], leases: [bare(105)] },
+      ]);
+      harness.detectChanges();
+
+      expect(amounts()).toEqual(['85 €', '95 €', '70 €', '105 €']);
+      const logged = [...warn.mock.calls, ...error.mock.calls].map((args) => String(args[0]));
+      expect(logged.filter((line) => line.includes('NG0955'))).toEqual([]);
     });
   });
 

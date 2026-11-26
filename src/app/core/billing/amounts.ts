@@ -29,3 +29,34 @@ export function computeTotalPrice(lease: Lease): number {
 
   return totalPrice;
 }
+
+/**
+ * An amount in whole cents, rounded exactly as the PDF prints it (`toFixed(2)`) and as `formatEuro`
+ * shows it. Add THESE integers, never the raw floats: a total built from unrounded amounts can differ
+ * by a cent or two from the sum of the rows a person reads (three professional leases at 1091.08 each
+ * bill 1309.296 and print 1 309,30 €, but their raw sum 3927.888 prints 3 927,89 € instead of 3 927,90 €).
+ *
+ * An amount that is not a finite number counts as 0 (the screens show it as a dash, so it adds nothing
+ * to what is displayed); the result is never `-0`. `computeTotalPrice` itself is left as it is: the PDF
+ * must stay identical to the legacy one.
+ */
+export function toCents(amount: number): number {
+  if (!Number.isFinite(amount)) {
+    return 0;
+  }
+  // `|| 0` turns -0 (from a tiny negative amount) into 0.
+  return Math.round(Number(amount.toFixed(2)) * 100) || 0;
+}
+
+/**
+ * The sum of amounts as the owner adds them up by hand: each amount rounded to the cent first (`toCents`),
+ * the integers added (exact), then converted back to euros. One rule for the month total of the home
+ * screen, the total of the selection on the send screen and the total of the reminder e-mail.
+ */
+export function sumAmounts(amounts: readonly number[]): number {
+  let cents = 0;
+  for (const amount of amounts) {
+    cents += toCents(amount);
+  }
+  return cents / 100;
+}

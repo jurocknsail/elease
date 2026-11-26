@@ -1,9 +1,10 @@
-import { computeTotalPrice } from '../../core/billing/amounts';
+import { computeTotalPrice, toCents } from '../../core/billing/amounts';
+import { formatEuro } from '../../core/format/fr';
 import { BillingPeriod } from '../../core/billing/period';
 import { leaseStatus } from '../../core/billing/send-status';
 import { Lease } from '../../core/models/lease';
 import { Leaseholder } from '../../core/models/leaseholder';
-import { RentCallRow, buildRows, showReminderBanner, summary } from './send-state';
+import { RentCallRow, buildRows, rowKey, showReminderBanner, summary } from './send-state';
 
 function lease(overrides: Partial<Lease> = {}): Lease {
   return {
@@ -41,6 +42,18 @@ const DEC_2026: BillingPeriod = { year: 2026, month: 12 };
 /** A row with just what `summary` and `showReminderBanner` read. */
 function row(status: 'sent' | 'todo', amount = 100): RentCallRow {
   return { holder: holder('Dupont'), lease: lease(), amount, status };
+}
+
+/** Plain spaces instead of the no-break ones of the French formatting. */
+const plainEuro = (value: string) =>
+  value.replace(
+    new RegExp('[' + String.fromCharCode(0xa0) + String.fromCharCode(0x202f) + ']', 'g'),
+    ' ',
+  );
+
+/** « 1 309,30 € » -> 130930: the cents a person reads on the screen. */
+function euroCents(shown: string): number {
+  return Math.round(Number(shown.replace(/[^\d,-]/g, '').replace(',', '.')) * 100);
 }
 
 describe('buildRows', () => {
@@ -248,24 +261,91 @@ describe('summary', () => {
     expect(summary([])).toEqual({ todo: 0, sent: 0, total: 0 });
   });
 
-  it('adds the amounts as they are, without rounding of its own', () => {
-    // 0.1 + 0.2 is 0.30000000000000004: the sum of the amounts the PDFs bill, not a rounded one.
+  it('totals the amounts as printed: each lease rounded to the cent, then added', () => {
+    // Three professional leases at 1091.08: each bills 1309.296 and is shown as 1 309,30 €.
+    const leases = ['A', 'B', 'C'].map((name) => lease({ name, isPro: true, price: 1091.08 }));
+    const rows = buildRows([holder('Dupont', leases)], DEC_2026);
+
+    expect(rows.map((r) => formatEuro(r.amount))).toEqual(rows.map(() => formatEuro(1309.3)));
+    expect(plainEuro(formatEuro(rows[0].amount))).toBe('1 309,30 €');
+    // The raw float sum is 3927.888, which prints 3 927,89: one cent short of the three rows.
+    expect(summary(rows).total).toBe(3927.9);
+    expect(plainEuro(formatEuro(summary(rows).total))).toBe('3 927,90 €');
+  });
+
+  it('has no float noise: 0.1 + 0.2 is 0.3', () => {
+    const rows = buildRows(
+      [holder('Dupont', [lease({ name: 'A', price: 0.1 }), lease({ name: 'B', price: 0.2 })])],
+      DEC_2026,
+    );
+
+    expect(summary(rows).total).toBe(0.3);
+  });
+
+  it('rounds each lease like the PDF (toFixed(2)), not the total', () => {
     const leases = [
-      lease({ name: 'A', price: 0.1 }),
-      lease({ name: 'B', price: 0.2 }),
-      lease({ name: 'C', isPro: true, price: 1091.08, charge: 33.33 }),
-      lease({ name: 'D', price: 2.675, additionalCharges: [{ title: 'x', amount: 1.005 }] }),
+      lease({ name: 'A', price: 2.675 }),
+      lease({ name: 'B', price: 1.005 }),
+      lease({ name: 'C', price: 0.125 }),
     ];
     const rows = buildRows([holder('Dupont', leases)], DEC_2026);
 
-    let expected = 0;
-    for (const l of leases) {
-      expected += computeTotalPrice(l);
+    // 2.675 -> 2.67, 1.005 -> 1.00, 0.125 -> 0.13 (what toFixed(2) prints), i.e. 3.80 in all.
+    expect(summary(rows).total).toBe(3.8);
+  });
+
+  it('counts an amount that is not a number as nothing, never NaN', () => {
+    const s = summary([row('todo', NaN), row('sent', 100.5), row('todo', Infinity)]);
+
+    expect(s.total).toBe(100.5);
+    expect(s.todo).toBe(2);
+    expect(s.sent).toBe(1);
+  });
+
+  it('always equals the sum of the amounts shown in the rows (2 000 pseudo-random portfolios)', () => {
+    // Deterministic generator (mulberry32): the same portfolios on every run.
+    let state = 0x1f2e3d4c;
+    const random = () => {
+      state = (state + 0x6d2b79f5) >>> 0;
+      let t = state;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const decimals = (max: number) => {
+      const places = random() < 0.5 ? 2 : 3;
+      return Math.round(random() * max * 10 ** places) / 10 ** places;
+    };
+
+    let rawSumDiffered = 0;
+    for (let portfolio = 0; portfolio < 2000; portfolio++) {
+      const count = 1 + Math.floor(random() * 15);
+      const leases = Array.from({ length: count }, (_, i) =>
+        lease({
+          name: `Bail ${i}`,
+          isPro: random() < 0.5,
+          price: decimals(3000),
+          charge: random() < 0.4 ? null : decimals(400),
+          additionalCharges: Array.from({ length: Math.floor(random() * 4) }, (_, k) => ({
+            title: `Frais ${k}`,
+            amount: decimals(150),
+          })),
+        }),
+      );
+      const rows = buildRows([holder('Dupont', leases)], DEC_2026);
+      const { total } = summary(rows);
+
+      // What the owner adds by hand: the amounts printed on the rows, to the cent.
+      const shown = rows.reduce((sum, r) => sum + euroCents(formatEuro(r.amount)), 0);
+      expect(Math.round(total * 100)).toBe(shown);
+      expect(euroCents(formatEuro(total))).toBe(shown);
+      expect(Math.round(total * 100)).toBe(rows.reduce((sum, r) => sum + toCents(r.amount), 0));
+      if (euroCents(formatEuro(rows.reduce((sum, r) => sum + r.amount, 0))) !== shown) {
+        rawSumDiffered += 1;
+      }
     }
-    expect(summary(rows).total).toBe(expected);
-    expect(summary(buildRows([holder('Dupont', leases.slice(0, 2))], DEC_2026)).total).toBe(
-      0.1 + 0.2,
-    );
+    // The property is not vacuous: the plain float sum is off by a cent in many of these portfolios.
+    expect(rawSumDiffered).toBeGreaterThan(100);
   });
 
   it('works on what buildRows returns', () => {
@@ -281,6 +361,41 @@ describe('summary', () => {
     );
 
     expect(summary(rows)).toEqual({ todo: 1, sent: 1, total: 680 });
+  });
+});
+
+describe('rowKey', () => {
+  it("is the lease's objectId when it has one", () => {
+    const rows = buildRows(
+      [holder('Dupont', [lease({ name: 'Studio', objectId: 'abc123' })])],
+      DEC_2026,
+    );
+
+    expect(rowKey(rows[0], 0)).toBe('abc123');
+    expect(rowKey(rows[0], 7)).toBe('abc123');
+  });
+
+  it('falls back on the position, so leases without an objectId and with the same name stay distinct', () => {
+    const rows = buildRows(
+      [
+        holder('Dupont', [
+          lease({ name: 'Garage', objectId: undefined }),
+          lease({ name: 'Garage', objectId: undefined }),
+        ]),
+        holder('Dupont', [lease({ name: 'Garage', objectId: undefined })], { objectId: undefined }),
+      ],
+      DEC_2026,
+    );
+
+    const keys = rows.map((r, i) => rowKey(r, i));
+    expect(new Set(keys).size).toBe(3);
+  });
+
+  it('cannot collide with a real objectId', () => {
+    const rows = buildRows([holder('Dupont', [lease({ objectId: undefined })])], DEC_2026);
+
+    expect(rowKey(rows[0], 0)).toContain(':');
+    expect(rowKey(rows[0], 0)).toBe('h-Dupont:0');
   });
 });
 

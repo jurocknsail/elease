@@ -1,4 +1,4 @@
-import { computeTotalPrice } from '../../core/billing/amounts';
+import { computeTotalPrice, sumAmounts } from '../../core/billing/amounts';
 import { BillingPeriod } from '../../core/billing/period';
 import { leaseStatus } from '../../core/billing/send-status';
 import { Lease } from '../../core/models/lease';
@@ -42,22 +42,31 @@ export function buildRows(holders: Leaseholder[], p: BillingPeriod): RentCallRow
 
 /**
  * The numbers of the month: leases still to send, leases already sent, and the total of every row
- * (sent or not: it is the month's rent, not what is left to send). Amounts are added as they are, with
- * no rounding of their own: the display formats them.
+ * (sent or not: it is the month's rent, not what is left to send). The total is the sum of the amounts
+ * as printed, each rounded to the cent (`sumAmounts`), so it always equals what a person adds up from
+ * the rows and from the PDFs.
  */
 export function summary(rows: RentCallRow[]): { todo: number; sent: number; total: number } {
   let todo = 0;
   let sent = 0;
-  let total = 0;
   for (const row of rows) {
     if (row.status === 'todo') {
       todo += 1;
     } else {
       sent += 1;
     }
-    total += row.amount;
   }
-  return { todo, sent, total };
+  return { todo, sent, total: sumAmounts(rows.map((row) => row.amount)) };
+}
+
+/**
+ * A stable key for a row of the list (`@for` track): the lease's objectId, which every lease from the
+ * backend has. A lease without one (not expected) falls back on the tenant and the position in the
+ * list, so two such leases, even with the same name, never share a key. The fallback contains a colon,
+ * which no objectId does.
+ */
+export function rowKey(row: RentCallRow, index: number): string {
+  return row.lease.objectId ?? `${row.holder.objectId ?? 'holder'}:${index}`;
 }
 
 /**
