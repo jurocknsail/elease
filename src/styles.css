@@ -1,5 +1,6 @@
 @import '@fontsource-variable/inter';
 @import 'tailwindcss' source('.');
+@import '@angular/cdk/overlay-prebuilt.css';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
@@ -7,20 +8,37 @@
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
 }
 
-:root {
-  color-scheme: light;
+/*
+ * Colour tokens, light theme. `static` makes Tailwind always emit them and turn each into utilities
+ * (`bg-surface`, `text-muted`, `border-border`, `bg-accent`, `text-on-accent`...); the dark values below
+ * simply override the variables, so no `dark:` variant is needed in templates.
+ *
+ * Contrast (WCAG 2.1, scripted): every text pair is >= 4.5:1 and every control border >= 3:1 in both
+ * themes. `--color-border` is a divider only (1.2:1 to 1.4:1): never use it to outline a control.
+ */
+@theme static {
   --color-bg: #ffffff;
   --color-surface: #f6f7f9;
+  /* Dividers and card outlines (decorative). */
   --color-border: #e2e5ea;
+  /* Outline of inputs, checkboxes and outlined buttons: 3.75:1 on bg, 3.50:1 on surface. */
+  --color-border-strong: #7d8494;
   --color-text: #14171f;
   --color-muted: #5b6270;
   --color-accent: #4f46e5;
   --color-accent-soft: #eef0ff;
+  /* Text and icons on an accent (or danger) background: white on #4f46e5 is 6.29:1. */
+  --color-on-accent: #ffffff;
   --color-ok: #0f7a4a;
   --color-ok-soft: #e6f6ee;
   --color-warn: #8a5a00;
   --color-warn-soft: #fff4dc;
   --color-danger: #c62828;
+  --color-danger-soft: #fdecec;
+}
+
+:root {
+  color-scheme: light;
 }
 
 [data-theme='dark'] {
@@ -28,15 +46,20 @@
   --color-bg: #0f1115;
   --color-surface: #181b22;
   --color-border: #2a2f3a;
+  /* 4.26:1 on bg, 3.88:1 on surface. */
+  --color-border-strong: #707888;
   --color-text: #eceff4;
   --color-muted: #a3abba;
   --color-accent: #818cf8;
   --color-accent-soft: #23264a;
+  /* White on the dark accent #818cf8 would be only 2.98:1: dark text gives 6.33:1. */
+  --color-on-accent: #0f1115;
   --color-ok: #4ade80;
   --color-ok-soft: #12301f;
   --color-warn: #fbbf24;
   --color-warn-soft: #33270b;
   --color-danger: #f87171;
+  --color-danger-soft: #331818;
 }
 
 html {
@@ -44,13 +67,99 @@ html {
 }
 
 body {
-  @apply bg-[var(--color-bg)] text-[var(--color-text)] font-sans antialiased;
+  @apply bg-bg text-text font-sans antialiased;
   margin: 0;
   min-height: 100dvh;
 }
 
+/* iOS zooms into any field below 16 px. */
 input,
 select,
 textarea {
   font-size: 16px;
+}
+
+/* No 300 ms double-tap-zoom delay on anything tappable; no grey flash on tap. */
+a,
+button,
+input,
+select,
+textarea,
+summary,
+[role='button'] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keyboard focus: a 2 px accent ring (6.3:1 on the page in both themes), never removed. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Dialog overlay (Angular CDK): a dimmer that works on both themes, and a panel in the app's style. */
+.cdk-overlay-dark-backdrop {
+  background: rgb(8 10 14 / 0.55);
+}
+
+/*
+ * Shared controls. Every one is at least 44 px tall (touch target), in plain classes so that any
+ * screen can use them without a component.
+ */
+@layer components {
+  .btn {
+    @apply inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold whitespace-nowrap select-none;
+    transition:
+      background-color 120ms,
+      border-color 120ms,
+      filter 120ms;
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled='true'] {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-on-accent;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
+
+  .btn-secondary {
+    @apply border border-border-strong bg-bg text-text;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    @apply bg-surface;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-on-accent;
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
+
+  .field-input {
+    @apply min-h-11 w-full rounded-lg border border-border-strong bg-bg px-3 text-text placeholder:text-muted;
+  }
+
+  .field-input[aria-invalid='true'] {
+    @apply border-danger;
+  }
 }
