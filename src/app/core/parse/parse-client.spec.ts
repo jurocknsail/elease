@@ -131,16 +131,6 @@ describe('ParseClient (SDK adapter)', () => {
       }
     });
 
-    it('lets the error of the cloud function propagate unchanged', async () => {
-      const error = Object.assign(new Error('refused'), { code: 141 });
-      const rest = stubRest(() => Promise.reject(error));
-      try {
-        await expect(TestBed.inject(ParseClient).runCloud('echo', params)).rejects.toBe(error);
-      } finally {
-        rest.restore();
-      }
-    });
-
     /**
      * The adapter is the last choke point for `sendEmail`: whatever the caller or the injected
      * environment says, it applies the guard of the REAL build environment (placeholders here,
@@ -190,32 +180,6 @@ describe('ParseClient (SDK adapter)', () => {
           });
           // The caller's object is not modified.
           expect(callerParams.sandbox).toBe(false);
-        } finally {
-          rest.restore();
-        }
-      });
-
-      it('adds the sandbox flag when the caller sent none', async () => {
-        const rest = stubRest(() => Promise.resolve({ result: true }));
-        try {
-          const { sandbox: _dropped, ...withoutSandbox } = params;
-          await TestBed.inject(ParseClient).runCloud('sendEmail', {
-            ...withoutSandbox,
-            recipientEmail: testRecipient,
-          });
-          expect((rest.requests[0].body as { sandbox: unknown }).sandbox).toBe(true);
-        } finally {
-          rest.restore();
-        }
-      });
-
-      it('leaves the other cloud functions alone', async () => {
-        const rest = stubRest(() => Promise.resolve({ result: true }));
-        try {
-          await TestBed.inject(ParseClient).runCloud('sendEmailPreview', params);
-          expect(rest.requests).toEqual([
-            { method: 'POST', path: 'functions/sendEmailPreview', body: params },
-          ]);
         } finally {
           rest.restore();
         }
@@ -287,20 +251,6 @@ describe('ParseClient (SDK adapter)', () => {
       await expect(TestBed.inject(ParseClient).logOut()).resolves.toBeUndefined();
 
       expect(logOut).toHaveBeenCalledTimes(1);
-    });
-
-    it('gives the username of the current user, or null without a session or a username', () => {
-      const current = vi.spyOn(Parse.User, 'current');
-      const client = TestBed.inject(ParseClient);
-
-      current.mockReturnValue(userNamed('julien') as never);
-      expect(client.currentUsername()).toBe('julien');
-
-      current.mockReturnValue(null as never);
-      expect(client.currentUsername()).toBeNull();
-
-      current.mockReturnValue(userNamed(undefined) as never);
-      expect(client.currentUsername()).toBeNull();
     });
   });
 

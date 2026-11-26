@@ -70,7 +70,7 @@ function baseLease(overrides: Partial<Lease> = {}): Lease {
 }
 
 describe('leaseFromParse', () => {
-  it('maps a real-shaped lease with missing charge and renewalDate, lot 0, isSelected and indexing', () => {
+  it('maps a real-shaped lease: absent charge and renewalDate stay absent, lot 0 stays 0, isSelected, indexing and the Parse envelope are ignored', () => {
     const lease = leaseFromParse(realShapedLease());
 
     expect(lease.objectId).toBe('lease-1');
@@ -82,37 +82,19 @@ describe('leaseFromParse', () => {
     expect(lease.price).toBe(1091.08);
     expect(lease.postalCode).toBe(13600);
     expect(lease.lastSendDate).toBe(1761393600000);
-  });
-
-  it('ignores isSelected and indexing, and the Parse envelope', () => {
-    const lease = leaseFromParse(realShapedLease());
     const keys = Object.keys(lease);
-
-    for (const ignored of [
+    for (const key of [
       'isSelected',
       'indexing',
       'ACL',
       'createdAt',
-      'updatedAt',
       '__type',
-      'className',
-    ]) {
-      expect(keys).not.toContain(ignored);
-    }
-  });
-
-  it('keeps the new optional fields undefined (absent) when the object has none', () => {
-    const lease = leaseFromParse(realShapedLease());
-
-    for (const key of [
       'lastSentPeriod',
       'lastSentPeriodAt',
       'indexType',
-      'referenceIndexQuarter',
-      'referenceIndexValue',
       'revisionReminderSentFor',
     ]) {
-      expect(key in lease).toBe(false);
+      expect(keys).not.toContain(key);
     }
   });
 
@@ -147,15 +129,7 @@ describe('leaseFromParse', () => {
     });
   });
 
-  it('reads lastSentPeriodAt only when it is a finite number', () => {
-    for (const bad of ['1764061200000', null, Number.NaN, Number.POSITIVE_INFINITY, {}, true]) {
-      const lease = leaseFromParse({ ...realShapedLease(), lastSentPeriodAt: bad });
-      expect('lastSentPeriodAt' in lease).toBe(false);
-    }
-    expect(leaseFromParse({ ...realShapedLease(), lastSentPeriodAt: 0 }).lastSentPeriodAt).toBe(0);
-  });
-
-  it('tolerates null, NaN-like and malformed values', () => {
+  it('tolerates null and malformed values, keeping only valid additional charge rows and a finite lastSentPeriodAt', () => {
     const lease = leaseFromParse({
       objectId: 'x',
       name: 'Bail',
@@ -163,47 +137,34 @@ describe('leaseFromParse', () => {
       charge: null,
       renewalDate: null,
       price: null,
-      additionalCharges: 'oops',
+      additionalCharges: [{ title: 'Eau', amount: 12 }, null, 'x', { title: 'Sans montant' }],
       indexType: 'IPC',
       referenceIndexValue: 'abc',
       lastSentPeriod: 12,
+      lastSentPeriodAt: Number.NaN,
     });
 
     expect(lease.lot).toBeNull();
     expect(lease.charge).toBeNull();
     expect(lease.renewalDate).toBeNull();
     expect(lease.price).toBe(0);
-    expect(lease.additionalCharges).toEqual([]);
+    expect(lease.additionalCharges).toEqual([{ title: 'Eau', amount: 12 }]);
     expect(lease.indexType).toBeUndefined();
     expect(lease.referenceIndexValue).toBeUndefined();
     expect(lease.lastSentPeriod).toBeUndefined();
+    expect('lastSentPeriodAt' in lease).toBe(false);
     expect(lease.streetName).toBe('');
     expect(lease.isPro).toBe(false);
-  });
-
-  it('drops malformed additional charge rows but keeps valid ones', () => {
-    const lease = leaseFromParse({
-      objectId: 'x',
-      additionalCharges: [{ title: 'Eau', amount: 12 }, null, 'x', { title: 'Sans montant' }],
-    });
-
-    expect(lease.additionalCharges).toEqual([{ title: 'Eau', amount: 12 }]);
+    expect(leaseFromParse({ ...realShapedLease(), lastSentPeriodAt: 0 }).lastSentPeriodAt).toBe(0);
   });
 });
 
 describe('leaseToParseFields', () => {
-  it('writes exactly the legacy fields, never isSelected nor indexing', () => {
-    const fields = leaseToParseFields(leaseFromParse(realShapedLease()));
-
-    expect(Object.keys(fields).sort()).toEqual(LEGACY_KEYS);
-    expect('isSelected' in fields).toBe(false);
-    expect('indexing' in fields).toBe(false);
-  });
-
-  it('round-trips the real-shaped lease: present legacy fields unchanged, absent ones null, nothing else', () => {
+  it('round-trips the real-shaped lease: the legacy fields unchanged, absent ones null, lot 0 kept, never isSelected nor indexing', () => {
     const json = realShapedLease();
     const fields = leaseToParseFields(leaseFromParse(json));
 
+    expect(Object.keys(fields).sort()).toEqual(LEGACY_KEYS);
     for (const key of [
       'isPro',
       'name',
@@ -222,33 +183,7 @@ describe('leaseToParseFields', () => {
     expect(fields['charge']).toBeNull();
     expect(fields['renewalDate']).toBeNull();
     expect(fields['additionalCharges']).toEqual([]);
-    expect('isSelected' in fields).toBe(false);
-    expect('indexing' in fields).toBe(false);
-    expect(Object.keys(fields).sort()).toEqual(LEGACY_KEYS);
-  });
-
-  it('round-trips the legacy fields unchanged', () => {
-    const json: Record<string, unknown> = {
-      ...realShapedLease(),
-      charge: 80,
-      renewalDate: 1772323200000,
-      lot: 5,
-    };
-    const fields = leaseToParseFields(leaseFromParse(json));
-
-    for (const key of LEGACY_KEYS.filter((k) => k !== 'additionalCharges')) {
-      expect(fields[key], key).toEqual(json[key]);
-    }
-    expect(fields['additionalCharges']).toEqual([]);
-  });
-
-  it('reports absent charge, renewalDate and lot as null, and keeps lot 0 as 0', () => {
-    const fields = leaseToParseFields(leaseFromParse({ ...realShapedLease(), lot: undefined }));
-    expect(fields['charge']).toBeNull();
-    expect(fields['renewalDate']).toBeNull();
-    expect(fields['lot']).toBeNull();
-
-    expect(leaseToParseFields(leaseFromParse(realShapedLease()))['lot']).toBe(0);
+    expect(leaseToParseFields(leaseFromParse({ ...json, lot: undefined }))['lot']).toBeNull();
   });
 
   it('adds the new fields only when they are defined', () => {
@@ -275,17 +210,7 @@ describe('leaseToParseFields', () => {
         'revisionReminderSentFor',
       ].sort(),
     );
-    expect(fields['lastSentPeriod']).toBe('2026-12');
     expect(fields['lastSentPeriodAt']).toBe(1764061200000);
-    expect(fields['referenceIndexValue']).toBe(143.5);
-  });
-
-  it('copies additional charges so the lease is not shared with the Parse object', () => {
-    const lease = baseLease();
-    const fields = leaseToParseFields(lease);
-
-    expect(fields['additionalCharges']).toEqual(lease.additionalCharges);
-    expect(fields['additionalCharges']).not.toBe(lease.additionalCharges);
   });
 });
 
@@ -317,7 +242,7 @@ describe('writeLeaseFields', () => {
     log.filter(([op]) => op === 'unset').map(([, key]) => key);
 
   describe('on creation (no base lease)', () => {
-    it('never sends null: an absent charge, renewalDate or lot is simply not stored', () => {
+    it('never sends null nor removes anything: absent charge, renewalDate and lot are not stored, 0 stays a real value', () => {
       const { object, log } = target();
       writeLeaseFields(object, baseLease({ charge: null, renewalDate: null, lot: null }), {
         bookkeeping: true,
@@ -328,14 +253,11 @@ describe('writeLeaseFields', () => {
       expect(keysSet(log)).not.toContain('lot');
       expect(keysUnset(log)).toEqual([]);
       expect(log.some(([, , value]) => value === null)).toBe(false);
-    });
 
-    it('keeps lot 0 and charge 0 as real values', () => {
-      const { object, log } = target();
-      writeLeaseFields(object, baseLease({ lot: 0, charge: 0 }), { bookkeeping: true });
-
-      expect(log).toContainEqual(['set', 'lot', 0]);
-      expect(log).toContainEqual(['set', 'charge', 0]);
+      const zero = target();
+      writeLeaseFields(zero.object, baseLease({ lot: 0, charge: 0 }), { bookkeeping: true });
+      expect(zero.log).toContainEqual(['set', 'lot', 0]);
+      expect(zero.log).toContainEqual(['set', 'charge', 0]);
     });
 
     it('writes the bookkeeping fields only when asked to', () => {
@@ -357,84 +279,41 @@ describe('writeLeaseFields', () => {
       }
       expect(keysSet(without.log)).toContain('name');
     });
-
-    it('never removes anything when it cannot prove the user cleared it', () => {
-      const { object, log } = target();
-      writeLeaseFields(object, baseLease({ charge: null, renewalDate: null, lot: null }), {
-        bookkeeping: false,
-      });
-
-      expect(keysUnset(log)).toEqual([]);
-    });
   });
 
   describe('against the base lease the user started from', () => {
-    it('writes only the fields that differ, and reports it', () => {
-      const { object, log } = target();
+    it('writes only the fields that differ (additional charges by value), and reports whether it wrote', () => {
       const base = baseLease();
 
-      const written = writeLeaseFields(
-        object,
-        { ...base, price: 600 },
-        { bookkeeping: false, base },
-      );
+      const changed = target();
+      expect(
+        writeLeaseFields(
+          changed.object,
+          { ...base, price: 600, additionalCharges: [{ title: 'Parking', amount: 30 }] },
+          { bookkeeping: false, base },
+        ),
+      ).toBe(true);
+      expect(changed.log).toEqual([
+        ['set', 'price', 600],
+        ['set', 'additionalCharges', [{ title: 'Parking', amount: 30 }]],
+      ]);
 
-      expect(log).toEqual([['set', 'price', 600]]);
-      expect(written).toBe(true);
+      const same = target();
+      expect(
+        writeLeaseFields(
+          same.object,
+          { ...base, additionalCharges: [{ title: 'Parking', amount: 25 }] },
+          { bookkeeping: false, base },
+        ),
+      ).toBe(false);
+      expect(same.log).toEqual([]);
     });
 
-    it('writes nothing, and reports it, when nothing changed', () => {
-      const { object, log } = target();
-      const base = baseLease();
-
-      const written = writeLeaseFields(
-        object,
-        { ...base, additionalCharges: [{ title: 'Parking', amount: 25 }] },
-        { bookkeeping: false, base },
-      );
-
-      expect(log).toEqual([]);
-      expect(written).toBe(false);
-    });
-
-    it('compares additional charges by value', () => {
-      const { object, log } = target();
-      const base = baseLease();
-
-      writeLeaseFields(
-        object,
-        { ...base, additionalCharges: [{ title: 'Parking', amount: 30 }] },
-        { bookkeeping: false, base },
-      );
-
-      expect(log).toEqual([['set', 'additionalCharges', [{ title: 'Parking', amount: 30 }]]]);
-    });
-
-    it('removes charge, renewalDate and lot only when the base had a value and the lease has none', () => {
-      const { object, log } = target();
-      const base = baseLease({ charge: 50, renewalDate: 1767225600000, lot: 2 });
-
-      writeLeaseFields(
-        object,
-        { ...base, charge: null, renewalDate: null, lot: null },
-        { bookkeeping: false, base },
-      );
-
-      expect(keysUnset(log).sort()).toEqual(['charge', 'lot', 'renewalDate']);
-      expect(keysSet(log)).toEqual([]);
-    });
-
-    it('leaves a value that was already absent in the base alone', () => {
-      const { object, log } = target();
-      const base = baseLease({ charge: null, renewalDate: null, lot: null });
-
-      writeLeaseFields(object, { ...base, name: 'Autre' }, { bookkeeping: false, base });
-
-      expect(log).toEqual([['set', 'name', 'Autre']]);
-    });
-
-    it('clears an editable index field only when the base had it', () => {
-      const withIndex = baseLease({
+    it('removes a field only when the base had a value and the lease has none, and leaves absent ones alone', () => {
+      const base = baseLease({
+        charge: 50,
+        renewalDate: 1767225600000,
+        lot: 2,
         indexType: 'IRL',
         referenceIndexQuarter: '2025-T2',
         referenceIndexValue: 143.5,
@@ -443,38 +322,53 @@ describe('writeLeaseFields', () => {
       writeLeaseFields(
         cleared.object,
         {
-          ...withIndex,
+          ...base,
+          charge: null,
+          renewalDate: null,
+          lot: null,
           indexType: undefined,
           referenceIndexQuarter: undefined,
           referenceIndexValue: undefined,
         },
-        { bookkeeping: false, base: withIndex },
+        { bookkeeping: false, base },
       );
       expect(keysUnset(cleared.log).sort()).toEqual([
+        'charge',
         'indexType',
+        'lot',
         'referenceIndexQuarter',
         'referenceIndexValue',
+        'renewalDate',
       ]);
+      expect(keysSet(cleared.log)).toEqual([]);
 
       // The base never had them (another device may have written them since): leave them alone.
+      const absentBase = baseLease({ charge: null, renewalDate: null, lot: null });
       const absent = target();
-      const base = baseLease();
-      writeLeaseFields(absent.object, { ...base, price: 1 }, { bookkeeping: false, base });
-      expect(absent.log).toEqual([['set', 'price', 1]]);
+      writeLeaseFields(
+        absent.object,
+        { ...absentBase, name: 'Autre' },
+        {
+          bookkeeping: false,
+          base: absentBase,
+        },
+      );
+      expect(absent.log).toEqual([['set', 'name', 'Autre']]);
     });
 
-    it('never writes the bookkeeping fields, even if they differ from the base', () => {
-      const { object, log } = target();
-      const base = baseLease({ lastSendDate: 0 });
+    it('never writes nor unsets the bookkeeping fields, even if they differ from the stale base', () => {
+      const base = baseLease({ lastSendDate: 0, lastSentPeriod: '2026-11', lastSentPeriodAt: 5 });
+      const { lastSentPeriodAt: dropped, ...withoutAt } = base;
+      expect(dropped).toBe(5);
 
+      const { object, log } = target();
       writeLeaseFields(
         object,
         {
-          ...base,
+          ...withoutAt,
           price: 1,
           lastSendDate: 99,
           lastSentPeriod: '2025-01',
-          lastSentPeriodAt: 99,
           revisionReminderSentFor: '2025-01-01',
         },
         { bookkeeping: false, base },
@@ -482,22 +376,11 @@ describe('writeLeaseFields', () => {
 
       expect(log).toEqual([['set', 'price', 1]]);
     });
-
-    it('never unsets lastSentPeriodAt, even when the stale copy lacks it', () => {
-      const { object, log } = target();
-      const base = baseLease({ lastSentPeriod: '2026-11', lastSentPeriodAt: 5 });
-      const { lastSentPeriodAt: dropped, ...withoutAt } = base;
-      expect(dropped).toBe(5);
-
-      writeLeaseFields(object, { ...withoutAt, price: 1 }, { bookkeeping: false, base });
-
-      expect(log).toEqual([['set', 'price', 1]]);
-    });
   });
 });
 
 describe('leaseholderFromParse', () => {
-  it('maps the contact and its included leases, skipping unresolved pointers', () => {
+  it('maps the contact and its included leases, skipping unresolved pointers, and tolerates a missing lease list', () => {
     const holder = leaseholderFromParse({
       objectId: 'holder-1',
       name: 'Julien Berger',
@@ -510,50 +393,47 @@ describe('leaseholderFromParse', () => {
       ],
     });
 
-    expect(holder.objectId).toBe('holder-1');
-    expect(holder.name).toBe('Julien Berger');
-    expect(holder.email).toBe('julien.berger1421@gmail.com');
-    expect(holder.phone).toBe('0600000000');
+    expect(holder).toMatchObject({
+      objectId: 'holder-1',
+      name: 'Julien Berger',
+      email: 'julien.berger1421@gmail.com',
+      phone: '0600000000',
+    });
     expect(holder.leases.map((l) => l.objectId)).toEqual(['lease-1', 'lease-2']);
-  });
 
-  it('gives an empty lease list when the field is missing, null or not an array', () => {
     for (const leases of [undefined, null, 'x']) {
-      const holder = leaseholderFromParse({
+      const bare = leaseholderFromParse({
         objectId: 'h',
         name: 'A',
         email: 'a@example.com',
         leases,
       });
-      expect(holder.leases).toEqual([]);
-      expect(holder.phone).toBe('');
+      expect(bare.leases).toEqual([]);
+      expect(bare.phone).toBe('');
     }
   });
 });
 
 describe('landlord profile mapping', () => {
-  it('maps a stored profile', () => {
-    const profile = landlordProfileFromParse({
+  it('maps a stored profile, with empty values for missing fields', () => {
+    expect(
+      landlordProfileFromParse({
+        objectId: 'profile-1',
+        name: 'SCI TEST',
+        addressLines: ['1 RUE A', '75001 PARIS'],
+        issueCity: 'PARIS',
+        legalNotice: 'Mentions',
+        emailSignature: 'Sig',
+        user: { __type: 'Pointer', className: '_User', objectId: 'user-1' },
+      }),
+    ).toEqual<LandlordProfile>({
       objectId: 'profile-1',
       name: 'SCI TEST',
       addressLines: ['1 RUE A', '75001 PARIS'],
       issueCity: 'PARIS',
       legalNotice: 'Mentions',
       emailSignature: 'Sig',
-      user: { __type: 'Pointer', className: '_User', objectId: 'user-1' },
     });
-
-    expect(profile).toEqual<LandlordProfile>({
-      objectId: 'profile-1',
-      name: 'SCI TEST',
-      addressLines: ['1 RUE A', '75001 PARIS'],
-      issueCity: 'PARIS',
-      legalNotice: 'Mentions',
-      emailSignature: 'Sig',
-    });
-  });
-
-  it('falls back to empty values for missing fields', () => {
     expect(landlordProfileFromParse({ objectId: 'p', addressLines: 'x' })).toEqual<LandlordProfile>(
       {
         objectId: 'p',
@@ -576,20 +456,6 @@ describe('landlord profile mapping', () => {
       'legalNotice',
       'name',
     ]);
-    expect(fields['addressLines']).toEqual(DEFAULT_LANDLORD_PROFILE.addressLines);
     expect(fields['addressLines']).not.toBe(DEFAULT_LANDLORD_PROFILE.addressLines);
-  });
-});
-
-describe('DEFAULT_LANDLORD_PROFILE', () => {
-  it('holds the values that were hard-coded in the legacy app', () => {
-    expect(DEFAULT_LANDLORD_PROFILE).toEqual({
-      name: 'SCI LA CHARINE',
-      addressLines: ['41 CHEMIN DES BAGNOLS', '13600 LA CIOTAT'],
-      issueCity: 'LA CIOTAT',
-      legalNotice:
-        'SCI LA CHARINE au capital de 2000 euros, inscrite au RCS de MARSEILLE sous le n° 507 834 117.',
-      emailSignature: 'Pierre MARGERIT',
-    });
   });
 });

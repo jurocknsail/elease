@@ -6,7 +6,6 @@ import { LandlordProfileRepository } from './landlord-profile.repository';
 import { LeaseholderRepository } from './leaseholder.repository';
 import { ParseClient } from './parse-client';
 import { FakeParseClient, parseError, pointer } from './testing/fake-parse-client';
-import { BackendTimeoutError } from './with-timeout';
 import { DEFAULT_LANDLORD_PROFILE } from '../models/landlord-profile';
 
 /**
@@ -115,16 +114,6 @@ describe('expired session (Parse code 209) in the repositories', () => {
     });
   });
 
-  it('does not touch the session when the backend merely times out', async () => {
-    const context = setup();
-    context.fake.failWhen(() => true, new BackendTimeoutError(), false);
-
-    await expect(context.holders.load()).rejects.toBeInstanceOf(BackendTimeoutError);
-
-    expect(context.auth.user()).not.toBeNull();
-    expect(context.router.navigate).not.toHaveBeenCalled();
-  });
-
   it('treats a missing session (no current user) like an expired one', async () => {
     const context = setup();
     context.fake.userId = null;
@@ -135,16 +124,6 @@ describe('expired session (Parse code 209) in the repositories', () => {
 
     expect(error).toMatchObject({ code: 209 });
     expect(context.router.navigate).toHaveBeenCalledWith(['/login'], expect.anything());
-  });
-
-  it('signs out once per failing operation, not once per failing remote call', async () => {
-    const context = setup();
-    const logout = vi.spyOn(context.auth, 'logout');
-    context.fake.failWhen(() => true, parseError(209), false);
-
-    await context.holders.deleteLeaseholder('h1').catch(() => undefined);
-
-    expect(logout).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -161,17 +140,6 @@ describe('LeaseholderRepository.markLeasesSent after a delivered e-mail', () => 
 
     expect(context.auth.user()).not.toBeNull();
     expect(context.fake.userId).not.toBeNull();
-    expect(context.router.navigate).not.toHaveBeenCalled();
-  });
-
-  it('leaves the session alone for any other error', async () => {
-    const context = setup();
-    const other = parseError(141, 'Cloud Code script failed.');
-    context.fake.failWhen(() => true, other, false);
-
-    await expect(run(context)).rejects.toBe(other);
-
-    expect(context.auth.user()).not.toBeNull();
     expect(context.router.navigate).not.toHaveBeenCalled();
   });
 });

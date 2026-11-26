@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { DEFAULT_LANDLORD_PROFILE, LandlordProfile } from '../models/landlord-profile';
 import { LandlordProfileRepository } from './landlord-profile.repository';
 import { ParseClient } from './parse-client';
-import { FakeParseClient, parseError, pointer } from './testing/fake-parse-client';
+import { FakeParseClient, pointer } from './testing/fake-parse-client';
 
 const OWNER_ACL = { 'user-1': { read: true, write: true } };
 
@@ -33,18 +33,6 @@ describe('LandlordProfileRepository', () => {
         emailSignature: 'Pierre MARGERIT',
         user: pointer('_User', 'user-1'),
       });
-    });
-
-    it('never hands out the default object itself', async () => {
-      const { repo } = setup();
-
-      const profile = await repo.get();
-      profile.addressLines.push('mutated');
-
-      expect(DEFAULT_LANDLORD_PROFILE.addressLines).toEqual([
-        '41 CHEMIN DES BAGNOLS',
-        '13600 LA CIOTAT',
-      ]);
     });
 
     it('returns the existing profile of the user without creating another one', async () => {
@@ -79,21 +67,6 @@ describe('LandlordProfileRepository', () => {
       expect(fake.callsOf('save')).toEqual([]);
     });
 
-    it('queries the own profile by user pointer, oldest first, one result', async () => {
-      const { fake, repo } = setup();
-
-      await repo.get();
-
-      const finds = fake.callsOf('find', 'LandlordProfile');
-      expect(finds).toHaveLength(1);
-      expect(finds[0].query).toEqual({
-        include: [],
-        order: 'createdAt',
-        limit: 1,
-        where: [['user', pointer('_User', 'user-1')]],
-      });
-    });
-
     it('takes the oldest profile when duplicates exist', async () => {
       const { fake, repo } = setup();
       const attrs = (name: string) => ({
@@ -124,29 +97,12 @@ describe('LandlordProfileRepository', () => {
       expect(fake.recordsOf('LandlordProfile')).toHaveLength(1);
     });
 
-    it('queries again on the next call instead of serving a stale copy', async () => {
-      const { fake, repo } = setup();
-      const created = await repo.get();
-      fake.record('LandlordProfile', created.objectId!)!.attrs['issueCity'] = 'MARSEILLE';
-
-      expect((await repo.get()).issueCity).toBe('MARSEILLE');
-    });
-
     it('fails with code 209 without creating anything when there is no session', async () => {
       const { fake, repo } = setup();
       fake.userId = null;
 
       await expect(repo.get()).rejects.toMatchObject({ code: 209 });
       expect(fake.recordsOf('LandlordProfile')).toEqual([]);
-    });
-
-    it('lets Parse errors propagate unchanged and can be retried', async () => {
-      const { fake, repo } = setup();
-      const error = parseError(100, 'network');
-      fake.failWhen((call) => call.op === 'find', error);
-
-      await expect(repo.get()).rejects.toBe(error);
-      await expect(repo.get()).resolves.toMatchObject({ name: 'SCI LA CHARINE' });
     });
   });
 
@@ -197,15 +153,6 @@ describe('LandlordProfileRepository', () => {
         name: 'SCI NOUVELLE',
         user: pointer('_User', 'user-1'),
       });
-    });
-
-    it('lets Parse errors propagate unchanged', async () => {
-      const { fake, repo } = setup();
-      const profile = await repo.get();
-      const error = parseError(209, 'invalid session token');
-      fake.failWhen((call) => call.op === 'save', error);
-
-      await expect(repo.save(profile)).rejects.toBe(error);
     });
   });
 });

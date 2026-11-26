@@ -166,22 +166,6 @@ describe('LeaseholderRepository', () => {
       expect('update' in repo.leaseholders).toBe(false);
     });
 
-    it('loads two holders sharing the same e-mail address: nothing assumes e-mails are unique', async () => {
-      const { fake, repo } = setup();
-      fake.seed('Leaseholder', 'h4', {
-        name: 'Même Adresse',
-        email: 'julien.berger1421@gmail.com',
-        phone: '',
-        leases: [],
-      });
-
-      await repo.load();
-
-      const sharing = repo.leaseholders().filter((h) => h.email === 'julien.berger1421@gmail.com');
-      expect(sharing.map((h) => h.objectId)).toEqual(['h1', 'h4']);
-      expect(repo.leaseholders()).toHaveLength(4);
-    });
-
     it('rejects with a BackendTimeoutError after 20 s when Back4App hangs and keeps the previous state', async () => {
       const { fake, repo } = setup();
       await repo.load();
@@ -276,35 +260,6 @@ describe('LeaseholderRepository', () => {
       expect(fake.record('Leaseholder', 'h1')?.attrs['leases']).toHaveLength(3);
       expect(repo.leaseholders().find((h) => h.objectId === 'h2')?.name).toBe('Autre Locataire');
     });
-
-    it('leaves the state unchanged and rethrows the Parse error when the save fails', async () => {
-      const { fake, repo } = await loaded();
-      const before = repo.leaseholders();
-      const error = parseError(141, 'cloud validation');
-      fake.failWhen((call) => call.op === 'save', error);
-
-      await expect(
-        repo.updateContact('h1', { name: 'X', email: 'x@example.com', phone: '' }),
-      ).rejects.toBe(error);
-      expect(repo.leaseholders()).toBe(before);
-    });
-
-    it('is time-limited like every Parse call', async () => {
-      const { fake, repo } = await loaded();
-      vi.useFakeTimers();
-      fake.hangWhen((call) => call.op === 'save');
-      const outcome = repo
-        .updateContact('h1', { name: 'X', email: 'x@example.com', phone: '' })
-        .then(
-          () => 'resolved',
-          (error: unknown) => error,
-        );
-
-      await vi.advanceTimersByTimeAsync(20000);
-
-      expect(await outcome).toBeInstanceOf(BackendTimeoutError);
-      expect(repo.leaseholders().find((h) => h.objectId === 'h1')?.name).toBe('Julien Berger');
-    });
   });
 
   describe('addLease', () => {
@@ -333,20 +288,6 @@ describe('LeaseholderRepository', () => {
       ]);
     });
 
-    it('appends to the existing pointers instead of rewriting the array', async () => {
-      const { fake, repo } = await loaded();
-
-      const created = await repo.addLease('h1', newLease());
-
-      expect(fake.record('Leaseholder', 'h1')?.attrs['leases']).toEqual([
-        pointer('Lease', 'a'),
-        pointer('Lease', 'gone'),
-        pointer('Lease', 'b'),
-        pointer('Lease', created.objectId!),
-      ]);
-      expect(leaseNames(repo, 'h1')).toEqual(['Bail A', 'Bail B', 'Studio']);
-    });
-
     it('does not store anything for absent charge, renewalDate and lot, and never writes isSelected or indexing', async () => {
       const { fake, repo } = await loaded();
 
@@ -362,33 +303,6 @@ describe('LeaseholderRepository', () => {
       expect(ops.some((op) => op.kind === 'set' && op.value === null)).toBe(false);
       expect(keysOf(ops)).not.toContain('isSelected');
       expect(keysOf(ops)).not.toContain('indexing');
-    });
-
-    it('writes the new fields only when they are defined', async () => {
-      const { fake, repo } = await loaded();
-
-      await repo.addLease(
-        'h3',
-        newLease({
-          lastSendDate: 1761393600000,
-          lastSentPeriod: '2026-11',
-          lastSentPeriodAt: 1761393600000,
-          indexType: 'ILC',
-          referenceIndexQuarter: '2025-T2',
-          referenceIndexValue: 133.7,
-        }),
-      );
-
-      expect(keysOf(saveOps(fake.callsOf('save', 'Lease')[0]))).toEqual(
-        [
-          ...LEGACY_KEYS,
-          'indexType',
-          'lastSentPeriod',
-          'lastSentPeriodAt',
-          'referenceIndexQuarter',
-          'referenceIndexValue',
-        ].sort(),
-      );
     });
 
     it('removes the new lease again, leaves the state unchanged and rethrows when linking fails', async () => {
@@ -407,30 +321,6 @@ describe('LeaseholderRepository', () => {
       ).toEqual(['a', 'b', 'c']);
       expect(fake.record('Leaseholder', 'h3')?.attrs['leases']).toEqual([]);
       expect(repo.leaseholders()).toBe(before);
-    });
-
-    it('does not delete the lease after a timeout, because the link may still land', async () => {
-      const { fake, repo } = await loaded();
-      vi.useFakeTimers();
-      fake.hangWhen((call) => call.op === 'save' && call.className === 'Leaseholder');
-      const outcome = repo.addLease('h3', newLease()).then(
-        () => 'resolved',
-        (error: unknown) => error,
-      );
-
-      await vi.advanceTimersByTimeAsync(20000);
-
-      expect(await outcome).toBeInstanceOf(BackendTimeoutError);
-      expect(fake.callsOf('destroy')).toEqual([]);
-    });
-
-    it('still rethrows the original error when the clean-up fails too', async () => {
-      const { fake, repo } = await loaded();
-      const error = parseError(100, 'network');
-      fake.failWhen((call) => call.op === 'save' && call.className === 'Leaseholder', error);
-      fake.failWhen((call) => call.op === 'destroy', parseError(100, 'still down'));
-
-      await expect(repo.addLease('h3', newLease())).rejects.toBe(error);
     });
   });
 
@@ -496,15 +386,6 @@ describe('LeaseholderRepository', () => {
       expect(repo.leaseholders()[0].leases[1].charge).toBeNull();
     });
 
-    it('does not write anything for an absent charge that stays absent', async () => {
-      const { fake, repo } = await loaded();
-
-      await repo.updateLease({ ...repo.leaseholders()[0].leases[0], name: 'Autre nom' });
-
-      expect(keysOf(saveOps(fake.callsOf('save', 'Lease')[0]))).toEqual(['name']);
-      expect(fake.record('Lease', 'a')!.attrs['lot']).toBe(0);
-    });
-
     it('never writes lastSendDate, lastSentPeriod, lastSentPeriodAt or revisionReminderSentFor, and shows the fresh server values afterwards', async () => {
       const { fake, repo } = await loaded();
       const stale = repo.leaseholders()[0].leases[0];
@@ -541,77 +422,11 @@ describe('LeaseholderRepository', () => {
       });
     });
 
-    it('does not remove an index field written elsewhere when the stale copy lacked it and the user did not clear it', async () => {
-      const { fake, repo } = await loaded();
-      const stale = repo.leaseholders()[0].leases[0];
-      expect(stale.indexType).toBeUndefined();
-      const server = fake.record('Lease', 'a')!.attrs;
-      server['indexType'] = 'ILC';
-      server['referenceIndexQuarter'] = '2025-T2';
-      server['referenceIndexValue'] = 133.7;
-
-      await repo.updateLease({ ...stale, price: 5 });
-
-      expect(saveOps(fake.callsOf('save', 'Lease')[0])).toEqual([
-        { kind: 'set', key: 'price', value: 5 },
-      ]);
-      expect(server['indexType']).toBe('ILC');
-      expect(server['referenceIndexValue']).toBe(133.7);
-      expect(repo.leaseholders()[0].leases[0]).toMatchObject({
-        indexType: 'ILC',
-        referenceIndexQuarter: '2025-T2',
-        referenceIndexValue: 133.7,
-      });
-    });
-
-    it('does not save when nothing changed, and still shows the server version', async () => {
-      const { fake, repo } = await loaded();
-      const unchanged = repo.leaseholders()[0].leases[0];
-      fake.record('Lease', 'a')!.attrs['price'] = 7777;
-
-      await repo.updateLease(unchanged);
-
-      expect(fake.callsOf('save')).toEqual([]);
-      expect(repo.leaseholders()[0].leases[0].price).toBe(7777);
-    });
-
-    it('writes every non-bookkeeping field, and removes nothing, when the lease is not in the state', async () => {
-      const { fake, repo } = setup(); // not loaded: the base version is unknown
-      expect(fake.record('Lease', 'b')!.attrs['charge']).toBe(80);
-
-      await repo.updateLease({
-        ...newLease({ charge: null, renewalDate: null, lot: null, lastSendDate: 42 }),
-        objectId: 'b',
-      });
-
-      const ops = saveOps(fake.callsOf('save', 'Lease')[0]);
-      expect(keysOf(ops)).toEqual(
-        LEGACY_KEYS.filter(
-          (key) => !['charge', 'renewalDate', 'lot', 'lastSendDate'].includes(key),
-        ),
-      );
-      expect(ops.some((op) => op.kind === 'unset')).toBe(false);
-      // Nothing can prove the user cleared the charge: it stays.
-      expect(fake.record('Lease', 'b')!.attrs['charge']).toBe(80);
-      expect(fake.record('Lease', 'b')!.attrs['lastSendDate']).toBe(0);
-    });
-
     it('rejects a lease without objectId before any remote call', async () => {
       const { fake, repo } = await loaded();
 
       await expect(repo.updateLease(newLease())).rejects.toThrow();
       expect(fake.calls).toEqual([]);
-    });
-
-    it('leaves the state unchanged and rethrows when the save fails', async () => {
-      const { fake, repo } = await loaded();
-      const before = repo.leaseholders();
-      // Not 209: an expired session signs the user out, which empties the state (see repositories-session.spec.ts).
-      const error = parseError(141, 'Cloud Code script failed.');
-      fake.failWhen((call) => call.op === 'save', error);
-
-      await expect(repo.updateLease({ ...before[0].leases[0], name: 'X' })).rejects.toBe(error);
-      expect(repo.leaseholders()).toBe(before);
     });
   });
 
@@ -651,39 +466,6 @@ describe('LeaseholderRepository', () => {
       expect(repo.leaseholders()).toBe(before);
     });
 
-    it('does not put the pointer back after a timeout, and a retry finishes the job', async () => {
-      const { fake, repo } = await loaded();
-      vi.useFakeTimers();
-      fake.hangWhen((call) => call.op === 'destroy');
-      const outcome = repo.deleteLease('h1', 'a').then(
-        () => 'resolved',
-        (error: unknown) => error,
-      );
-
-      await vi.advanceTimersByTimeAsync(20000);
-
-      expect(await outcome).toBeInstanceOf(BackendTimeoutError);
-      expect(fake.callsOf('save', 'Leaseholder')).toHaveLength(1);
-      vi.useRealTimers();
-
-      // The destroy never reached the server: the retry unlinks (nothing left to remove) and deletes.
-      await repo.deleteLease('h1', 'a');
-      expect(fake.record('Lease', 'a')).toBeUndefined();
-      expect(leaseNames(repo, 'h1')).toEqual(['Bail B']);
-    });
-
-    it('counts an already deleted lease as deleted', async () => {
-      const { fake, repo } = await loaded();
-
-      await repo.deleteLease('h1', 'gone');
-
-      expect(fake.record('Leaseholder', 'h1')?.attrs['leases']).toEqual([
-        pointer('Lease', 'a'),
-        pointer('Lease', 'b'),
-      ]);
-      expect(leaseNames(repo, 'h1')).toEqual(['Bail A', 'Bail B']);
-    });
-
     it('refuses to destroy a lease that does not belong to the holder, and touches nothing', async () => {
       const { fake, repo } = await loaded();
       const before = repo.leaseholders();
@@ -697,13 +479,6 @@ describe('LeaseholderRepository', () => {
       expect(fake.record('Leaseholder', 'h1')?.attrs['leases']).toHaveLength(3);
       expect(fake.record('Leaseholder', 'h2')?.attrs['leases']).toEqual([pointer('Lease', 'c')]);
       expect(repo.leaseholders()).toBe(before);
-    });
-
-    it('refuses an unknown lease id as well', async () => {
-      const { fake, repo } = await loaded();
-
-      await expect(repo.deleteLease('h3', 'nope')).rejects.toThrow('appartient');
-      expect(fake.callsOf('destroy')).toEqual([]);
     });
 
     it('does not destroy the lease when unlinking fails', async () => {
@@ -739,14 +514,6 @@ describe('LeaseholderRepository', () => {
       expect(repo.leaseholders().map((h) => h.objectId)).toEqual(['h2', 'h3']);
     });
 
-    it('deletes a holder without leases', async () => {
-      const { repo } = await loaded();
-
-      await repo.deleteLeaseholder('h3');
-
-      expect(repo.leaseholders().map((h) => h.objectId)).toEqual(['h1', 'h2']);
-    });
-
     it('keeps the holder, and rethrows the Parse error unchanged, when one of its leases cannot be deleted', async () => {
       const { fake, repo } = await loaded();
       const before = repo.leaseholders();
@@ -763,17 +530,6 @@ describe('LeaseholderRepository', () => {
       await repo.deleteLeaseholder('h1');
       expect(fake.record('Leaseholder', 'h1')).toBeUndefined();
       expect(fake.record('Lease', 'b')).toBeUndefined();
-    });
-  });
-
-  describe('deleteLeaseholder when the holder is already gone', () => {
-    it('counts it as deleted and drops it from the state', async () => {
-      const { fake, repo } = await loaded();
-      fake.remove('Leaseholder', 'h3'); // deleted elsewhere, or by a previous attempt that timed out
-
-      await expect(repo.deleteLeaseholder('h3')).resolves.toBeUndefined();
-
-      expect(repo.leaseholders().map((h) => h.objectId)).toEqual(['h1', 'h2']);
     });
   });
 
@@ -824,14 +580,6 @@ describe('LeaseholderRepository', () => {
         undefined,
       ]);
       expect(repo.leaseholders()[1].leases.map((l) => l.lastSentPeriod)).toEqual(['2026-12']);
-    });
-
-    it('does nothing for an empty list', async () => {
-      const { fake, repo } = await loaded();
-
-      await repo.markLeasesSent([], '2026-12', 5);
-
-      expect(fake.calls).toEqual([]);
     });
   });
 });

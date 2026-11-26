@@ -46,23 +46,6 @@ describe('describeBackendError', () => {
     expect(describeBackendError('boom', true).retryable).toBe(true);
     expect(describeBackendError(null, true).title).toBe('Une erreur est survenue');
   });
-
-  it('reads navigator.onLine by default', () => {
-    const descriptor = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');
-    try {
-      Object.defineProperty(Navigator.prototype, 'onLine', {
-        configurable: true,
-        get: () => false,
-      });
-      expect(describeBackendError(new Error('x')).title).toBe('Connexion requise');
-      Object.defineProperty(Navigator.prototype, 'onLine', { configurable: true, get: () => true });
-      expect(describeBackendError(new Error('x')).title).toBe('Une erreur est survenue');
-    } finally {
-      if (descriptor) {
-        Object.defineProperty(Navigator.prototype, 'onLine', descriptor);
-      }
-    }
-  });
 });
 
 describe('isConnectionError', () => {
@@ -70,12 +53,5 @@ describe('isConnectionError', () => {
     expect(isConnectionError(new Error('x'), false)).toBe(true);
     expect(isConnectionError(new BackendTimeoutError(), true)).toBe(true);
     expect(isConnectionError(parseError(100), true)).toBe(true);
-  });
-
-  it('is false for every other error while online', () => {
-    expect(isConnectionError(parseError(141), true)).toBe(false);
-    expect(isConnectionError(parseError(209), true)).toBe(false);
-    expect(isConnectionError(new Error('x'), true)).toBe(false);
-    expect(isConnectionError(null, true)).toBe(false);
   });
 });

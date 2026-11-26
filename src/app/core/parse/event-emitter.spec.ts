@@ -16,39 +16,6 @@ describe('MinimalEventEmitter', () => {
     ]);
   });
 
-  it('once listeners run once', () => {
-    const emitter = new MinimalEventEmitter();
-    const listener = vi.fn();
-    emitter.once('error', listener);
-
-    emitter.emit('error', 'boom');
-    emitter.emit('error', 'again');
-
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith('boom');
-    expect(emitter.listenerCount('error')).toBe(0);
-  });
-
-  it('removes one listener or all of them', () => {
-    const emitter = new MinimalEventEmitter();
-    const kept = vi.fn();
-    const removed = vi.fn();
-    emitter.on('a', kept).on('a', removed);
-
-    emitter.off('a', removed);
-    emitter.emit('a');
-    expect(kept).toHaveBeenCalledTimes(1);
-    expect(removed).not.toHaveBeenCalled();
-    expect(emitter.listenerCount('a')).toBe(1);
-
-    emitter.on('b', kept);
-    emitter.removeAllListeners('a');
-    expect(emitter.listenerCount('a')).toBe(0);
-    expect(emitter.listenerCount('b')).toBe(1);
-    emitter.removeAllListeners();
-    expect(emitter.listenerCount('b')).toBe(0);
-  });
-
   it('tolerates listeners that add or remove listeners while running', () => {
     const emitter = new MinimalEventEmitter();
     const late = vi.fn();

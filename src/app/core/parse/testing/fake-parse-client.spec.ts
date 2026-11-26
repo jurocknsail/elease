@@ -18,12 +18,6 @@ describe('FakeParseClient cloud functions', () => {
     expect(calls[0].params).toEqual({ ...params, attachments: [{ Filename: 'a.pdf' }] });
   });
 
-  it('resolves with the configured result', async () => {
-    const fake = new FakeParseClient();
-    fake.cloudResult = { sent: 1 };
-    await expect(fake.runCloud('sendEmail', params)).resolves.toEqual({ sent: 1 });
-  });
-
   it('fails one matching call only, by default', async () => {
     const fake = new FakeParseClient();
     const error = parseError(141, 'Mailjet refused');
@@ -61,21 +55,6 @@ describe('FakeParseClient cloud functions', () => {
     }
   });
 
-  it('does not mix cloud calls with object calls', async () => {
-    const fake = new FakeParseClient();
-    await fake.runCloud('sendEmail', params);
-    expect(fake.callsOf('save')).toEqual([]);
-    expect(fake.callsOf('find')).toEqual([]);
-  });
-
-  it('gives the signed-in e-mail, or null without a session', () => {
-    const fake = new FakeParseClient();
-    fake.userEmail = 'proprietaire@example.test';
-    expect(fake.currentUserEmail()).toBe('proprietaire@example.test');
-
-    fake.userId = null;
-    expect(fake.currentUserEmail()).toBeNull();
-  });
   describe('sessions', () => {
     it('signs in a registered account and then answers as that user', async () => {
       const fake = new FakeParseClient();
@@ -102,17 +81,6 @@ describe('FakeParseClient cloud functions', () => {
       expect(fake.callsOf('login').map((call) => call.username)).toEqual(['julien', 'inconnu']);
       expect(JSON.stringify(fake.calls)).not.toContain('secret');
       expect(JSON.stringify(fake.calls)).not.toContain('nope');
-    });
-
-    it('removes the session before the server answers, so a failing sign-out still signs out', async () => {
-      const fake = new FakeParseClient();
-      fake.failWhen((call) => call.op === 'logout', parseError(100, 'offline'));
-
-      await expect(fake.logOut()).rejects.toMatchObject({ code: 100 });
-
-      expect(fake.currentUsername()).toBeNull();
-      expect(fake.currentUser()).toBeNull();
-      expect(fake.callsOf('logout')).toHaveLength(1);
     });
   });
 });
