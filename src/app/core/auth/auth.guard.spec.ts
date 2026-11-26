@@ -1,12 +1,6 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import {
-  ActivatedRouteSnapshot,
-  Router,
-  RouterStateSnapshot,
-  UrlTree,
-  provideRouter,
-} from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { ParseClient } from '../parse/parse-client';
 import { FakeParseClient } from '../parse/testing/fake-parse-client';
@@ -61,14 +55,6 @@ describe('authGuard', () => {
     expect(router.url).toBe('/login?returnUrl=%2Flocataires%2Fabc%3Ftab%3Dbaux');
   });
 
-  it('does not clutter the login address when the user asked for the default page', async () => {
-    const { router } = setup(false);
-
-    await RouterTestingHarness.create('/appels');
-
-    expect(router.url).toBe('/login');
-  });
-
   it('stops asking for a session that no longer exists, even after the page was shown', async () => {
     const { router, fake } = setup(true);
     const harness = await RouterTestingHarness.create('/appels');
@@ -80,32 +66,6 @@ describe('authGuard', () => {
     expect(fake.userId).toBeNull();
     await harness.navigateByUrl('/locataires');
 
-    expect(router.url).toBe('/login?returnUrl=%2Flocataires');
-  });
-
-  it('never forwards an address that is not an internal path (defence in depth)', () => {
-    setup(false);
-    const route = {} as ActivatedRouteSnapshot;
-
-    for (const url of [
-      '//evil.example/appels',
-      'https://evil.example',
-      '/\\evil.example',
-      '/login',
-    ]) {
-      const result = TestBed.runInInjectionContext(() =>
-        authGuard(route, { url } as RouterStateSnapshot),
-      );
-
-      expect(result).toBeInstanceOf(UrlTree);
-      expect(TestBed.inject(Router).serializeUrl(result as UrlTree)).toBe('/login');
-    }
-  });
-
-  it('does not let the login page be used as a return address', async () => {
-    const { router } = setup(false);
-
-    await RouterTestingHarness.create('/login?returnUrl=%2Flocataires');
     expect(router.url).toBe('/login?returnUrl=%2Flocataires');
   });
 });

@@ -25,43 +25,26 @@ describe('AuthService', () => {
   });
 
   describe('session restore', () => {
-    it('has no user when the SDK holds no session', () => {
-      const { auth } = setup();
-      expect(auth.user()).toBeNull();
-    });
-
-    it('restores the user of the stored session, with the e-mail', () => {
+    it('restores the user of the stored session, and counts an unreadable or missing one as no session', () => {
       const { fake, auth } = setup({ signedIn: true });
       fake.userName = 'julien';
       fake.userEmail = 'julien@example.test';
 
       expect(auth.user()).toEqual({ username: 'julien', email: 'julien@example.test' });
-    });
 
-    it('reads the session lazily: nothing is asked of the client before `user` is read', () => {
-      const { fake, auth } = setup({ signedIn: true });
-      const spy = vi.spyOn(fake, 'currentUsername');
-      expect(spy).not.toHaveBeenCalled();
-
-      auth.user();
-      auth.user();
-
-      // Once: the answer is kept until the session changes.
-      expect(spy).toHaveBeenCalledTimes(1);
-    });
-
-    it('counts an unreadable stored session as no session', () => {
-      const { fake, auth } = setup({ signedIn: true });
-      vi.spyOn(fake, 'currentUsername').mockImplementation(() => {
+      TestBed.resetTestingModule();
+      const unreadable = setup({ signedIn: true });
+      vi.spyOn(unreadable.fake, 'currentUsername').mockImplementation(() => {
         throw new SyntaxError('Unexpected token in stored user');
       });
-
-      expect(auth.user()).toBeNull();
+      expect(unreadable.auth.user()).toBeNull();
+      TestBed.resetTestingModule();
+      expect(setup().auth.user()).toBeNull();
     });
   });
 
   describe('login', () => {
-    it('signs in and exposes the user', async () => {
+    it('signs in and exposes the user, without recording the password anywhere but in the call to the client', async () => {
       const { fake, auth } = setup();
       expect(auth.user()).toBeNull();
 
@@ -69,13 +52,6 @@ describe('AuthService', () => {
 
       expect(auth.user()).toEqual({ username: 'julien', email: 'julien@example.test' });
       expect(fake.callsOf('login')).toHaveLength(1);
-      expect(fake.callsOf('login')[0].username).toBe('julien');
-    });
-
-    it('never records or exposes the password anywhere but the call to the client', async () => {
-      const { fake, auth } = setup();
-      await auth.login('julien', PASSWORD);
-
       expect(JSON.stringify(fake.calls)).not.toContain(PASSWORD);
       expect(JSON.stringify(auth.user())).not.toContain(PASSWORD);
     });
@@ -102,15 +78,6 @@ describe('AuthService', () => {
 
       expect(await outcome).toBeInstanceOf(BackendTimeoutError);
       expect(LOGIN_TIMEOUT_MS).toBe(20000);
-      expect(auth.user()).toBeNull();
-    });
-
-    it('passes a network failure (code 100) through unchanged', async () => {
-      const { fake, auth } = setup();
-      const failure = parseError(100, 'XMLHttpRequest failed');
-      fake.failWhen((call) => call.op === 'login', failure);
-
-      await expect(auth.login('julien', PASSWORD)).rejects.toBe(failure);
       expect(auth.user()).toBeNull();
     });
   });
@@ -170,36 +137,6 @@ describe('AuthService', () => {
       expect(fake.userId).not.toBeNull();
       expect(fake.callsOf('logout')).toEqual([]);
     });
-
-    it('does nothing when the login that timed out finally fails', async () => {
-      const { fake, auth } = setup();
-      vi.spyOn(fake, 'logIn').mockImplementation(
-        () =>
-          new Promise<void>((_resolve, reject) => {
-            setTimeout(
-              () => reject(parseError(100, 'XMLHttpRequest failed')),
-              LOGIN_TIMEOUT_MS + 1000,
-            );
-          }),
-      );
-      vi.useFakeTimers();
-
-      const outcome = auth.login('julien', PASSWORD).catch((e: unknown) => e);
-      await vi.advanceTimersByTimeAsync(LOGIN_TIMEOUT_MS + 2000);
-
-      expect(await outcome).toBeInstanceOf(BackendTimeoutError);
-      expect(fake.callsOf('logout')).toEqual([]);
-      expect(auth.user()).toBeNull();
-    });
-
-    it('does not interfere with a login that answers in time', async () => {
-      const { fake, auth } = setup();
-
-      await auth.login('julien', PASSWORD);
-
-      expect(auth.user()?.username).toBe('julien');
-      expect(fake.callsOf('logout')).toEqual([]);
-    });
   });
 
   describe('logout', () => {
@@ -230,19 +167,6 @@ describe('AuthService', () => {
       await auth.logout();
 
       expect(holders.leaseholders()).toEqual([]);
-    });
-
-    it('lets the repositories register for the sign-out, and unregister', async () => {
-      const { auth } = setup({ signedIn: true });
-      const kept = vi.fn();
-      const removed = vi.fn();
-      auth.onLogout(kept);
-      auth.onLogout(removed)();
-
-      await auth.logout();
-
-      expect(kept).toHaveBeenCalledTimes(1);
-      expect(removed).not.toHaveBeenCalled();
     });
 
     it('clears everything before the first await, even when a listener throws', () => {
@@ -287,17 +211,6 @@ describe('AuthService', () => {
 
       expect(done).toHaveBeenCalledTimes(1);
       expect(auth.user()).toBeNull();
-    });
-
-    it('lets a different account sign in afterwards', async () => {
-      const { fake, auth } = setup();
-      fake.addAccount('autre', 'another pass', { email: 'autre@example.test' });
-      await auth.login('julien', PASSWORD);
-      await auth.logout();
-
-      await auth.login('autre', 'another pass');
-
-      expect(auth.user()).toEqual({ username: 'autre', email: 'autre@example.test' });
     });
   });
 

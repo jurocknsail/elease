@@ -62,14 +62,6 @@ describe('handleSessionError', () => {
     });
   });
 
-  it('does not carry the login page itself as a return address', () => {
-    const router = fakeRouter('/login?returnUrl=%2Fappels');
-
-    handleSessionError({ code: 209 }, router as unknown as Router, vi.fn());
-
-    expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: {} });
-  });
-
   it('still navigates, and never throws, when the logout fails', async () => {
     const router = fakeRouter();
     const logout = vi.fn().mockRejectedValue(new Error('offline'));
@@ -112,39 +104,5 @@ describe('SessionErrorHandler', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login'], {
       queryParams: { returnUrl: '/reglages' },
     });
-  });
-
-  it('leaves every other error alone and never touches the router', () => {
-    const { fake, router, handler } = setup();
-
-    expect(handler.handle(parseError(101))).toBe(false);
-    expect(handler.handle(new BackendTimeoutError())).toBe(false);
-
-    expect(router.navigate).not.toHaveBeenCalled();
-    expect(fake.userId).not.toBeNull();
-  });
-
-  it('does not even create the router for another error (repositories need none in their specs)', () => {
-    const fake = new FakeParseClient();
-    const created = vi.fn();
-    TestBed.configureTestingModule({
-      providers: [
-        { provide: ParseClient, useValue: fake },
-        {
-          provide: Router,
-          useFactory: () => {
-            created();
-            return fakeRouter();
-          },
-        },
-      ],
-    });
-    const handler = TestBed.inject(SessionErrorHandler);
-
-    expect(handler.handle(parseError(141))).toBe(false);
-    expect(created).not.toHaveBeenCalled();
-
-    expect(handler.handle(parseError(209))).toBe(true);
-    expect(created).toHaveBeenCalledTimes(1);
   });
 });

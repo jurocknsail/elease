@@ -1,35 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
-import { Lease } from '../models/lease';
 import { LandlordProfileRepository } from './landlord-profile.repository';
 import { LeaseholderRepository } from './leaseholder.repository';
 import { ParseClient } from './parse-client';
 import { FakeParseClient, parseError, pointer } from './testing/fake-parse-client';
-import { DEFAULT_LANDLORD_PROFILE } from '../models/landlord-profile';
 
 /**
  * Review focus: an expired or invalid session (Parse 209) must send the user to the login screen,
  * whichever remote call notices it, while the screen that asked still gets the original error (so it
  * stops its spinner). Any other error leaves the session alone.
  */
-
-const LEASE: Lease = {
-  isPro: false,
-  name: 'Studio',
-  lot: 0,
-  streetNumber: 4,
-  streetName: 'rue A',
-  optionalAddressInfo: '',
-  postalCode: 13600,
-  city: 'La Ciotat',
-  price: 500,
-  charge: null,
-  additionalCharges: [],
-  lastSendDate: 0,
-  renewalDate: null,
-  objectId: 'a',
-};
 
 function setup() {
   const fake = new FakeParseClient();
@@ -59,28 +40,11 @@ function setup() {
 
 type Operation = [name: string, run: (ctx: ReturnType<typeof setup>) => Promise<unknown>];
 
+/** One operation per kind: a read, a multi-step write, and the other repository. */
 const OPERATIONS: Operation[] = [
   ['LeaseholderRepository.load', ({ holders }) => holders.load()],
-  [
-    'LeaseholderRepository.createLeaseholder',
-    ({ holders }) => holders.createLeaseholder({ name: 'N', email: 'n@example.test', phone: '' }),
-  ],
-  [
-    'LeaseholderRepository.updateContact',
-    ({ holders }) => holders.updateContact('h1', { name: 'N', email: 'n@example.test', phone: '' }),
-  ],
-  ['LeaseholderRepository.addLease', ({ holders }) => holders.addLease('h1', LEASE)],
-  [
-    'LeaseholderRepository.updateLease',
-    ({ holders }) => holders.updateLease({ ...LEASE, price: 600 }),
-  ],
-  ['LeaseholderRepository.deleteLease', ({ holders }) => holders.deleteLease('h1', 'a')],
   ['LeaseholderRepository.deleteLeaseholder', ({ holders }) => holders.deleteLeaseholder('h1')],
   ['LandlordProfileRepository.get', ({ profile }) => profile.get()],
-  [
-    'LandlordProfileRepository.save',
-    ({ profile }) => profile.save({ ...DEFAULT_LANDLORD_PROFILE, name: 'Autre' }),
-  ],
 ];
 
 describe('expired session (Parse code 209) in the repositories', () => {

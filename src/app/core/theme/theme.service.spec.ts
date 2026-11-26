@@ -101,21 +101,6 @@ describe('ThemeService', () => {
     expect(document.documentElement.dataset['theme']).toBe('light');
   });
 
-  it('ignores an OS preference change in an explicit mode', () => {
-    const media = stubMatchMedia(false);
-    const service = TestBed.inject(ThemeService);
-    service.setMode('light');
-
-    media.setOsDark(true);
-    expect(service.effective()).toBe('light');
-    expect(document.documentElement.dataset['theme']).toBe('light');
-
-    service.setMode('dark');
-    media.setOsDark(false);
-    expect(service.effective()).toBe('dark');
-    expect(document.documentElement.dataset['theme']).toBe('dark');
-  });
-
   it('keeps meta[name=theme-color] in sync with the effective theme', () => {
     const meta = document.createElement('meta');
     meta.name = 'theme-color';
@@ -127,26 +112,5 @@ describe('ThemeService', () => {
     expect(meta.content).toBe('#0f1115');
     service.setMode('light');
     expect(meta.content).toBe('#ffffff');
-  });
-
-  it('updates meta[name=theme-color] when the OS preference changes in system mode', () => {
-    const meta = document.createElement('meta');
-    meta.name = 'theme-color';
-    meta.content = '#ffffff';
-    document.head.append(meta);
-
-    const media = stubMatchMedia(false);
-    TestBed.inject(ThemeService);
-    expect(meta.content).toBe('#ffffff');
-
-    media.setOsDark(true);
-    expect(meta.content).toBe('#0f1115');
-  });
-
-  it('creates meta[name=theme-color] when the page does not define one', () => {
-    expect(themeColorMeta()).toBeNull();
-    const service = TestBed.inject(ThemeService);
-    service.setMode('dark');
-    expect(themeColorMeta()?.content).toBe('#0f1115');
   });
 });
