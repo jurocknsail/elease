@@ -1,6 +1,7 @@
 {
   "name": "E-Lease",
   "short_name": "E-Lease",
+  "id": "/",
   "lang": "fr",
   "start_url": "/",
   "scope": "/",
