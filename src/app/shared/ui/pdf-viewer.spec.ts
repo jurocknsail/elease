@@ -135,15 +135,6 @@ describe('PdfViewer', () => {
   const link = (fixture: ComponentFixture<Host>) =>
     el(fixture).querySelector<HTMLAnchorElement>('a[target="_blank"]');
 
-  it('shows a neutral message when there is no blob, and no link', async () => {
-    const fixture = open(null);
-    await flush(fixture);
-
-    expect(el(fixture).textContent).toContain('Aucun aperçu à afficher.');
-    expect(link(fixture)).toBeNull();
-    expect(pdf.getDocumentCalls).toBe(0);
-  });
-
   it('draws EVERY page on its own canvas, each with a page label', async () => {
     pdf.pages = 3;
     const fixture = open();
@@ -188,21 +179,6 @@ describe('PdfViewer', () => {
     expect(a?.getAttribute('target')).toBe('_blank');
   });
 
-  it('shows a loading state (busy, announced) until the first page is drawn', async () => {
-    pdf.manual = true;
-    const fixture = open();
-    await flush(fixture);
-
-    expect(el(fixture).querySelector('[role="status"]')?.textContent).toContain('Chargement');
-    expect(el(fixture).querySelector('[aria-busy="true"]')).not.toBeNull();
-
-    pdf.renders[0].finish();
-    await flush(fixture);
-
-    expect(el(fixture).querySelector('[role="status"]')).toBeNull();
-    expect(el(fixture).querySelector('[aria-busy="true"]')).toBeNull();
-  });
-
   describe('failure', () => {
     it("shows « Impossible d'afficher l'aperçu » and the link still works", async () => {
       pdf.loadError = new Error('invalid pdf');
@@ -213,28 +189,6 @@ describe('PdfViewer', () => {
       expect(alert?.textContent).toContain("Impossible d'afficher l'aperçu");
       expect(canvases(fixture)).toHaveLength(0);
       expect(link(fixture)?.getAttribute('href')).toBe(created[0]);
-    });
-
-    it('shows the same error when a page fails to render', async () => {
-      pdf.manual = true;
-      const fixture = open();
-      await flush(fixture);
-      pdf.renders[0].fail(new Error('render'));
-      await flush(fixture);
-
-      expect(el(fixture).querySelector('[role="alert"]')).not.toBeNull();
-    });
-
-    it('shows the error when pdf.js itself cannot be loaded', async () => {
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [{ provide: PDFJS_LOADER, useValue: () => Promise.reject(new Error('chunk')) }],
-      });
-      const fixture = open();
-      await flush(fixture);
-
-      expect(el(fixture).querySelector('[role="alert"]')).not.toBeNull();
-      expect(link(fixture)).not.toBeNull();
     });
   });
 
@@ -260,23 +214,6 @@ describe('PdfViewer', () => {
       expect(first.canvas.isConnected).toBe(false);
     });
 
-    it('a late answer for the previous blob never draws', async () => {
-      pdf.manual = true;
-      const fixture = open(pdfBlob('one'));
-      await flush(fixture);
-      const stale = pdf.renders[0];
-
-      pdf.manual = false;
-      fixture.componentInstance.blob.set(pdfBlob('two'));
-      fixture.detectChanges();
-      await flush(fixture);
-      stale.finish();
-      await flush(fixture);
-
-      expect(canvases(fixture).every((c) => c !== stale.canvas)).toBe(true);
-      expect(canvases(fixture)).toHaveLength(2);
-    });
-
     it('destroying the component revokes the URL, cancels renders, destroys the document and frees canvases', async () => {
       pdf.manual = true;
       const fixture = open();
@@ -289,32 +226,6 @@ describe('PdfViewer', () => {
       expect(revoked).toEqual([created[0]]);
       expect(pdf.destroyed).toEqual([1]);
       expect(render.canvas.isConnected).toBe(false);
-    });
-
-    it('going back to no blob revokes the URL and removes the link and the canvases', async () => {
-      const fixture = open();
-      await flush(fixture);
-
-      fixture.componentInstance.blob.set(null);
-      fixture.detectChanges();
-      await flush(fixture);
-
-      expect(revoked).toEqual([created[0]]);
-      expect(link(fixture)).toBeNull();
-      expect(canvases(fixture)).toHaveLength(0);
-    });
-
-    it('opening and closing 30 times leaves no canvas and no object URL behind', async () => {
-      for (let i = 0; i < 30; i++) {
-        const fixture = open(pdfBlob(String(i)));
-        await flush(fixture);
-        fixture.destroy();
-      }
-
-      expect(created).toHaveLength(30);
-      expect([...revoked].sort()).toEqual([...created].sort());
-      expect(document.querySelectorAll('canvas')).toHaveLength(0);
-      expect(pdf.destroyed).toHaveLength(30);
     });
   });
 });

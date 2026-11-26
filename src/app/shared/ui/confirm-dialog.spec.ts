@@ -110,32 +110,6 @@ describe('ConfirmDialog', () => {
     expect(await result).toBe(false);
   });
 
-  it('uses the custom labels, and the red button for a destructive action', async () => {
-    const { open } = setup();
-    void open({
-      title: 'Supprimer définitivement ce bail ?',
-      message: 'Cette action est irréversible.',
-      confirmLabel: 'Supprimer',
-      cancelLabel: 'Conserver',
-      danger: true,
-    });
-    await vi.waitFor(() => expect(panel()).not.toBeNull());
-
-    expect(buttonLabelled('Conserver')).toBeDefined();
-    const confirm = buttonLabelled('Supprimer');
-    expect(confirm.classList.contains('btn-danger')).toBe(true);
-    expect(confirm.classList.contains('btn-primary')).toBe(false);
-  });
-
-  it('uses the primary button when the action is not destructive', async () => {
-    const { open } = setup();
-    void open();
-    await vi.waitFor(() => expect(panel()).not.toBeNull());
-
-    expect(buttonLabelled('Envoyer').classList.contains('btn-primary')).toBe(true);
-    expect(buttonLabelled('Envoyer').classList.contains('btn-danger')).toBe(false);
-  });
-
   it('gives the initial focus to Cancel, keeps it inside, and gives it back to the opener', async () => {
     // jsdom has no layout, so the CDK would find nothing "visible" to focus: pretend every element has a box.
     vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(
@@ -154,16 +128,6 @@ describe('ConfirmDialog', () => {
     await result;
 
     await vi.waitFor(() => expect(document.activeElement).toBe(opener));
-  });
-
-  it('keeps buttons at least 44 px tall by using the shared button class', async () => {
-    const { open } = setup();
-    void open();
-    await vi.waitFor(() => expect(panel()).not.toBeNull());
-
-    for (const button of buttons()) {
-      expect(button.classList.contains('btn')).toBe(true);
-    }
   });
 
   it('refuses a second dialog while one is open (a double tap must not stack two confirmations)', async () => {

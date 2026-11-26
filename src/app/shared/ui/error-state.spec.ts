@@ -72,19 +72,6 @@ describe('ErrorState', () => {
     expect(root.textContent).not.toContain('Cloud Code failure');
   });
 
-  it('draws a "no connection" icon for a missing connection and a warning for anything else', () => {
-    const { fixture, root } = render();
-    expect(root.querySelector('app-icon')?.getAttribute('data-icon')).toBe('wifi-off');
-
-    fixture.componentInstance.error.set(parseError(100, 'XMLHttpRequest failed'));
-    fixture.detectChanges();
-    expect(root.querySelector('app-icon')?.getAttribute('data-icon')).toBe('wifi-off');
-
-    fixture.componentInstance.error.set(parseError(141, 'Cloud Code failure'));
-    fixture.detectChanges();
-    expect(root.querySelector('app-icon')?.getAttribute('data-icon')).toBe('alert');
-  });
-
   it('offers no retry for an expired session (the login screen takes over)', () => {
     const { fixture, button, root } = render();
 

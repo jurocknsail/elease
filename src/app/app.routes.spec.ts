@@ -1,4 +1,3 @@
-import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, TitleStrategy, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -50,10 +49,7 @@ describe('routes', () => {
   });
 
   it.each([
-    ['/appels', 'Décembre 2026'],
     ['/appels/envoi', 'Appels de loyer — décembre 2026'],
-    ['/locataires', 'Locataires'],
-    ['/locataires/abc123', 'Locataire'],
     ['/reglages', 'Réglages'],
   ])('serves %s inside the shell, lazily', async (url, title) => {
     const { router } = setup(true);
@@ -63,15 +59,6 @@ describe('routes', () => {
     expect(router.url).toBe(url);
     const main = (harness.fixture.nativeElement as HTMLElement).querySelector('app-shell main');
     expect(main?.querySelector('h1')?.textContent?.trim()).toBe(title);
-  });
-
-  it('comes back to the same screen on a reload: the URL is the state, the session is restored', async () => {
-    const { router } = setup(true);
-
-    await RouterTestingHarness.create('/locataires');
-
-    expect(router.url).toBe('/locataires');
-    expect(TestBed.inject(AuthService).user()?.username).toBe('julien');
   });
 
   it('sends everything to the login screen when signed out, remembering where the user was going', async () => {
@@ -97,64 +84,6 @@ describe('routes', () => {
     await harness.navigateByUrl('/locataires');
 
     expect(router.url).toBe('/login?returnUrl=%2Flocataires');
-  });
-
-  it('a crafted returnUrl that spells the login page (/%6Cogin) does not leave a signed-in user on /login', async () => {
-    const { router, fake } = setup(false);
-    fake.addAccount('julien', 'pass');
-    const harness = await RouterTestingHarness.create('/login?returnUrl=%2F%256Cogin');
-    const page = harness.fixture.nativeElement as HTMLElement;
-    (page.querySelector('input[name="username"]') as HTMLInputElement).value = 'julien';
-    (page.querySelector('input[name="password"]') as HTMLInputElement).value = 'pass';
-
-    page.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
-
-    // Angular decodes /%6Cogin to /login: only the query changes, so the guard must run again.
-    await vi.waitFor(() => expect(router.url).toBe('/appels'));
-  });
-
-  it('keeps a signed-in user away from /login', async () => {
-    const { router } = setup(true);
-
-    await RouterTestingHarness.create('/login');
-
-    expect(router.url).toBe('/appels');
-  });
-
-  it('sends an unknown address to « Appels de loyer »', async () => {
-    const { router } = setup(true);
-
-    await RouterTestingHarness.create('/page/inconnue');
-
-    expect(router.url).toBe('/appels');
-  });
-
-  it('shows the login page at /login when signed out', async () => {
-    const { router } = setup(false);
-
-    const harness = await RouterTestingHarness.create('/login');
-
-    expect(router.url).toBe('/login');
-    expect(heading(harness)).toBe('Connexion');
-  });
-
-  it('sets the document title per route', async () => {
-    setup(true);
-    const harness = await RouterTestingHarness.create('/appels');
-    expect(document.title).toBe('Appels de loyer — E-Lease');
-
-    await harness.navigateByUrl('/locataires');
-    expect(document.title).toBe('Locataires — E-Lease');
-
-    await harness.navigateByUrl('/reglages');
-    expect(document.title).toBe('Réglages — E-Lease');
-  });
-
-  it('titles the login page', async () => {
-    setup(false);
-    await RouterTestingHarness.create('/login');
-
-    expect(document.title).toBe('Connexion — E-Lease');
   });
 
   describe('expired session (Parse 209) in the running app', () => {

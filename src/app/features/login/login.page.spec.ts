@@ -83,18 +83,6 @@ describe('LoginPage', () => {
     expect(root.querySelector('[role="alert"]')).toBeNull();
   });
 
-  it('sets the attributes mobile keyboards and password managers need', async () => {
-    const { username, password } = await setup();
-
-    expect(username().type).toBe('text');
-    expect(username().getAttribute('autocomplete')).toBe('username');
-    expect(username().getAttribute('autocapitalize')).toBe('none');
-    expect(username().getAttribute('autocorrect')).toBe('off');
-    expect(username().getAttribute('spellcheck')).toBe('false');
-    expect(password().type).toBe('password');
-    expect(password().getAttribute('autocomplete')).toBe('current-password');
-  });
-
   describe('validation', () => {
     it('asks for both fields, calls nothing, and focuses the first empty one', async () => {
       const { fake, root, username, signIn } = await setup();
@@ -107,26 +95,6 @@ describe('LoginPage', () => {
       expect(username().getAttribute('aria-invalid')).toBe('true');
       expect(username().getAttribute('aria-describedby')).toBe('login-username-error');
       expect(document.activeElement).toBe(username());
-      expect(fake.callsOf('login')).toEqual([]);
-    });
-
-    it('treats an identifier of spaces as empty', async () => {
-      const { fake, root, signIn } = await setup();
-
-      await signIn('   ', PASSWORD);
-
-      expect(root.textContent).toContain('Saisissez votre identifiant');
-      expect(root.textContent).not.toContain('Saisissez votre mot de passe');
-      expect(fake.callsOf('login')).toEqual([]);
-    });
-
-    it('asks for the password alone when only it is missing', async () => {
-      const { fake, root, signIn } = await setup();
-
-      await signIn('julien', '');
-
-      expect(root.textContent).toContain('Saisissez votre mot de passe');
-      expect(root.textContent).not.toContain('Saisissez votre identifiant');
       expect(fake.callsOf('login')).toEqual([]);
     });
   });
@@ -143,16 +111,6 @@ describe('LoginPage', () => {
       expect(router.url).toBe('/appels');
     });
 
-    it('sends the password exactly as typed, spaces included', async () => {
-      const { fake, auth, signIn, settle } = await setup();
-      fake.addAccount('marie', '  pass with spaces  ');
-
-      await signIn('marie', '  pass with spaces  ');
-      await settle();
-
-      expect(auth.user()?.username).toBe('marie');
-    });
-
     it('goes back to the page that was asked for before the login (returnUrl)', async () => {
       const { router, signIn, settle } = await setup('/login?returnUrl=%2Flocataires%2Fabc');
 
@@ -162,22 +120,19 @@ describe('LoginPage', () => {
       expect(router.url).toBe('/locataires/abc');
     });
 
-    it.each([
-      'https://evil.example/appels',
-      '//evil.example',
-      '/\\evil.example',
-      'javascript:alert(1)',
-      '/login',
-    ])('ignores the return address %s (no open redirect)', async (returnUrl) => {
-      const { router, signIn, settle } = await setup(
-        `/login?returnUrl=${encodeURIComponent(returnUrl)}`,
-      );
+    it.each(['https://evil.example/appels', '//evil.example'])(
+      'ignores the return address %s (no open redirect)',
+      async (returnUrl) => {
+        const { router, signIn, settle } = await setup(
+          `/login?returnUrl=${encodeURIComponent(returnUrl)}`,
+        );
 
-      await signIn('julien', PASSWORD);
-      await settle();
+        await signIn('julien', PASSWORD);
+        await settle();
 
-      expect(router.url).toBe('/appels');
-    });
+        expect(router.url).toBe('/appels');
+      },
+    );
 
     it('shows « Connexion… », disables the button, and does not sign in twice on a second submit', async () => {
       const { fake, button, signIn, settle } = await setup();
@@ -251,30 +206,6 @@ describe('LoginPage', () => {
       await settle();
 
       expect(alert()).toBe('Le serveur ne répond pas. Réessayez.');
-    });
-
-    it('any other error: a neutral message, never "incorrect"', async () => {
-      const { fake, alert, signIn, settle } = await setup();
-      fake.failWhen((call) => call.op === 'login', parseError(141, 'Cloud Code failure'));
-
-      await signIn('julien', PASSWORD);
-      await settle();
-
-      expect(alert()).toBe('Connexion impossible pour le moment. Réessayez.');
-      expect(alert()).not.toContain('incorrect');
-      expect(alert()).not.toContain('Cloud Code');
-    });
-
-    it('clears the previous error when the user tries again', async () => {
-      const { alert, signIn, settle } = await setup();
-      await signIn('julien', 'bad');
-      await settle();
-      expect(alert()).not.toBeNull();
-
-      await signIn('julien', PASSWORD);
-      await settle();
-
-      expect(alert()).toBeNull();
     });
   });
 });

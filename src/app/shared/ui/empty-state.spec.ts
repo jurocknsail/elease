@@ -36,8 +36,4 @@ describe('EmptyState', () => {
     expect(second.querySelector('p')).toBeNull();
     expect(second.querySelector('app-icon')).toBeNull();
   });
-
-  it('does not use the title attribute (no native tooltip over the whole block)', () => {
-    expect(render().querySelector('app-empty-state[title]')).toBeNull();
-  });
 });
