@@ -68,6 +68,13 @@ export abstract class ParseClient {
   /** ACL readable and writable by the signed-in user only; throws `NoSessionError` without a session. */
   abstract ownerAcl(): RemoteAcl;
   abstract currentUser(): RemoteObject | null;
+  /** E-mail of the signed-in user (the sender of the rent calls), or null without a session or e-mail. */
+  abstract currentUserEmail(): string | null;
+  /**
+   * Runs a Cloud Code function and gives its result. Returns a raw promise (callers add their own
+   * timeout) and lets Parse errors propagate unchanged.
+   */
+  abstract runCloud(name: string, params: Record<string, unknown>): Promise<unknown>;
 }
 
 let sdkInitialized = false;
@@ -126,5 +133,16 @@ class SdkParseClient extends ParseClient {
   override currentUser(): RemoteObject | null {
     ensureSdk();
     return Parse.User.current() ?? null;
+  }
+
+  override currentUserEmail(): string | null {
+    ensureSdk();
+    // Same source as the legacy sender: `Parse.User.current()?.getEmail()`.
+    return Parse.User.current()?.getEmail() || null;
+  }
+
+  override runCloud(name: string, params: Record<string, unknown>): Promise<unknown> {
+    ensureSdk();
+    return Parse.Cloud.run(name, params);
   }
 }

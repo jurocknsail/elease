@@ -62,6 +62,92 @@ describe('ParseClient (SDK adapter)', () => {
     ]);
   });
 
+  describe('cloud functions', () => {
+    /** Replaces the SDK's REST layer so that nothing leaves the process; returns what it was asked. */
+    function stubRest(respond: (path: string) => Promise<unknown>): {
+      requests: Array<{ method: string; path: string; body: unknown }>;
+      restore: () => void;
+    } {
+      const requests: Array<{ method: string; path: string; body: unknown }> = [];
+      const core = Parse.CoreManager as unknown as {
+        getRESTController(): unknown;
+        setRESTController(controller: unknown): void;
+      };
+      const original = core.getRESTController();
+      core.setRESTController({
+        request: (method: string, path: string, body: unknown) => {
+          requests.push({ method, path, body });
+          return respond(path);
+        },
+        ajax: () => Promise.reject(new Error('no network in tests')),
+      });
+      return { requests, restore: () => core.setRESTController(original) };
+    }
+
+    const params = {
+      senderEmail: 'proprietaire@example.test',
+      recipientEmail: 'locataire@example.test',
+      subject: 'Sujet',
+      text: 'Texte',
+      attachments: [{ ContentType: 'application/pdf', Filename: 'a.pdf', Base64Content: 'QUJD' }],
+      sandbox: true,
+    };
+
+    it('runs a cloud function by name with the parameters unchanged, and gives its result', async () => {
+      const rest = stubRest(() => Promise.resolve({ result: { delivered: 1 } }));
+      try {
+        const result = await TestBed.inject(ParseClient).runCloud('sendEmail', params);
+
+        expect(result).toEqual({ delivered: 1 });
+        expect(rest.requests).toEqual([
+          { method: 'POST', path: 'functions/sendEmail', body: params },
+        ]);
+      } finally {
+        rest.restore();
+      }
+    });
+
+    it('lets the error of the cloud function propagate unchanged', async () => {
+      const error = Object.assign(new Error('refused'), { code: 141 });
+      const rest = stubRest(() => Promise.reject(error));
+      try {
+        await expect(TestBed.inject(ParseClient).runCloud('sendEmail', params)).rejects.toBe(error);
+      } finally {
+        rest.restore();
+      }
+    });
+  });
+
+  describe('currentUserEmail', () => {
+    function userWith(email: string | undefined): Parse.User {
+      const user = new Parse.User();
+      user.id = 'user-1';
+      if (email !== undefined) {
+        user.set('email', email);
+      }
+      return user;
+    }
+
+    it('is the e-mail of the signed-in user, as the legacy sender e-mail was', () => {
+      vi.spyOn(Parse.User, 'current').mockReturnValue(
+        userWith('proprietaire@example.test') as never,
+      );
+      expect(TestBed.inject(ParseClient).currentUserEmail()).toBe('proprietaire@example.test');
+    });
+
+    it('is null without a session or without an e-mail', () => {
+      const current = vi.spyOn(Parse.User, 'current');
+      current.mockReturnValue(null as never);
+      expect(TestBed.inject(ParseClient).currentUserEmail()).toBeNull();
+
+      current.mockReturnValue(userWith(undefined) as never);
+      expect(TestBed.inject(ParseClient).currentUserEmail()).toBeNull();
+
+      current.mockReturnValue(userWith('') as never);
+      expect(TestBed.inject(ParseClient).currentUserEmail()).toBeNull();
+    });
+  });
+
   it('builds an owner-only ACL for the signed-in user, as the legacy app did', () => {
     const user = new Parse.User();
     user.id = 'user-1';

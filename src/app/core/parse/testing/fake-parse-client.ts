@@ -31,9 +31,14 @@ export interface FakeQueryParams {
 }
 
 export interface FakeCall {
-  op: 'find' | 'fetch' | 'save' | 'destroy';
+  op: 'find' | 'fetch' | 'save' | 'destroy' | 'cloud';
+  /** Class of the object concerned; empty for a cloud function. */
   className: string;
   id?: string;
+  /** Name of the cloud function (`cloud` calls). */
+  functionName?: string;
+  /** A copy of the parameters of a cloud function. */
+  params?: Record<string, unknown>;
   /** Parameters of a `find`. */
   query?: FakeQueryParams;
   /** Field operations carried by a save. */
@@ -95,6 +100,10 @@ export class FakeParseClient implements ParseClient {
   readonly calls: FakeCall[] = [];
   /** Signed-in user id; null simulates a missing session. */
   userId: string | null = 'user-1';
+  /** E-mail of the signed-in user. */
+  userEmail: string | null = 'proprietaire@example.test';
+  /** What a cloud function resolves with. */
+  cloudResult: unknown = undefined;
 
   private readonly records = new Map<string, StoredRecord>();
   private readonly failures: Failure[] = [];
@@ -180,6 +189,15 @@ export class FakeParseClient implements ParseClient {
 
   currentUser(): RemoteObject | null {
     return this.userId ? new FakeObject(this, '_User', this.userId, true) : null;
+  }
+
+  currentUserEmail(): string | null {
+    return this.userId ? this.userEmail : null;
+  }
+
+  async runCloud(name: string, params: Record<string, unknown>): Promise<unknown> {
+    await this.gate({ op: 'cloud', className: '', functionName: name, params: clone(params) });
+    return clone(this.cloudResult);
   }
 
   // ----- internals shared with FakeObject / FakeQuery -----

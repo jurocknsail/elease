@@ -1,0 +1,183 @@
+import { assertRecipientAllowed, effectiveSandbox, RecipientBlockedError } from './email-guard';
+
+/** The only address an e-mail may go to outside production (a developer account, never a tenant). */
+const TEST_ADDRESS = 'julien.berger1421@gmail.com';
+const TENANT = 'locataire@example.test';
+
+const dev = { production: false, sandbox: false, testRecipientEmail: TEST_ADDRESS };
+const prod = { production: true, sandbox: false, testRecipientEmail: TEST_ADDRESS };
+
+const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
+const NO_BREAK_SPACE = String.fromCharCode(0x00a0);
+const LINE_SEPARATOR = String.fromCharCode(0x2028);
+
+describe('assertRecipientAllowed', () => {
+  describe('outside production', () => {
+    it('blocks any address but the test one, with a RecipientBlockedError', () => {
+      expect(() => assertRecipientAllowed(TENANT, dev)).toThrow(RecipientBlockedError);
+      expect(() => assertRecipientAllowed(TENANT, dev)).toThrow(/Envoi bloqué/);
+    });
+
+    it('allows the test address, compared case-insensitively and trimmed', () => {
+      expect(() => assertRecipientAllowed(TEST_ADDRESS, dev)).not.toThrow();
+      expect(() => assertRecipientAllowed('JULIEN.berger1421@gmail.com', dev)).not.toThrow();
+      expect(() => assertRecipientAllowed(`  ${TEST_ADDRESS}\n`, dev)).not.toThrow();
+    });
+
+    it('is case-insensitive on the configured address too', () => {
+      const env = { ...dev, testRecipientEmail: 'Julien.Berger1421@Gmail.com' };
+      expect(() => assertRecipientAllowed(TEST_ADDRESS, env)).not.toThrow();
+    });
+
+    it('blocks lookalikes: prefix, suffix, plus-addressing, other domain', () => {
+      for (const lookalike of [
+        'xjulien.berger1421@gmail.com',
+        'julien.berger1421@gmail.com.example.test',
+        'julien.berger1421+tenant@gmail.com',
+        'julien.berger1421@gmail.co',
+        'julien.berger1421@googlemail.com',
+      ]) {
+        expect(() => assertRecipientAllowed(lookalike, dev), lookalike).toThrow(
+          RecipientBlockedError,
+        );
+      }
+    });
+
+    it('blocks everything when no test address is configured, even the developer address', () => {
+      for (const testRecipientEmail of [undefined, '', '   ']) {
+        const env = { production: false, sandbox: true, testRecipientEmail };
+        expect(() => assertRecipientAllowed(TEST_ADDRESS, env)).toThrow(RecipientBlockedError);
+        expect(() => assertRecipientAllowed(TENANT, env)).toThrow(RecipientBlockedError);
+      }
+    });
+
+    it('names the allowed address and says nothing was sent', () => {
+      expect(() => assertRecipientAllowed(TENANT, dev)).toThrow(
+        `[DEV] Envoi bloqué vers ${TENANT} : seul ${TEST_ADDRESS} est autorisé hors production.`,
+      );
+      expect(() => assertRecipientAllowed(TENANT, { production: false })).toThrow(
+        `[DEV] Envoi bloqué vers ${TENANT} : seul (aucune adresse de test) est autorisé hors production.`,
+      );
+    });
+
+    it('treats anything but production === true as outside production (fails closed)', () => {
+      for (const production of [undefined, null, 0, '', 'true', 'false']) {
+        const env = { production, testRecipientEmail: TEST_ADDRESS } as never;
+        expect(() => assertRecipientAllowed(TENANT, env), String(production)).toThrow(
+          RecipientBlockedError,
+        );
+      }
+    });
+
+    describe('several addresses and header injection', () => {
+      const injected = [
+        `${TEST_ADDRESS},${TENANT}`,
+        `${TENANT},${TEST_ADDRESS}`,
+        `${TEST_ADDRESS};${TENANT}`,
+        `${TEST_ADDRESS} ${TENANT}`,
+        `${TEST_ADDRESS}\n${TENANT}`,
+        `${TEST_ADDRESS}\r\nBcc: ${TENANT}`,
+        `${TEST_ADDRESS}\tx`,
+        `Julien <${TEST_ADDRESS}>`,
+        `<${TEST_ADDRESS}>`,
+        `"${TEST_ADDRESS}"`,
+        `mailto:${TEST_ADDRESS}`,
+        `${TEST_ADDRESS}${ZERO_WIDTH_SPACE}`,
+        `${TEST_ADDRESS}${NO_BREAK_SPACE}${TENANT}`,
+        `${TEST_ADDRESS}${LINE_SEPARATOR}${TENANT}`,
+      ];
+
+      it.each(injected.map((value) => [JSON.stringify(value), value]))(
+        'blocks %s',
+        (_label, value) => {
+          expect(() => assertRecipientAllowed(value, dev)).toThrow(RecipientBlockedError);
+        },
+      );
+
+      it('blocks them even when the configured test address is itself such a list', () => {
+        const list = `${TEST_ADDRESS},${TENANT}`;
+        const env = { production: false, sandbox: true, testRecipientEmail: list };
+        expect(() => assertRecipientAllowed(list, env)).toThrow(RecipientBlockedError);
+        expect(() => assertRecipientAllowed(TEST_ADDRESS, env)).toThrow(RecipientBlockedError);
+      });
+
+      it('does not echo a malformed value in the message', () => {
+        try {
+          assertRecipientAllowed(`${TEST_ADDRESS},${TENANT}`, dev);
+          expect.unreachable('the guard must throw');
+        } catch (error) {
+          expect(error).toBeInstanceOf(RecipientBlockedError);
+          expect((error as Error).message).not.toContain(TENANT);
+        }
+      });
+    });
+  });
+
+  describe('in production', () => {
+    it('allows any well-formed single address, and ignores the test address', () => {
+      expect(() => assertRecipientAllowed(TENANT, prod)).not.toThrow();
+      expect(() => assertRecipientAllowed(TENANT, { production: true })).not.toThrow();
+      expect(() => assertRecipientAllowed(TEST_ADDRESS, prod)).not.toThrow();
+      expect(() =>
+        assertRecipientAllowed('  Prénom.Nom+x@sous.domaine.example.test ', prod),
+      ).not.toThrow();
+      expect(() => assertRecipientAllowed("o'brien@example.test", prod)).not.toThrow();
+    });
+
+    it.each([
+      ['empty', ''],
+      ['blank', '   '],
+      ['no at sign', 'locataire.example.test'],
+      ['no domain', 'locataire@'],
+      ['no local part', '@example.test'],
+      ['domain without dot', 'locataire@localhost'],
+      ['dot at the end of the domain', 'locataire@example.'],
+      ['two dots in a row', 'locataire@example..test'],
+      ['two at signs', 'a@b@example.test'],
+      ['comma list', `${TENANT},${TEST_ADDRESS}`],
+      ['semicolon list', `${TENANT};${TEST_ADDRESS}`],
+      ['space list', `${TENANT} ${TEST_ADDRESS}`],
+      ['newline', `${TENANT}\nBcc: ${TEST_ADDRESS}`],
+      ['carriage return and line feed', `${TENANT}\r\nBcc: ${TEST_ADDRESS}`],
+      ['tab', `${TENANT}\tx`],
+      ['display name', `Locataire <${TENANT}>`],
+      ['quoted', `"${TENANT}"`],
+      ['zero-width space', `${TENANT}${ZERO_WIDTH_SPACE}`],
+      ['no-break space inside', `a${NO_BREAK_SPACE}b@example.test`],
+      ['control character', `a${String.fromCharCode(1)}b@example.test`],
+      ['too long', `${'a'.repeat(250)}@example.test`],
+    ])('rejects a malformed recipient: %s', (_label, value) => {
+      expect(() => assertRecipientAllowed(value, prod)).toThrow(RecipientBlockedError);
+    });
+
+    it('rejects values that are not strings', () => {
+      for (const value of [undefined, null, 5, {}, []]) {
+        expect(() => assertRecipientAllowed(value as never, prod)).toThrow(RecipientBlockedError);
+      }
+    });
+
+    it('says when there is no address at all', () => {
+      expect(() => assertRecipientAllowed('  ', prod)).toThrow(/Aucune adresse e-mail/);
+    });
+  });
+});
+
+describe('effectiveSandbox', () => {
+  it('is always true outside production, whatever the flag says', () => {
+    expect(effectiveSandbox({ production: false, sandbox: false })).toBe(true);
+    expect(effectiveSandbox({ production: false, sandbox: true })).toBe(true);
+  });
+
+  it('follows the flag in production', () => {
+    expect(effectiveSandbox({ production: true, sandbox: false })).toBe(false);
+    expect(effectiveSandbox({ production: true, sandbox: true })).toBe(true);
+  });
+
+  it('is true unless production is exactly true (fails closed)', () => {
+    for (const production of [undefined, null, 0, '', 'true']) {
+      expect(effectiveSandbox({ production, sandbox: false } as never), String(production)).toBe(
+        true,
+      );
+    }
+  });
+});

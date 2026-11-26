@@ -26,15 +26,6 @@ export const environment = {
   parseJsKey: 'YOUR_PARSE_JAVASCRIPT_KEY',
   parseServerUrl: 'https://your-parse-server-url.com/parse',
 
-  // INSEE API key
-  // -------------
-  // Required for fetching IRL (residential) and ILAT (professional) rent indices
-  // 1. Go to https://api.insee.fr/
-  // 2. Create an account
-  // 3. Create an application and request access to "Indice de référence des loyers"
-  // 4. Copy your API key here
-  inseeApiKey: 'YOUR_INSEE_API_KEY',
-
   // Email sandbox mode
   // ------------------
   // true  = Emails are NOT sent, only logged to console (safe for development)
@@ -42,5 +33,5 @@ export const environment = {
   sandbox: true,
 
   // Dev only: only emails to this address are allowed outside production
-  testRecipientEmail: 'you@example.com'
+  testRecipientEmail: 'you@example.com',
 };
