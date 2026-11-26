@@ -7,7 +7,7 @@ import { authGuard, guestGuard } from './core/auth/auth.guard';
  * shell stays open. The app opens on « Appels de loyer »; the router URL is the state, so a reload
  * comes back to the same screen (the session itself is restored from local storage by the SDK).
  *
- * Every feature page is lazy-loaded. The pages other than login are placeholders for now.
+ * Every feature page is lazy-loaded.
  */
 export const routes: Routes = [
   {
@@ -50,12 +50,20 @@ export const routes: Routes = [
       {
         path: 'locataires',
         title: 'Locataires',
+        // List and detail side by side: the screen gets the whole width and height.
+        data: { fullWidth: true },
         loadComponent: () => import('./features/tenants/tenants.page').then((m) => m.TenantsPage),
-      },
-      {
-        path: 'locataires/:id',
-        title: 'Locataire',
-        loadComponent: () => import('./features/tenants/tenant-detail').then((m) => m.TenantDetail),
+        // The tenant is a CHILD: the list stays mounted while another one opens, and the address
+        // `/locataires/:id` can be opened directly (reload, shared link).
+        children: [
+          {
+            path: ':id',
+            title: 'Locataire',
+            data: { fullWidth: true },
+            loadComponent: () =>
+              import('./features/tenants/tenant-detail').then((m) => m.TenantDetail),
+          },
+        ],
       },
       {
         path: 'reglages',

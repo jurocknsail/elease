@@ -317,7 +317,9 @@ export function leaseFromForm(value: LeaseFormValue, base?: Lease): Lease {
 
   lease.isPro = value.isPro;
   lease.name = value.name.trim();
-  lease.lot = lotFromText(value.lot);
+  const lot = lotFromText(value.lot);
+  // « No lot » is stored as 0 or as nothing: an untouched lot is never rewritten into the other form.
+  lease.lot = lot === null && base?.lot === 0 ? 0 : lot;
   lease.streetNumber = requiredNumber(value.streetNumber, 'numéro de voie');
   lease.streetName = value.streetName.trim();
   lease.optionalAddressInfo = value.optionalAddressInfo.trim();

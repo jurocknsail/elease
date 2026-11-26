@@ -153,6 +153,9 @@ describe('lease form', () => {
       const saved = leaseFromForm(form.getRawValue());
       expect(saved.lot).toBeNull();
       expect(saved.charge).toBe(0);
+      // A stored 0 that was not touched is not rewritten into null.
+      const stored = lease({ lot: 0 });
+      expect(leaseFromForm(buildLeaseForm(fb, stored).getRawValue(), stored).lot).toBe(0);
     });
 
     it('clears the reference index when its fields are emptied', () => {
