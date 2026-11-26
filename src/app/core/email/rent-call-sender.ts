@@ -30,15 +30,30 @@ export interface SendResult {
   /** The address of the group, as given to `send`. */
   email: string;
   holderNames: string[];
-  /** True when the e-mail left. False means it did NOT, unless `uncertain` is set. */
+  /**
+   * True when the cloud function accepted the e-mail (see `simulated`). When false, read
+   * `uncertain` before offering anything.
+   */
   ok: boolean;
+  /**
+   * True when nothing was really delivered: the Mailjet sandbox was in force (always the case
+   * outside production). The screen must not present such a send as delivered.
+   */
+  simulated: boolean;
   /** Why it failed (French, for the user). Only on failure. */
   error?: string;
+  /**
+   * The Parse error code of the failure, when it carries one (e.g. 209: the session expired, send
+   * the user to the login screen).
+   */
+  errorCode?: number;
   /** Ids of the leases whose PDFs this e-mail carries. */
   leaseIds: string[];
   /**
-   * The cloud function did not answer in time: the e-mail MAY have been delivered. It was not
-   * recorded as sent and is not retried; the user must check the mailbox before sending again.
+   * Only on failure. Absent (false): the e-mail was definitely NOT sent, sending it again is safe.
+   * True: it MAY have been delivered (no answer in time, connection lost, unreadable answer). It was
+   * not recorded as sent and is not retried: never offer a plain « Réessayer », the user must check
+   * the mailbox before sending it again.
    */
   uncertain?: boolean;
   /** Only on success: the e-mail went out but the send could not be recorded. Never send it again. */
@@ -47,14 +62,43 @@ export interface SendResult {
 
 const UNCERTAIN_MESSAGE =
   "Délai dépassé : l'e-mail a peut-être été envoyé. Vérifiez votre boîte avant de renvoyer.";
+const INTERRUPTED_MESSAGE =
+  "Connexion interrompue : l'e-mail a peut-être été envoyé. Vérifiez votre boîte avant de renvoyer.";
+const NO_EMAIL_MESSAGE = "Votre compte n'a pas d'adresse e-mail : envoi impossible.";
 const RECORD_WARNING =
   "E-mail envoyé, mais l'état d'envoi n'a pas pu être enregistré : ne le renvoyez pas.";
 const NO_PDF_MESSAGE = "Aucun appel de loyer à joindre : rien n'a été envoyé.";
 const FAILURE_PREFIX = "L'envoi a échoué";
 const MAX_DETAIL_LENGTH = 200;
 
+/**
+ * Parse error codes after which the e-mail may nevertheless have been delivered: the request left,
+ * but its outcome is unknown. -1 and 1: server-side error (other cause, internal error); 100:
+ * connection lost; 107: unreadable answer (a gateway answering with an HTML page); 124: the request
+ * timed out. Any other code is an answer of the server itself: 141 (the cloud function reported an
+ * error) and 209 (invalid session, refused before the function runs) count as definite failures.
+ */
+const AMBIGUOUS_CODES: ReadonlySet<number> = new Set([-1, 1, 100, 107, 124]);
+
+/** The Parse error code carried by a rejection, if any. */
+function errorCodeOf(error: unknown): number | undefined {
+  const code = (error as { code?: unknown } | null | undefined)?.code;
+  return typeof code === 'number' && Number.isInteger(code) ? code : undefined;
+}
+
+/**
+ * Whether the e-mail may have gone out although the call failed. True for the ambiguous codes and
+ * for every rejection that carries no usable code (a network error, a string, an unknown value):
+ * only a failure known to come from the server's answer is a definite failure.
+ */
+function mayHaveBeenSent(error: unknown): boolean {
+  const code = errorCodeOf(error);
+  return code === undefined || AMBIGUOUS_CODES.has(code);
+}
+
 function failureMessage(error: unknown): string {
-  const detail = error instanceof Error ? error.message.trim().slice(0, MAX_DETAIL_LENGTH) : '';
+  const message = (error as { message?: unknown } | null | undefined)?.message;
+  const detail = typeof message === 'string' ? message.trim().slice(0, MAX_DETAIL_LENGTH) : '';
   return detail === '' ? `${FAILURE_PREFIX}.` : `${FAILURE_PREFIX} : ${detail}`;
 }
 
@@ -69,8 +113,11 @@ function failureMessage(error: unknown): string {
  *   fails with the guard message and nothing is sent.
  * - The send is recorded on the leases (`markLeasesSent`, one call per successful group) only after
  *   the cloud function answered, and never for a failed or uncertain group.
- * - A send that times out is UNCERTAIN (the mail may have been delivered): reported, not recorded,
- *   never retried here.
+ * - A send whose outcome is unknown is UNCERTAIN (the mail may have been delivered): no answer in
+ *   time, a lost connection, an unreadable answer or any failure without a definite server answer.
+ *   It is reported, not recorded, never retried here, and must not be offered as a plain retry.
+ *   Only a failure the server answered itself (e.g. the cloud function's own error, an invalid
+ *   session) is a plain failure.
  * - If recording fails after the mail went out, the group stays `ok` with a `warning`: the mail HAS
  *   gone, so it is never turned into an invitation to send again.
  *
@@ -104,6 +151,7 @@ export class RentCallSender {
         email,
         holderNames: Array.isArray(group?.holderNames) ? [...group.holderNames] : [],
         ok: false,
+        simulated: effectiveSandbox(this.env),
         error: failureMessage(outcome.reason),
         leaseIds: [],
       };
@@ -120,7 +168,12 @@ export class RentCallSender {
     const leaseIds = [
       ...new Set(group.pdfs.flatMap((pdf) => (pdf.lease.objectId ? [pdf.lease.objectId] : []))),
     ];
-    const base = { email, holderNames: [...group.holderNames], leaseIds };
+    const base = {
+      email,
+      holderNames: [...group.holderNames],
+      simulated: effectiveSandbox(this.env),
+      leaseIds,
+    };
 
     try {
       assertRecipientAllowed(email, this.env);
@@ -134,9 +187,13 @@ export class RentCallSender {
     if (group.pdfs.length === 0) {
       return { ...base, ok: false, error: NO_PDF_MESSAGE };
     }
+    if (!this.client.currentUser()) {
+      const noSession = new NoSessionError();
+      return { ...base, ok: false, error: noSession.message, errorCode: noSession.code };
+    }
     const senderEmail = this.client.currentUserEmail();
     if (!senderEmail) {
-      return { ...base, ok: false, error: new NoSessionError().message };
+      return { ...base, ok: false, error: NO_EMAIL_MESSAGE };
     }
 
     const fileNames = uniqueAttachmentNames(group.pdfs.map((pdf) => pdf.fileName));
@@ -156,10 +213,19 @@ export class RentCallSender {
     try {
       await withTimeout(this.client.runCloud('sendEmail', params), SEND_TIMEOUT_MS);
     } catch (error) {
+      if (error instanceof RecipientBlockedError) {
+        // Refused by the cloud seam before any request: nothing went out.
+        return { ...base, ok: false, error: error.message };
+      }
       if (error instanceof BackendTimeoutError) {
         return { ...base, ok: false, uncertain: true, error: UNCERTAIN_MESSAGE };
       }
-      return { ...base, ok: false, error: failureMessage(error) };
+      const code = errorCodeOf(error);
+      const withCode = code === undefined ? {} : { errorCode: code };
+      if (mayHaveBeenSent(error)) {
+        return { ...base, ok: false, uncertain: true, error: INTERRUPTED_MESSAGE, ...withCode };
+      }
+      return { ...base, ok: false, error: failureMessage(error), ...withCode };
     }
 
     // The e-mail HAS gone out: nothing below may turn this result into a failure.

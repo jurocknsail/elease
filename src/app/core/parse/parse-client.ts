@@ -1,9 +1,12 @@
 import { Injectable } from '@angular/core';
 import Parse from 'parse';
 import { environment } from '../../../environments/environment';
+import { assertRecipientAllowed, effectiveSandbox } from '../email/email-guard';
 
 /** Parse error code for an expired or invalid session token. */
 export const INVALID_SESSION_TOKEN = 209;
+/** The Cloud Code function that sends the rent calls by e-mail. */
+const SEND_EMAIL_FUNCTION = 'sendEmail';
 /** Parse error code for "object not found". */
 export const OBJECT_NOT_FOUND = 101;
 
@@ -149,7 +152,14 @@ class SdkParseClient extends ParseClient {
     return Parse.User.current()?.getEmail() || null;
   }
 
-  override runCloud(name: string, params: Record<string, unknown>): Promise<unknown> {
+  override async runCloud(name: string, params: Record<string, unknown>): Promise<unknown> {
+    if (name === SEND_EMAIL_FUNCTION) {
+      // Last choke point for e-mail: whoever calls (the sender, a future caller, a test that swapped
+      // the injected environment), nothing leaves unless the REAL build environment allows it, and
+      // the Mailjet sandbox is forced outside production. The caller's object is not modified.
+      assertRecipientAllowed(params['recipientEmail'] as string, environment);
+      params = { ...params, sandbox: effectiveSandbox(environment) };
+    }
     ensureSdk();
     return Parse.Cloud.run(name, params);
   }

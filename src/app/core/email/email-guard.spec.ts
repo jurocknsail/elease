@@ -69,6 +69,65 @@ describe('assertRecipientAllowed', () => {
       }
     });
 
+    describe('look-alike characters (case folding must not make a stranger equal)', () => {
+      const KELVIN_SIGN = String.fromCharCode(0x212a);
+      const CYRILLIC_A = String.fromCharCode(0x430);
+
+      it('blocks a Cyrillic homoglyph of the test address', () => {
+        const homoglyph = TEST_ADDRESS.replace('a', CYRILLIC_A);
+        expect(homoglyph).not.toBe(TEST_ADDRESS);
+        expect(() => assertRecipientAllowed(homoglyph, dev)).toThrow(RecipientBlockedError);
+      });
+
+      it('blocks a Kelvin sign, which lower-cases to an ASCII k, in place of a k', () => {
+        const env = { production: false, sandbox: true, testRecipientEmail: 'kim@example.test' };
+        expect(() => assertRecipientAllowed('KIM@EXAMPLE.TEST', env)).not.toThrow();
+        expect(() => assertRecipientAllowed(`${KELVIN_SIGN}im@example.test`, env)).toThrow(
+          RecipientBlockedError,
+        );
+        expect(() => assertRecipientAllowed(`${KELVIN_SIGN}IM@example.test`, env)).toThrow(
+          RecipientBlockedError,
+        );
+      });
+
+      it('blocks everything when the configured test address itself is not ASCII', () => {
+        const env = {
+          production: false,
+          sandbox: true,
+          testRecipientEmail: `${KELVIN_SIGN}im@example.test`,
+        };
+        expect(() => assertRecipientAllowed('kim@example.test', env)).toThrow(
+          RecipientBlockedError,
+        );
+        expect(() => assertRecipientAllowed(`${KELVIN_SIGN}im@example.test`, env)).toThrow(
+          RecipientBlockedError,
+        );
+      });
+
+      it('blocks the test address with any one character swapped for a non-ASCII look-alike', () => {
+        const lookAlikes = [0x212a, 0x0130, 0x0131, 0xff4a, 0x430, 0x435, 0x3b1, 0x17f].map(
+          (code) => String.fromCharCode(code),
+        );
+        for (let position = 0; position < TEST_ADDRESS.length; position += 1) {
+          for (const lookAlike of lookAlikes) {
+            const variant =
+              TEST_ADDRESS.slice(0, position) + lookAlike + TEST_ADDRESS.slice(position + 1);
+            expect(
+              () => assertRecipientAllowed(variant, dev),
+              `${position}:${lookAlike.charCodeAt(0)}`,
+            ).toThrow(RecipientBlockedError);
+          }
+        }
+      });
+
+      it('keeps the message of the other blocked recipients', () => {
+        const env = { production: false, sandbox: true, testRecipientEmail: 'kim@example.test' };
+        expect(() => assertRecipientAllowed(`${KELVIN_SIGN}im@example.test`, env)).toThrow(
+          `[DEV] Envoi bloqué vers ${KELVIN_SIGN}im@example.test : seul kim@example.test est autorisé hors production.`,
+        );
+      });
+    });
+
     describe('several addresses and header injection', () => {
       const injected = [
         `${TEST_ADDRESS},${TENANT}`,
@@ -122,6 +181,7 @@ describe('assertRecipientAllowed', () => {
         assertRecipientAllowed('  Prénom.Nom+x@sous.domaine.example.test ', prod),
       ).not.toThrow();
       expect(() => assertRecipientAllowed("o'brien@example.test", prod)).not.toThrow();
+      expect(() => assertRecipientAllowed('élodie@exemple.test', prod)).not.toThrow();
     });
 
     it.each([
@@ -141,6 +201,14 @@ describe('assertRecipientAllowed', () => {
       ['carriage return and line feed', `${TENANT}\r\nBcc: ${TEST_ADDRESS}`],
       ['tab', `${TENANT}\tx`],
       ['display name', `Locataire <${TENANT}>`],
+      ['comma in the local part', 'a,b@example.test'],
+      ['comma in the domain', 'a@example.test,b'],
+      ['semicolon in the local part', 'a;b@example.test'],
+      ['angle brackets', '<a@example.test>'],
+      ['closing angle bracket', 'a@example.test>'],
+      ['colon', 'a:b@example.test'],
+      ['mailto scheme', 'mailto:a@example.test'],
+      ['IP literal', 'a@[1.2.3.4]'],
       ['quoted', `"${TENANT}"`],
       ['zero-width space', `${TENANT}${ZERO_WIDTH_SPACE}`],
       ['no-break space inside', `a${NO_BREAK_SPACE}b@example.test`],

@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import Parse from 'parse';
+import { environment } from '../../../environments/environment';
+import { RecipientBlockedError } from '../email/email-guard';
 import { INVALID_SESSION_TOKEN, NoSessionError, ParseClient } from './parse-client';
 
 /**
@@ -67,6 +69,19 @@ describe('ParseClient (SDK adapter)', () => {
   });
 
   describe('cloud functions', () => {
+    let originalServerUrl: string;
+
+    beforeEach(() => {
+      // Defensive: should a stub ever fail to install, the request could only reach a closed local
+      // port, never a real server.
+      originalServerUrl = Parse.serverURL;
+      Parse.serverURL = 'http://127.0.0.1:9';
+    });
+
+    afterEach(() => {
+      Parse.serverURL = originalServerUrl;
+    });
+
     /** Replaces the SDK's REST layer so that nothing leaves the process; returns what it was asked. */
     function stubRest(respond: (path: string) => Promise<unknown>): {
       requests: Array<{ method: string; path: string; body: unknown }>;
@@ -94,18 +109,17 @@ describe('ParseClient (SDK adapter)', () => {
       subject: 'Sujet',
       text: 'Texte',
       attachments: [{ ContentType: 'application/pdf', Filename: 'a.pdf', Base64Content: 'QUJD' }],
-      sandbox: true,
+      sandbox: false,
     };
 
+    // A dummy function name: the generic passthrough tests never use the real `sendEmail`.
     it('runs a cloud function by name with the parameters unchanged, and gives its result', async () => {
       const rest = stubRest(() => Promise.resolve({ result: { delivered: 1 } }));
       try {
-        const result = await TestBed.inject(ParseClient).runCloud('sendEmail', params);
+        const result = await TestBed.inject(ParseClient).runCloud('echo', params);
 
         expect(result).toEqual({ delivered: 1 });
-        expect(rest.requests).toEqual([
-          { method: 'POST', path: 'functions/sendEmail', body: params },
-        ]);
+        expect(rest.requests).toEqual([{ method: 'POST', path: 'functions/echo', body: params }]);
       } finally {
         rest.restore();
       }
@@ -115,10 +129,91 @@ describe('ParseClient (SDK adapter)', () => {
       const error = Object.assign(new Error('refused'), { code: 141 });
       const rest = stubRest(() => Promise.reject(error));
       try {
-        await expect(TestBed.inject(ParseClient).runCloud('sendEmail', params)).rejects.toBe(error);
+        await expect(TestBed.inject(ParseClient).runCloud('echo', params)).rejects.toBe(error);
       } finally {
         rest.restore();
       }
+    });
+
+    /**
+     * The adapter is the last choke point for `sendEmail`: whatever the caller or the injected
+     * environment says, it applies the guard of the REAL build environment (placeholders here,
+     * `production` false) and forces the sandbox flag. The REST layer is stubbed; the only function
+     * name used against the real adapter in these specs is this one, behind the stub and the guard.
+     */
+    describe.skipIf(environment.production)('sendEmail, outside production', () => {
+      const testRecipient =
+        (environment as { testRecipientEmail?: string }).testRecipientEmail ?? '';
+
+      it('never lets a recipient other than the test address reach the REST layer', async () => {
+        const rest = stubRest(() => Promise.resolve({ result: true }));
+        try {
+          const client = TestBed.inject(ParseClient);
+          for (const recipientEmail of [
+            'locataire@example.test',
+            `${testRecipient},locataire@example.test`,
+            `${testRecipient}\nBcc: locataire@example.test`,
+            '',
+            undefined,
+          ]) {
+            let call: Promise<unknown> | undefined;
+            expect(
+              () => (call = client.runCloud('sendEmail', { ...params, recipientEmail })),
+            ).not.toThrow();
+            await expect(call).rejects.toBeInstanceOf(RecipientBlockedError);
+          }
+          expect(rest.requests).toEqual([]);
+        } finally {
+          rest.restore();
+        }
+      });
+
+      it('sends to the test address with the sandbox forced, even if the caller says false', async () => {
+        expect(testRecipient).not.toBe('');
+        const rest = stubRest(() => Promise.resolve({ result: { delivered: 0 } }));
+        try {
+          const callerParams = { ...params, recipientEmail: ` ${testRecipient.toUpperCase()} ` };
+          const result = await TestBed.inject(ParseClient).runCloud('sendEmail', callerParams);
+
+          expect(result).toEqual({ delivered: 0 });
+          expect(rest.requests).toHaveLength(1);
+          expect(rest.requests[0]).toEqual({
+            method: 'POST',
+            path: 'functions/sendEmail',
+            body: { ...callerParams, sandbox: true },
+          });
+          // The caller's object is not modified.
+          expect(callerParams.sandbox).toBe(false);
+        } finally {
+          rest.restore();
+        }
+      });
+
+      it('adds the sandbox flag when the caller sent none', async () => {
+        const rest = stubRest(() => Promise.resolve({ result: true }));
+        try {
+          const { sandbox: _dropped, ...withoutSandbox } = params;
+          await TestBed.inject(ParseClient).runCloud('sendEmail', {
+            ...withoutSandbox,
+            recipientEmail: testRecipient,
+          });
+          expect((rest.requests[0].body as { sandbox: unknown }).sandbox).toBe(true);
+        } finally {
+          rest.restore();
+        }
+      });
+
+      it('leaves the other cloud functions alone', async () => {
+        const rest = stubRest(() => Promise.resolve({ result: true }));
+        try {
+          await TestBed.inject(ParseClient).runCloud('sendEmailPreview', params);
+          expect(rest.requests).toEqual([
+            { method: 'POST', path: 'functions/sendEmailPreview', body: params },
+          ]);
+        } finally {
+          rest.restore();
+        }
+      });
     });
   });
 

@@ -13,6 +13,8 @@ export class RecipientBlockedError extends Error {
 
 const MAX_ADDRESS_LENGTH = 254;
 
+const ASCII_ONLY = /^[\x00-\x7F]*$/;
+
 /**
  * Characters that never belong to ONE plain address: white space and separators of every kind
  * (a no-break space, a line separator), control and invisible characters (zero-width, bidi marks),
@@ -37,7 +39,7 @@ const SINGLE_ADDRESS = new RegExp(
  *   name, no line break. A tenant record with `a@b.fr, c@d.fr` must never send to both, and a value
  *   with a line break must never reach a header.
  * - Outside production only `env.testRecipientEmail` is allowed, compared trimmed and
- *   case-insensitively. Anything but `production === true` counts as outside production. This is the
+ *   case-insensitively (both ASCII only). Anything but `production === true` counts as outside production. This is the
  *   guard of the legacy app (`ParseService.sendEmail`, commit 27f6267), kept as it was.
  */
 export function assertRecipientAllowed(recipient: string, env: GuardEnvironment): void {
@@ -55,7 +57,14 @@ export function assertRecipientAllowed(recipient: string, env: GuardEnvironment)
   }
   const testRecipient =
     typeof env.testRecipientEmail === 'string' ? env.testRecipientEmail.trim() : '';
-  if (testRecipient === '' || address.toLowerCase() !== testRecipient.toLowerCase()) {
+  // Both addresses must be plain ASCII before they are compared case-insensitively: Unicode case
+  // folding turns some other characters into ASCII letters (the Kelvin sign into `k`), which would
+  // let a look-alike pass for the test address.
+  const sameAddress =
+    ASCII_ONLY.test(address) &&
+    ASCII_ONLY.test(testRecipient) &&
+    address.toLowerCase() === testRecipient.toLowerCase();
+  if (testRecipient === '' || !sameAddress) {
     throw new RecipientBlockedError(
       `[DEV] Envoi bloqué vers ${address} : seul ${testRecipient === '' ? '(aucune adresse de test)' : testRecipient} est autorisé hors production.`,
     );

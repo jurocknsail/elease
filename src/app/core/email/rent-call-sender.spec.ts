@@ -7,7 +7,7 @@ import type { Leaseholder } from '../models/leaseholder';
 import { LeaseholderRepository } from '../parse/leaseholder.repository';
 import { ParseClient } from '../parse/parse-client';
 import { FakeParseClient, parseError, pointer } from '../parse/testing/fake-parse-client';
-import { assertRecipientAllowed } from './email-guard';
+import { assertRecipientAllowed, RecipientBlockedError } from './email-guard';
 import {
   groupByEmail,
   rentCallBody,
@@ -74,7 +74,7 @@ function holder(name: string, email: string): Leaseholder {
 type MarkLeasesSent = LeaseholderRepository['markLeasesSent'];
 
 /** The sender over a fake Parse client and a stubbed repository: no SDK, no network, no e-mail. */
-function setup(env: AppEnv = PROD, now: () => number = () => AT) {
+function setup(env: AppEnv = PROD, now: (() => number) | null = () => AT) {
   const fake = new FakeParseClient();
   const markLeasesSent = vi.fn<MarkLeasesSent>(() => Promise.resolve());
   TestBed.configureTestingModule({
@@ -82,7 +82,8 @@ function setup(env: AppEnv = PROD, now: () => number = () => AT) {
       { provide: ParseClient, useValue: fake },
       { provide: LeaseholderRepository, useValue: { markLeasesSent } },
       { provide: APP_ENV, useValue: env },
-      { provide: SEND_CLOCK, useValue: now },
+      // `null`: keep the default clock of the application.
+      ...(now ? [{ provide: SEND_CLOCK, useValue: now }] : []),
     ],
   });
   return { fake, markLeasesSent, sender: TestBed.inject(RentCallSender) };
@@ -158,6 +159,7 @@ describe('RentCallSender', () => {
           email: 'famille@example.test',
           holderNames: ['Agi Martin', 'Bob Martin'],
           ok: true,
+          simulated: false,
           leaseIds: ['l1', 'l2'],
         },
       ]);
@@ -325,7 +327,14 @@ describe('RentCallSender', () => {
       );
 
       expect(results).toEqual([
-        { email: A, holderNames: ['Agi'], ok: false, error: guardMessage, leaseIds: ['la1'] },
+        {
+          email: A,
+          holderNames: ['Agi'],
+          ok: false,
+          simulated: true,
+          error: guardMessage,
+          leaseIds: ['la1'],
+        },
       ]);
       expect(cloudCalls(fake)).toEqual([]);
       expect(markLeasesSent).not.toHaveBeenCalled();
@@ -415,6 +424,7 @@ describe('RentCallSender', () => {
             email: '',
             holderNames: ['Sans Mail', 'Blanc'],
             ok: false,
+            simulated: !env.production,
             error: 'Aucune adresse e-mail renseignée.',
             leaseIds: ['l1', 'l2'],
           },
@@ -444,6 +454,7 @@ describe('RentCallSender', () => {
         email: A,
         holderNames: ['Agi'],
         ok: true,
+        simulated: false,
         leaseIds: ['la1', 'la2'],
       });
       const failed = byEmail(results, B);
@@ -532,19 +543,42 @@ describe('RentCallSender', () => {
       expect(cloudCalls(fake)).toEqual([]);
     });
 
-    it('refuses to send without a signed-in user (no sender address): nothing is sent', async () => {
+    it('refuses to send without a session: nothing is sent, and the result carries the session code', async () => {
       const { fake, markLeasesSent, sender } = setup();
-      for (const signOut of [() => (fake.userId = null), () => (fake.userEmail = null)]) {
-        fake.userId = 'user-1';
-        fake.userEmail = 'proprietaire@example.test';
-        signOut();
-        const results = await sender.send(
+      fake.userId = null;
+
+      const [result] = await sender.send(
+        new Map([[A, group(['Agi'], pdf('la1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+
+      expect(result).toEqual({
+        email: A,
+        holderNames: ['Agi'],
+        ok: false,
+        simulated: false,
+        error: 'Session expirée : veuillez vous reconnecter.',
+        errorCode: 209,
+        leaseIds: ['la1'],
+      });
+      expect(cloudCalls(fake)).toEqual([]);
+      expect(markLeasesSent).not.toHaveBeenCalled();
+    });
+
+    it('says so when the signed-in account has no e-mail address: nothing is sent, not a session error', async () => {
+      const { fake, markLeasesSent, sender } = setup();
+      for (const email of [null, '']) {
+        fake.userEmail = email;
+        const [result] = await sender.send(
           new Map([[A, group(['Agi'], pdf('la1'))]]),
           PERIOD,
           DEFAULT_LANDLORD_PROFILE,
         );
-        expect(results[0].ok).toBe(false);
-        expect(results[0].error).toContain('Session expirée');
+        expect(result.ok).toBe(false);
+        expect(result.error).toBe("Votre compte n'a pas d'adresse e-mail : envoi impossible.");
+        expect(result.errorCode).toBeUndefined();
+        expect(result.uncertain).toBeUndefined();
       }
       expect(cloudCalls(fake)).toEqual([]);
       expect(markLeasesSent).not.toHaveBeenCalled();
@@ -580,6 +614,7 @@ describe('RentCallSender', () => {
         email: B,
         holderNames: ['Bob'],
         ok: false,
+        simulated: false,
         uncertain: true,
         error: UNCERTAIN_MESSAGE,
         leaseIds: ['lb1'],
@@ -605,15 +640,192 @@ describe('RentCallSender', () => {
       expect(cloudCalls(fake)).toHaveLength(1);
     });
 
-    it('does not mark an ordinary failure as uncertain', async () => {
+    it('does not mark an answer of the cloud function as uncertain', async () => {
       const { fake, sender } = setup();
-      failFor(fake, A, new Error('down'));
+      failFor(fake, A, parseError(141, 'Mailjet refused the message'));
       const [result] = await sender.send(
         new Map([[A, group(['Agi'], pdf('la1'))]]),
         PERIOD,
         DEFAULT_LANDLORD_PROFILE,
       );
+      expect(result.ok).toBe(false);
       expect(result.uncertain).toBeUndefined();
+    });
+  });
+
+  describe('a failure that may have delivered the e-mail is never a plain failure', () => {
+    const INTERRUPTED_MESSAGE =
+      "Connexion interrompue : l'e-mail a peut-être été envoyé. Vérifiez votre boîte avant de renvoyer.";
+
+    async function sendOneFailing(error: unknown) {
+      const { fake, markLeasesSent, sender } = setup();
+      failFor(fake, A, error);
+      const results = await sender.send(
+        new Map([[A, group(['Agi'], pdf('la1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+      // Exactly one attempt, never recorded, never retried.
+      expect(cloudCalls(fake)).toHaveLength(1);
+      expect(markLeasesSent).not.toHaveBeenCalled();
+      expect(results).toHaveLength(1);
+      return results[0];
+    }
+
+    it.each([
+      ['107 (unreadable answer, e.g. a gateway page)', parseError(107, 'invalid JSON'), 107],
+      ['100 (connection lost)', parseError(100, 'XMLHttpRequest failed'), 100],
+      ['124 (request timed out)', parseError(124, 'Request timed out'), 124],
+      ['-1 (other cause)', parseError(-1, 'unknown'), -1],
+      ['1 (internal server error)', parseError(1, 'server error'), 1],
+      ['an error without a code', new Error('network'), undefined],
+      ['a code that is not an integer', parseError(Number.NaN, 'odd'), undefined],
+      [
+        'a code that is not a number',
+        Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
+        undefined,
+      ],
+      ['a string (unparseable 2xx body)', 'Unexpected token < in JSON', undefined],
+      ['null', null, undefined],
+      ['undefined', undefined, undefined],
+    ])('is uncertain after %s', async (_label, error, code) => {
+      const result = await sendOneFailing(error);
+
+      expect(result).toEqual({
+        email: A,
+        holderNames: ['Agi'],
+        ok: false,
+        simulated: false,
+        uncertain: true,
+        error: INTERRUPTED_MESSAGE,
+        leaseIds: ['la1'],
+        ...(code === undefined ? {} : { errorCode: code }),
+      });
+    });
+
+    it.each([
+      ['141 (the cloud function reported an error)', 141],
+      ['209 (invalid session, refused before the function runs)', 209],
+      ['119 (operation forbidden)', 119],
+      ['142 (validation error)', 142],
+    ])('is a plain failure after %s, with its code', async (_label, code) => {
+      const result = await sendOneFailing(parseError(code, 'refused by the server'));
+
+      expect(result.ok).toBe(false);
+      expect(result.uncertain).toBeUndefined();
+      expect(result.errorCode).toBe(code);
+      expect(result.error).toBe("L'envoi a échoué : refused by the server");
+    });
+
+    it('keeps the message of a send that timed out, without a code', async () => {
+      vi.useFakeTimers();
+      const { fake, sender } = setup();
+      hangFor(fake, A);
+      const done = sender.send(
+        new Map([[A, group(['Agi'], pdf('la1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+      await vi.advanceTimersByTimeAsync(SEND_TIMEOUT_MS);
+      const [result] = await done;
+      expect(result.uncertain).toBe(true);
+      expect(result.error).toBe(UNCERTAIN_MESSAGE);
+      expect(result.errorCode).toBeUndefined();
+    });
+
+    it('is a plain failure when the cloud seam itself refuses the recipient (nothing went out)', async () => {
+      const result = await sendOneFailing(new RecipientBlockedError('[DEV] Envoi bloqué'));
+      expect(result.ok).toBe(false);
+      expect(result.uncertain).toBeUndefined();
+      expect(result.error).toBe('[DEV] Envoi bloqué');
+    });
+
+    it('leaves the other groups alone', async () => {
+      const { fake, markLeasesSent, sender } = setup();
+      failFor(fake, B, parseError(107, 'invalid JSON'));
+      const results = await sender.send(
+        new Map([
+          [A, group(['Agi'], pdf('la1'))],
+          [B, group(['Bob'], pdf('lb1'))],
+        ]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+      expect(byEmail(results, A).ok).toBe(true);
+      expect(byEmail(results, B).uncertain).toBe(true);
+      expect(markLeasesSent).toHaveBeenCalledTimes(1);
+      expect(markLeasesSent).toHaveBeenCalledWith(['la1'], '2027-01', AT);
+    });
+  });
+
+  describe('error codes', () => {
+    it('carries the Parse code of a failure, so the screen can send the user to the login on 209', async () => {
+      const { fake, sender } = setup();
+      failFor(fake, A, parseError(209, 'invalid session token'));
+      const [result] = await sender.send(
+        new Map([[A, group(['Agi'], pdf('la1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+      expect(result.errorCode).toBe(209);
+    });
+
+    it('has no code for a failure that carries none, and none on success', async () => {
+      const { fake, sender } = setup();
+      failFor(fake, B, new RecipientBlockedError('refusé'));
+      const results = await sender.send(
+        new Map([
+          [A, group(['Agi'], pdf('la1'))],
+          [B, group(['Bob'], pdf('lb1'))],
+          ['pas une adresse', group(['Cléo'], pdf('lc1'))],
+        ]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+      expect(results.map((result) => 'errorCode' in result)).toEqual([false, false, false]);
+    });
+  });
+
+  describe('simulated: nothing is really delivered', () => {
+    it('is true on every result outside production, sent or blocked', async () => {
+      const { sender } = setup(DEV);
+      const results = await sender.send(
+        new Map([
+          [TEST_ADDRESS, group(['Julien'], pdf('l1'))],
+          [A, group(['Agi'], pdf('l2'))],
+        ]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+      expect(results.map((result) => [result.ok, result.simulated])).toEqual([
+        [true, true],
+        [false, true],
+      ]);
+    });
+
+    it('follows the sandbox flag in production, on every kind of result', async () => {
+      for (const sandbox of [true, false]) {
+        TestBed.resetTestingModule();
+        const { fake, sender } = setup({ production: true, sandbox });
+        failFor(fake, B, parseError(141, 'refused'));
+        failFor(fake, C, parseError(107, 'invalid JSON'));
+        const results = await sender.send(
+          new Map<string, EmailGroup>([
+            [A, group(['Agi'], pdf('la1'))],
+            [B, group(['Bob'], pdf('lb1'))],
+            [C, group(['Cléo'], pdf('lc1'))],
+            ['pas une adresse', group(['Dan'], pdf('ld1'))],
+            ['d@example.test', { holderNames: ['Eve'] } as unknown as EmailGroup],
+          ]),
+          PERIOD,
+          DEFAULT_LANDLORD_PROFILE,
+        );
+        expect(results.map((result) => result.ok)).toEqual([true, false, false, false, false]);
+        expect(
+          results.map((result) => result.simulated),
+          String(sandbox),
+        ).toEqual(results.map(() => sandbox));
+      }
     });
   });
 
@@ -636,6 +848,21 @@ describe('RentCallSender', () => {
       expect(markLeasesSent).toHaveBeenCalledWith(['la1', 'la2'], periodKey(PERIOD), 1000);
       expect(markLeasesSent).toHaveBeenCalledWith(['lb1'], periodKey(PERIOD), 1000);
       expect(clock).toHaveBeenCalledTimes(1);
+    });
+
+    it('stamps the leases with the system clock when no clock is provided', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(AT);
+      const { markLeasesSent, sender } = setup(PROD, null);
+
+      expect(TestBed.inject(SEND_CLOCK)()).toBe(AT);
+      await sender.send(
+        new Map([[A, group(['Agi'], pdf('la1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+
+      expect(markLeasesSent).toHaveBeenCalledWith(['la1'], '2027-01', AT);
     });
 
     it('records after the e-mail went out, never before', async () => {
@@ -684,6 +911,7 @@ describe('RentCallSender', () => {
           email: A,
           holderNames: ['Agi'],
           ok: true,
+          simulated: false,
           warning: RECORD_WARNING,
           leaseIds: ['la1'],
         });
@@ -691,6 +919,7 @@ describe('RentCallSender', () => {
           email: B,
           holderNames: ['Bob'],
           ok: true,
+          simulated: false,
           leaseIds: ['lb1'],
         });
         expect(markLeasesSent).toHaveBeenCalledTimes(2);
@@ -741,6 +970,7 @@ describe('RentCallSender', () => {
           email: A,
           holderNames: ['Agi'],
           ok: true,
+          simulated: false,
           warning: RECORD_WARNING,
           leaseIds: [],
         });
