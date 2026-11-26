@@ -5,6 +5,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { AppTitleStrategy } from './app-title.strategy';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
+import { NOW } from './core/clock';
 import { LeaseholderRepository } from './core/parse/leaseholder.repository';
 import { ParseClient } from './core/parse/parse-client';
 import { FakeParseClient, parseError } from './core/parse/testing/fake-parse-client';
@@ -19,6 +20,8 @@ function setup(signedIn: boolean) {
   TestBed.configureTestingModule({
     providers: [
       { provide: ParseClient, useValue: fake },
+      // The home page's heading is the billing month: a fixed clock keeps it deterministic.
+      { provide: NOW, useValue: () => new Date(2026, 10, 25) },
       provideRouter(routes),
       { provide: TitleStrategy, useClass: AppTitleStrategy },
     ],
@@ -34,7 +37,7 @@ describe('routes', () => {
     document.title = '';
   });
 
-  it('opens on « Appels de loyer » when signed in', async () => {
+  it('opens on « Appels de loyer » (the month to come) when signed in', async () => {
     const { router } = setup(true);
 
     const harness = await RouterTestingHarness.create('/');
@@ -43,11 +46,11 @@ describe('routes', () => {
     expect(
       (harness.fixture.nativeElement as HTMLElement).querySelector('app-shell main h1')
         ?.textContent,
-    ).toBe('Appels de loyer');
+    ).toBe('Décembre 2026');
   });
 
   it.each([
-    ['/appels', 'Appels de loyer'],
+    ['/appels', 'Décembre 2026'],
     ['/appels/envoi', 'Envoi des appels de loyer'],
     ['/locataires', 'Locataires'],
     ['/locataires/abc123', 'Locataire'],
