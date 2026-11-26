@@ -1,4 +1,9 @@
-import { assertRecipientAllowed, effectiveSandbox, RecipientBlockedError } from './email-guard';
+import {
+  assertRecipientAllowed,
+  effectiveSandbox,
+  isSingleEmailAddress,
+  RecipientBlockedError,
+} from './email-guard';
 
 /** The only address an e-mail may go to outside production (a developer account, never a tenant). */
 const TEST_ADDRESS = 'julien.berger1421@gmail.com';
@@ -10,6 +15,15 @@ const prod = { production: true, sandbox: false, testRecipientEmail: TEST_ADDRES
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 const NO_BREAK_SPACE = String.fromCharCode(0x00a0);
 const LINE_SEPARATOR = String.fromCharCode(0x2028);
+
+describe('isSingleEmailAddress', () => {
+  it('accepts one plain address (trimmed) and refuses the rest, as the sender does', () => {
+    expect(isSingleEmailAddress(' locataire@example.test ')).toBe(true);
+    for (const bad of ['', 'a@b', 'a@b.fr, c@d.fr', 'Nom <a@b.fr>', 'sans-arobase']) {
+      expect(isSingleEmailAddress(bad)).toBe(false);
+    }
+  });
+});
 
 describe('assertRecipientAllowed', () => {
   describe('outside production', () => {

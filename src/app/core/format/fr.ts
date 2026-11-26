@@ -114,3 +114,43 @@ export function formatDate(ms: number): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   return `${day}/${month}/${date.getFullYear()}`;
 }
+
+/**
+ * The number typed in a French field, or `null` when it is not one. Accepts « 1 234,56 », « 1234.56 »,
+ * « 1.234,56 », « 12 € », « 12 » and « ,5 ». Spaces (no-break and narrow no-break ones too, all matched by `\s`) are thousands separators and a
+ * euro sign is ignored. A single `.` or `,` is the decimal mark; when both appear, the last one is.
+ * A sign is kept so that the caller can refuse a negative amount. Blank input is `null`, not 0.
+ */
+export function parseFrenchNumber(input: string): number | null {
+  if (typeof input !== 'string') {
+    return null;
+  }
+  const compact = input.replace(/\s/g, '').replaceAll('€', '');
+  if (compact === '') {
+    return null;
+  }
+  const lastComma = compact.lastIndexOf(',');
+  const lastDot = compact.lastIndexOf('.');
+  const decimalMark = Math.max(lastComma, lastDot);
+  let normalized = compact;
+  if (decimalMark >= 0) {
+    // Whatever precedes the decimal mark may carry the OTHER symbol as a thousands separator; the same
+    // symbol twice (« 1,2,3 ») is not a number.
+    const mark = compact[decimalMark];
+    if (compact.indexOf(mark) !== decimalMark) {
+      return null;
+    }
+    const integerPart = compact.slice(0, decimalMark).replace(/[.,]/g, '');
+    normalized = `${integerPart}.${compact.slice(decimalMark + 1)}`;
+  }
+  if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(normalized)) {
+    return null;
+  }
+  const value = Number(normalized);
+  return Number.isFinite(value) ? value : null;
+}
+
+/** A number as it is edited in a French field: no thousands separator, comma as decimal mark. */
+export function toFieldNumber(value: number): string {
+  return String(value).replace('.', ',');
+}

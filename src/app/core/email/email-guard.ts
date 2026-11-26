@@ -32,6 +32,16 @@ const SINGLE_ADDRESS = new RegExp(
 );
 
 /**
+ * Whether `value` (trimmed) is exactly one plain address, the shape the sender accepts in every
+ * environment. The contact form uses it too: Angular's `Validators.email` accepts `a@b`, which the
+ * sender then refuses, so a tenant saved with it could never receive a rent call.
+ */
+export function isSingleEmailAddress(value: string): boolean {
+  const address = typeof value === 'string' ? value.trim() : '';
+  return address.length > 0 && address.length <= MAX_ADDRESS_LENGTH && SINGLE_ADDRESS.test(address);
+}
+
+/**
  * Throws a `RecipientBlockedError` when an e-mail must not go to `recipient`. Called by the sender
  * before EVERY e-mail, not only by the screen.
  *
@@ -48,7 +58,7 @@ export function assertRecipientAllowed(recipient: string, env: GuardEnvironment)
   if (address === '') {
     throw new RecipientBlockedError('Aucune adresse e-mail renseignée.');
   }
-  if (address.length > MAX_ADDRESS_LENGTH || !SINGLE_ADDRESS.test(address)) {
+  if (!isSingleEmailAddress(address)) {
     throw new RecipientBlockedError('Adresse e-mail invalide : un seul destinataire est autorisé.');
   }
 
