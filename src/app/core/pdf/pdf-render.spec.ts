@@ -1,7 +1,14 @@
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { DEFAULT_LANDLORD_PROFILE } from '../models/landlord-profile';
 import { Lease } from '../models/lease';
-import { awaitCallback, createEngineLoader, PdfRenderError, renderPdf } from './pdf-render';
+import {
+  awaitCallback,
+  createEngineLoader,
+  PdfRenderError,
+  RENDER_TIMEOUT_MS as DEFAULT_RENDER_TIMEOUT_MS,
+  renderPdf,
+  withinDelay,
+} from './pdf-render';
 import { buildRentCallDefinition } from './rent-call-definition';
 
 /*
@@ -247,5 +254,37 @@ describe('createEngineLoader (lazy, load-once, retry after a failed load)', () =
 
     await expect(load()).rejects.toBeInstanceOf(PdfRenderError);
     await expect(load()).resolves.toMatchObject({ vfs: FONTS });
+  });
+});
+
+describe('hang guards', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('the default delay is 15 s', () => {
+    expect(DEFAULT_RENDER_TIMEOUT_MS).toBe(15000);
+  });
+
+  it('withinDelay passes the value through and clears its timer', async () => {
+    vi.useFakeTimers();
+    await expect(withinDelay(Promise.resolve('ok'), 1000, 'm')).resolves.toBe('ok');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('withinDelay passes a rejection through and clears its timer', async () => {
+    vi.useFakeTimers();
+    const cause = new Error('boom');
+    await expect(withinDelay(Promise.reject(cause), 1000, 'm')).rejects.toBe(cause);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('renderPdf gives up with a PdfRenderError when the engine chunk never arrives', async () => {
+    vi.useFakeTimers();
+    const never = () => new Promise<never>(() => undefined);
+    const promise = renderPdf({ content: ['x'] }, 15000, never);
+    const assertion = expect(promise).rejects.toBeInstanceOf(PdfRenderError);
+    await vi.advanceTimersByTimeAsync(15000);
+    await assertion;
   });
 });

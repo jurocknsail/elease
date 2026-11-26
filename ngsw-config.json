@@ -19,6 +19,14 @@
       }
     },
     {
+      "name": "pdf-worker",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": {
+        "files": ["/assets/pdfjs/pdf.worker.min.mjs"]
+      }
+    },
+    {
       "name": "assets",
       "installMode": "lazy",
       "updateMode": "prefetch",

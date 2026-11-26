@@ -14,8 +14,12 @@ export class PdfRenderError extends Error {
   }
 }
 
-/** A rent-call PDF is a few tens of kilobytes: it renders in well under a second. */
-const RENDER_TIMEOUT_MS = 30000;
+/**
+ * A rent-call PDF is a few tens of kilobytes: it renders in well under a second. The same delay also
+ * bounds the download of the pdfmake chunk (a slow or hanging connection must not block the first
+ * preview forever): a user waits 15 s at most before seeing « Échec de la génération » and « Réessayer ».
+ */
+export const RENDER_TIMEOUT_MS = 15000;
 
 type PdfMakeModule = typeof import('pdfmake/build/pdfmake');
 
@@ -122,6 +126,27 @@ export function awaitCallback<T>(
   });
 }
 
+/** Waits for `promise`, but rejects with a `PdfRenderError` if it has not settled within `timeoutMs`. */
+export function withinDelay<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new PdfRenderError(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 /** The base64 of a blob, without the `data:` prefix. */
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise<string>((resolve, reject) => {
@@ -145,8 +170,13 @@ function blobToBase64(blob: Blob): Promise<string> {
 export async function renderPdf(
   def: TDocumentDefinitions,
   timeoutMs = RENDER_TIMEOUT_MS,
+  load: () => Promise<PdfEngine> = loadEngine,
 ): Promise<RenderedPdf> {
-  const { createPdf, vfs } = await loadEngine();
+  const { createPdf, vfs } = await withinDelay(
+    load(),
+    timeoutMs,
+    'Le module de génération du PDF ne répond pas.',
+  );
   const blob = await awaitCallback<Blob>((done) => {
     createPdf(structuredClone(def), {}, roboto(), vfs).getBlob(done);
   }, timeoutMs);
