@@ -36,6 +36,15 @@ export function rentCallBody(profile: LandlordProfile): string {
 }
 
 /**
+ * The key under which a holder's e-mail is grouped: the trimmed, lower-cased address, or '' when it
+ * has none. `groupByEmail` and the count of e-mails on the send screen both use THIS function, so
+ * what the confirmation announces is exactly what the sender will send.
+ */
+export function recipientKey(holder: Pick<Leaseholder, 'email'>): string {
+  return typeof holder.email === 'string' ? holder.email.trim().toLowerCase() : '';
+}
+
+/**
  * Groups the PDFs by recipient, so that tenants sharing one address get ONE e-mail with all their
  * PDFs (the legacy grouping, `ParseService.addLeaseholderPDF`).
  *
@@ -51,7 +60,7 @@ export function groupByEmail(
 ): Map<string, EmailGroup> {
   const groups = new Map<string, EmailGroup>();
   for (const { holder, pdf } of items) {
-    const key = typeof holder.email === 'string' ? holder.email.trim().toLowerCase() : '';
+    const key = recipientKey(holder);
     let group = groups.get(key);
     if (!group) {
       group = { holderNames: [], pdfs: [] };

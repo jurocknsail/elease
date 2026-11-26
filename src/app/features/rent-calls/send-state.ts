@@ -1,6 +1,7 @@
 import { computeTotalPrice, sumAmounts } from '../../core/billing/amounts';
 import { BillingPeriod } from '../../core/billing/period';
 import { leaseStatus } from '../../core/billing/send-status';
+import { recipientKey } from '../../core/email/rent-call-email';
 import { Lease } from '../../core/models/lease';
 import { Leaseholder } from '../../core/models/leaseholder';
 
@@ -75,4 +76,70 @@ export function rowKey(row: RentCallRow, index: number): string {
  */
 export function showReminderBanner(today: Date, rows: RentCallRow[]): boolean {
   return today.getDate() >= REMINDER_FROM_DAY && rows.some((row) => row.status === 'todo');
+}
+
+/** The keys (see `rowKey`) of every lease still to send: what the send screen starts with. */
+export function initialSelection(rows: readonly RentCallRow[]): Set<string> {
+  const selected = new Set<string>();
+  rows.forEach((row, index) => {
+    if (row.status === 'todo') {
+      selected.add(rowKey(row, index));
+    }
+  });
+  return selected;
+}
+
+/** What the footer and the confirmation announce for the selected rows. */
+export interface SelectionSummary {
+  /** Selected leases = PDFs = rent calls. */
+  count: number;
+  /**
+   * E-mails that will go out: distinct recipient addresses, by the key of `groupByEmail` (trimmed,
+   * lower-cased). A holder without an address is its own group there and is NOT an e-mail: it is
+   * refused by the sender, never counted here.
+   */
+  emails: number;
+  /** Distinct tenants among the selected leases. */
+  holders: number;
+  /** Sum of the amounts, each rounded to the cent (`sumAmounts`): what the owner adds up by hand. */
+  total: number;
+}
+
+export function selectionSummary(
+  rows: readonly RentCallRow[],
+  selected: ReadonlySet<string>,
+): SelectionSummary {
+  const chosen = rows.filter((row, index) => selected.has(rowKey(row, index)));
+  const addresses = new Set<string>();
+  const holders = new Set<unknown>();
+  for (const row of chosen) {
+    const address = recipientKey(row.holder);
+    if (address !== '') {
+      addresses.add(address);
+    }
+    holders.add(row.holder.objectId ?? row.holder);
+  }
+  return {
+    count: chosen.length,
+    emails: addresses.size,
+    holders: holders.size,
+    total: sumAmounts(chosen.map((row) => row.amount)),
+  };
+}
+
+/**
+ * Whether sending is allowed: at least one lease is selected AND every selected lease has its PDF
+ * generated for the CURRENT call date (`previewed` holds the keys of those PDFs, and is emptied when
+ * the date changes). Nothing is ever sent that could not be previewed.
+ */
+export function canSend(selected: ReadonlySet<string>, previewed: ReadonlySet<string>): boolean {
+  if (selected.size === 0) {
+    return false;
+  }
+  for (const key of selected) {
+    if (!previewed.has(key)) {
+      return false;
+    }
+  }
+  return true;
 }

@@ -4,7 +4,17 @@ import { BillingPeriod } from '../../core/billing/period';
 import { leaseStatus } from '../../core/billing/send-status';
 import { Lease } from '../../core/models/lease';
 import { Leaseholder } from '../../core/models/leaseholder';
-import { RentCallRow, buildRows, rowKey, showReminderBanner, summary } from './send-state';
+import {
+  RentCallRow,
+  buildRows,
+  canSend,
+  initialSelection,
+  rowKey,
+  selectionSummary,
+  showReminderBanner,
+  summary,
+} from './send-state';
+import { groupByEmail } from '../../core/email/rent-call-email';
 
 function lease(overrides: Partial<Lease> = {}): Lease {
   return {
@@ -455,5 +465,179 @@ describe('showReminderBanner', () => {
     expect(
       showReminderBanner(new Date(2026, 10, 25), [row('sent'), row('sent'), row('todo')]),
     ).toBe(true);
+  });
+});
+
+describe('initialSelection', () => {
+  const sent = { lastSendDate: 1, lastSentPeriod: '2026-12', lastSentPeriodAt: 1 };
+
+  it('selects every lease still to send and none of the sent ones', () => {
+    const rows = buildRows(
+      [
+        holder('Dupont', [lease({ name: 'Studio' }), lease({ name: 'Garage', ...sent })]),
+        holder('Martin', [lease({ name: 'Commerce' })]),
+      ],
+      DEC_2026,
+    );
+
+    const selected = initialSelection(rows);
+
+    expect(selected).toEqual(new Set(['l-Commerce', 'l-Studio']));
+    expect(selected.has('l-Garage')).toBe(false);
+  });
+
+  it('uses the key of rowKey, also for a lease without objectId', () => {
+    const rows = buildRows(
+      [holder('Dupont', [lease({ name: 'Studio', objectId: undefined })])],
+      DEC_2026,
+    );
+
+    expect([...initialSelection(rows)]).toEqual([rowKey(rows[0], 0)]);
+  });
+
+  it('is empty when everything is sent or there is no row', () => {
+    expect(initialSelection([]).size).toBe(0);
+    expect(
+      initialSelection(buildRows([holder('Dupont', [lease({ ...sent })])], DEC_2026)).size,
+    ).toBe(0);
+  });
+});
+
+describe('selectionSummary', () => {
+  const keysOf = (rows: RentCallRow[]) => new Set(rows.map(rowKey));
+
+  it('3 leases of 2 holders with different e-mails: 3 calls, 2 e-mails, 2 holders', () => {
+    const rows = buildRows(
+      [
+        holder('Dupont', [
+          lease({ name: 'Studio', price: 600 }),
+          lease({ name: 'Garage', price: 80 }),
+        ]),
+        holder('Martin', [lease({ name: 'Commerce', price: 1000 })]),
+      ],
+      DEC_2026,
+    );
+
+    expect(selectionSummary(rows, keysOf(rows))).toEqual({
+      count: 3,
+      emails: 2,
+      holders: 2,
+      total: 1680,
+    });
+  });
+
+  it('counts only the selected rows', () => {
+    const rows = buildRows(
+      [
+        holder('Dupont', [
+          lease({ name: 'Studio', price: 600 }),
+          lease({ name: 'Garage', price: 80 }),
+        ]),
+      ],
+      DEC_2026,
+    );
+
+    expect(selectionSummary(rows, new Set(['l-Garage']))).toEqual({
+      count: 1,
+      emails: 1,
+      holders: 1,
+      total: 80,
+    });
+    expect(selectionSummary(rows, new Set())).toEqual({
+      count: 0,
+      emails: 0,
+      holders: 0,
+      total: 0,
+    });
+  });
+
+  it('two holders sharing one address are 2 holders but ONE e-mail, trimmed and case-insensitive', () => {
+    const rows = buildRows(
+      [
+        holder('Dupont', [lease({ name: 'A' })], { email: ' Famille@Example.test ' }),
+        holder('Martin', [lease({ name: 'B' })], { email: 'famille@example.test' }),
+      ],
+      DEC_2026,
+    );
+
+    expect(selectionSummary(rows, keysOf(rows))).toMatchObject({ count: 2, emails: 1, holders: 2 });
+  });
+
+  it('counts the e-mails with the very key of groupByEmail, whatever the spelling', () => {
+    const emails = ['a@x.test', ' A@X.test', 'b@x.test ', '', '   ', 'B@x.TEST', 'c@x.test'];
+    const holders = emails.map((email, i) =>
+      holder('H' + i, [lease({ name: 'L' + i })], { email }),
+    );
+    const rows = buildRows(holders, DEC_2026);
+    const items = rows.map((r) => ({
+      holder: r.holder,
+      pdf: { lease: r.lease, fileName: 'x.pdf', base64: '' },
+    }));
+    const groups = groupByEmail(items);
+
+    const { emails: counted } = selectionSummary(rows, keysOf(rows));
+
+    expect(counted).toBe([...groups.keys()].filter((key) => key !== '').length);
+    expect(counted).toBe(3);
+  });
+
+  it('a holder without an address is NOT an e-mail (own empty group) but is a holder', () => {
+    const rows = buildRows(
+      [
+        holder('Dupont', [lease({ name: 'A' })], { email: 'dupont@example.test' }),
+        holder('Sans', [lease({ name: 'B' })], { email: '' }),
+        holder('Blanc', [lease({ name: 'C' })], { email: '   ' }),
+      ],
+      DEC_2026,
+    );
+
+    expect(selectionSummary(rows, keysOf(rows))).toMatchObject({ count: 3, emails: 1, holders: 3 });
+  });
+
+  it('a holder with several selected leases is counted once', () => {
+    const rows = buildRows(
+      [holder('Dupont', [lease({ name: 'A' }), lease({ name: 'B' }), lease({ name: 'C' })])],
+      DEC_2026,
+    );
+
+    expect(selectionSummary(rows, keysOf(rows))).toMatchObject({ count: 3, emails: 1, holders: 1 });
+  });
+
+  it('the total is the sum of the amounts rounded to the cent (3 pro leases of 1091.08)', () => {
+    const rows = buildRows(
+      [
+        holder('Dupont', [
+          lease({ name: 'A', isPro: true, price: 1091.08 }),
+          lease({ name: 'B', isPro: true, price: 1091.08 }),
+          lease({ name: 'C', isPro: true, price: 1091.08 }),
+        ]),
+      ],
+      DEC_2026,
+    );
+
+    const { total } = selectionSummary(rows, keysOf(rows));
+
+    expect(total).toBe(3927.9);
+    expect(total).not.toBe(rows.reduce((sum, r) => sum + r.amount, 0));
+  });
+});
+
+describe('canSend', () => {
+  it('is false when nothing is selected', () => {
+    expect(canSend(new Set(), new Set(['a']))).toBe(false);
+    expect(canSend(new Set(), new Set())).toBe(false);
+  });
+
+  it('is false while one selected lease has no generated PDF', () => {
+    expect(canSend(new Set(['a', 'b']), new Set(['a']))).toBe(false);
+    expect(canSend(new Set(['a']), new Set())).toBe(false);
+  });
+
+  it('is true when every selected lease has its PDF', () => {
+    expect(canSend(new Set(['a', 'b']), new Set(['a', 'b']))).toBe(true);
+  });
+
+  it('ignores PDFs of leases that are not selected', () => {
+    expect(canSend(new Set(['a']), new Set(['a', 'b', 'c']))).toBe(true);
   });
 });
