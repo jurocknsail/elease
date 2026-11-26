@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './auth.service';
-import { safeReturnUrl } from './return-url';
+import { DEFAULT_URL, safeReturnUrl } from './return-url';
 
 /**
  * Lets signed-in users through. Everyone else goes to `/login`, with the address they asked for as
@@ -15,7 +15,8 @@ export const authGuard: CanActivateFn = (_route, state) => {
   }
   const returnUrl = safeReturnUrl(state.url);
   return inject(Router).createUrlTree(['/login'], {
-    queryParams: returnUrl ? { returnUrl } : {},
+    // Nothing to remember when the user asked for the page they land on anyway.
+    queryParams: returnUrl && returnUrl !== DEFAULT_URL ? { returnUrl } : {},
   });
 };
 

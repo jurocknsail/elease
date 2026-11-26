@@ -61,6 +61,14 @@ describe('authGuard', () => {
     expect(router.url).toBe('/login?returnUrl=%2Flocataires%2Fabc%3Ftab%3Dbaux');
   });
 
+  it('does not clutter the login address when the user asked for the default page', async () => {
+    const { router } = setup(false);
+
+    await RouterTestingHarness.create('/appels');
+
+    expect(router.url).toBe('/login');
+  });
+
   it('stops asking for a session that no longer exists, even after the page was shown', async () => {
     const { router, fake } = setup(true);
     const harness = await RouterTestingHarness.create('/appels');

@@ -1,3 +1,6 @@
+/** Where the app opens, and where to go after signing in when nothing else was asked for. */
+export const DEFAULT_URL = '/appels';
+
 /** A throw-away origin: a value that parses to another origin is not an internal path. */
 const BASE = 'https://app.invalid';
 
