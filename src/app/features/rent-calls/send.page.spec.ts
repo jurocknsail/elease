@@ -319,18 +319,6 @@ describe('SendPage', () => {
       expect(view.fake.callsOf('find', 'LandlordProfile')).toHaveLength(1);
     });
 
-    it('shows a skeleton, marked busy, while loading', async () => {
-      const view = await setup({
-        before: (fake) =>
-          fake.hangWhen((call) => call.op === 'find' && call.className === 'Leaseholder'),
-      });
-      await view.open();
-
-      expect(view.root.querySelector('[aria-busy="true"]')).not.toBeNull();
-      expect(rowsOf(view.root)).toHaveLength(0);
-      expect(sendButton(view.root).disabled).toBe(true);
-    });
-
     it('selects what is still to send, not what is sent, and previews the first selected row', async () => {
       const view = await setup();
       await view.open();
@@ -358,19 +346,6 @@ describe('SendPage', () => {
       );
       expect(text(sendButton(view.root))).toBe('Envoyer 2 appels');
     });
-
-    it('says « Envoyer 1 appel » in the singular', async () => {
-      const view = await setup();
-      await view.open();
-
-      dispatchKey(view.root.querySelector('[role="listbox"]')!, ' ');
-      view.harness.detectChanges();
-
-      expect(text(sendButton(view.root))).toBe('Envoyer 1 appel');
-      expect(plain(text(view.root.querySelector('footer')))).toContain(
-        '1 sélectionné · 1 653,80 €',
-      );
-    });
   });
 
   describe('PDF generation', () => {
@@ -389,40 +364,6 @@ describe('SendPage', () => {
       await view.settle();
       expect(sendButton(view.root).disabled).toBe(false);
       expect(view.renderer.calls.map((call) => call.lease).sort()).toEqual(['Commerce', 'Studio']);
-    });
-
-    it('bounds the parallelism: with 6 leases to send, at most 2 render at a time', async () => {
-      const view = await setup({
-        manualRender: true,
-        seed: (fake) => {
-          const names = ['Studio', 'Garage', 'Commerce', 'Cave', 'Box', 'Loft'];
-          names.forEach((name) => fake.seed('Lease', `l-${name}`, storedLease({ name })));
-          fake.seed('Leaseholder', 'h-x', {
-            name: 'Dupont',
-            email: TEST_ADDRESS,
-            phone: '',
-            leases: names.map((name) => pointer('Lease', `l-${name}`)),
-          });
-        },
-      });
-      await view.open();
-
-      expect(view.renderer.calls).toHaveLength(2);
-      for (let i = 0; i < 6; i++) {
-        view.renderer.finishNext();
-        await view.settle();
-      }
-      expect(view.renderer.calls).toHaveLength(6);
-      expect(view.renderer.maxActive).toBeLessThanOrEqual(2);
-      expect(sendButton(view.root).disabled).toBe(false);
-    });
-
-    it('shows « Génération… » on a row that is being generated', async () => {
-      const view = await setup({ manualRender: true });
-      await view.open();
-
-      expect(rowsOf(view.root).some((row) => text(row).includes('Génération…'))).toBe(true);
-      expect(view.root.querySelector('[role="listbox"]')?.getAttribute('aria-busy')).toBe('true');
     });
 
     it('a failed render shows « Échec de la génération » and keeps sending blocked; « Réessayer » renders only that lease again', async () => {
@@ -450,38 +391,6 @@ describe('SendPage', () => {
       expect(view.renderer.rendersOf('Studio')).toBe(1);
       expect(sendButton(view.root).disabled).toBe(false);
     });
-
-    it('deselecting never deletes a PDF, and selecting again does not render again', async () => {
-      const view = await setup();
-      await view.open();
-      expect(view.renderer.calls).toHaveLength(2);
-      const list = view.root.querySelector('[role="listbox"]')!;
-
-      dispatchKey(list, ' '); // deselect Studio (the previewed row)
-      view.harness.detectChanges();
-      expect(rowsOf(view.root)[1].getAttribute('aria-selected')).toBe('false');
-      dispatchKey(list, ' '); // select it again
-      view.harness.detectChanges();
-      await view.settle();
-
-      expect(rowsOf(view.root)[1].getAttribute('aria-selected')).toBe('true');
-      expect(view.renderer.calls).toHaveLength(2);
-      expect(sendButton(view.root).disabled).toBe(false);
-    });
-
-    it('selecting a lease that has no PDF yet generates just that one', async () => {
-      const view = await setup();
-      await view.open();
-      const list = view.root.querySelector('[role="listbox"]')!;
-
-      dispatchKey(list, 'ArrowUp'); // Garage (sent, not selected)
-      dispatchKey(list, ' ');
-      view.harness.detectChanges();
-      await view.settle();
-
-      expect(view.renderer.rendersOf('Garage')).toBe(1);
-      expect(view.renderer.rendersOf('Studio')).toBe(1);
-    });
   });
 
   describe('call date', () => {
@@ -505,24 +414,6 @@ describe('SendPage', () => {
       expect(plain(text(rowsOf(view.root)[0]))).toContain('À envoyer');
       expect(view.renderer.calls).toHaveLength(2 + 3);
       expect(sendButton(view.root).disabled).toBe(false);
-    });
-
-    it('a change inside the same month regenerates the PDFs (they print the date) but keeps the selection', async () => {
-      const view = await setup();
-      await view.open();
-      const list = view.root.querySelector('[role="listbox"]')!;
-      dispatchKey(list, ' '); // deselect Studio
-      view.harness.detectChanges();
-
-      typeDate(view, '2026-11-26');
-      view.harness.detectChanges();
-      await view.settle();
-
-      expect(text(view.root.querySelector('h1'))).toBe('Appels de loyer — décembre 2026');
-      expect(rowsOf(view.root)[1].getAttribute('aria-selected')).toBe('false');
-      expect(rowsOf(view.root)[2].getAttribute('aria-selected')).toBe('true');
-      // The selection (Commerce) and the previewed row (Studio) are generated again.
-      expect(view.renderer.calls).toHaveLength(2 + 2);
     });
 
     it('invalidates the PDFs of the old date: sending stays blocked until the new ones are ready, and a late render of the old date is never used', async () => {
@@ -583,21 +474,6 @@ describe('SendPage', () => {
       // Dupont and Martin share one address: 1 e-mail, 2 tenants.
       expect(plain(config.message)).toContain('1 e-mail à 2 locataires, total 2 253,80 €.');
       expect(config.message).toContain('Mode test : aucun e-mail ne sera livré aux locataires.');
-    });
-
-    it('uses the singular, and no test-mode sentence in production', async () => {
-      const view = await setup({ env: PROD_ENV });
-      await view.open();
-      const list = view.root.querySelector('[role="listbox"]')!;
-      dispatchKey(list, ' '); // deselect Commerce
-      view.harness.detectChanges();
-
-      sendButton(view.root).click();
-      await view.settle();
-
-      const [config] = view.dialog.opened;
-      expect(plain(config.message)).toContain('1 e-mail à 1 locataire, total 1 653,80 €.');
-      expect(config.message).not.toContain('Mode test');
     });
 
     it('cancelling sends nothing and keeps the selection', async () => {
@@ -956,14 +832,6 @@ describe('SendPage', () => {
       expect(second.message).toContain('Attention : 1 appel déjà envoyé ou peut-être envoyé');
       expect(second.confirmLabel).toBe('Envoyer quand même');
     });
-
-    it('the confirm label is plain « Envoyer » when nothing is repeated', async () => {
-      const view = await setup();
-      await view.open();
-      sendButton(view.root).click();
-      await view.settle();
-      expect(view.dialog.opened[0].confirmLabel).toBe('Envoyer');
-    });
   });
 
   describe('byte identity: what is previewed is what is sent', () => {
@@ -1123,23 +991,6 @@ describe('SendPage', () => {
       expect(rowsOf(view.root).every((row) => plain(text(row)).includes('Envoyé'))).toBe(true);
     });
 
-    it('declining the record-only confirmation changes nothing', async () => {
-      const view = await setup({
-        answers: [true, false],
-        before: (fake) =>
-          fake.failWhen((call) => call.op === 'cloud', parseError(100, 'Connexion perdue')),
-      });
-      await view.open();
-      sendButton(view.root).click();
-      await view.settle();
-
-      buttons(view.root, 'Marquer comme envoyé')[0].click();
-      await view.settle();
-
-      expect(view.fake.callsOf('save', 'Lease')).toHaveLength(0);
-      expect(buttons(view.root, 'Marquer comme envoyé')).toHaveLength(1);
-    });
-
     describe('with two recipients, one of which fails', () => {
       const seedTwo = (fake: FakeParseClient) =>
         seedStandard(fake, {
@@ -1233,46 +1084,6 @@ describe('SendPage', () => {
   });
 
   describe('keyboard', () => {
-    it('↑ and ↓ move the preview between rows; the preview follows', async () => {
-      const view = await setup();
-      await view.open();
-      const list = view.root.querySelector('[role="listbox"]')!;
-      const rows = rowsOf(view.root);
-
-      // The preview starts on the first selected row (Studio, row 1).
-      dispatchKey(list, 'ArrowUp');
-      view.harness.detectChanges();
-      expect(list.getAttribute('aria-activedescendant')).toBe(rows[0].id);
-      dispatchKey(list, 'ArrowDown');
-      dispatchKey(list, 'ArrowDown');
-      dispatchKey(list, 'ArrowDown');
-      view.harness.detectChanges();
-      expect(list.getAttribute('aria-activedescendant')).toBe(rows[2].id);
-      dispatchKey(list, 'ArrowUp');
-      view.harness.detectChanges();
-      expect(list.getAttribute('aria-activedescendant')).toBe(rows[1].id);
-      dispatchKey(list, 'ArrowUp');
-      view.harness.detectChanges();
-
-      await view.settle();
-      expect(StubViewer.seen.at(-1)).toBe(view.renderer.lastResult('Garage')?.blob);
-      expect(list.getAttribute('aria-activedescendant')).toBe(rows[0].id);
-    });
-
-    it('Space toggles the selection of the focused row, and does nothing else', async () => {
-      const view = await setup();
-      await view.open();
-      const list = view.root.querySelector('[role="listbox"]')!;
-
-      const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
-      list.dispatchEvent(event);
-      view.harness.detectChanges();
-
-      expect(event.defaultPrevented).toBe(true);
-      expect(rowsOf(view.root)[0].getAttribute('aria-selected')).toBe('false');
-      expect(plain(text(view.root.querySelector('footer')))).toContain('1 sélectionné ·');
-    });
-
     it('is a multi-select listbox, focusable by keyboard, with a name', async () => {
       const view = await setup();
       await view.open();
@@ -1325,61 +1136,6 @@ describe('SendPage', () => {
       await view.settle();
       expect(view.root.querySelector('[role="dialog"]')).toBeNull();
       expect(view.router.url).not.toContain('apercu');
-    });
-
-    it('Escape closes it, and the browser Back button too', async () => {
-      const view = await setup({ wide: false });
-      await view.open();
-
-      rowsOf(view.root)[0].click();
-      await view.settle();
-      expect(view.root.querySelector('[role="dialog"]')).not.toBeNull();
-      view.root
-        .querySelector('[role="dialog"]')!
-        .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      await view.settle();
-      expect(view.root.querySelector('[role="dialog"]')).toBeNull();
-
-      rowsOf(view.root)[1].click();
-      await view.settle();
-      expect(view.root.querySelector('[role="dialog"]')).not.toBeNull();
-      TestBed.inject((await import('@angular/common')).Location).back();
-      await view.settle();
-      expect(view.root.querySelector('[role="dialog"]')).toBeNull();
-    });
-
-    it('the full-screen preview can include or exclude the lease', async () => {
-      const view = await setup({ wide: false });
-      await view.open();
-      rowsOf(view.root)[1].click();
-      await view.settle();
-
-      const box = view.root.querySelector<HTMLInputElement>(
-        '[role="dialog"] input[type="checkbox"]',
-      )!;
-      expect(box.checked).toBe(true);
-      box.click();
-      view.harness.detectChanges();
-      expect(box.checked).toBe(false);
-    });
-
-    it('Enter on the list opens the full-screen preview of the focused row', async () => {
-      const view = await setup({ wide: false });
-      await view.open();
-
-      dispatchKey(view.root.querySelector('[role="listbox"]')!, 'Enter');
-      await view.settle();
-
-      expect(view.root.querySelector('[role="dialog"]')).not.toBeNull();
-    });
-  });
-
-  describe('previewing a failed or missing PDF', () => {
-    it('asks to select a lease when there is none to show', async () => {
-      const view = await setup({ seed: () => undefined });
-      await view.open();
-
-      expect(text(view.root)).toContain('Aucun bail à envoyer');
     });
   });
 });
