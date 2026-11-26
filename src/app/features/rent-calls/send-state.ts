@@ -14,7 +14,7 @@ export interface RentCallRow {
 }
 
 /** The first day of the month on which the reminder banner may appear. */
-const REMINDER_FROM_DAY = 25;
+export const REMINDER_FROM_DAY = 25;
 
 /** French collation: `Émile` sits with the E's, `alice` before `Bob`. */
 function compareNames(a: string, b: string): number {

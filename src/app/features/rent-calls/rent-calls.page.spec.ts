@@ -87,11 +87,12 @@ async function setup(options: SetupOptions = {}) {
   fake.userName = 'julien';
   (options.seed ?? seedStandard)(fake);
   options.before?.(fake);
-  const now = options.now ?? new Date(2026, 10, 25, 9, 30);
+  /** The clock the page reads: a spec moves it to let time pass. */
+  const clock = { now: options.now ?? new Date(2026, 10, 25, 9, 30) };
   TestBed.configureTestingModule({
     providers: [
       { provide: ParseClient, useValue: fake },
-      { provide: NOW, useValue: () => new Date(now) },
+      { provide: NOW, useValue: () => new Date(clock.now) },
       provideRouter([
         { path: 'appels', component: RentCallsPage },
         { path: 'appels/envoi', component: OtherPage },
@@ -104,6 +105,7 @@ async function setup(options: SetupOptions = {}) {
   const router = TestBed.inject(Router);
   const view = {
     fake,
+    clock,
     harness,
     router,
     auth: TestBed.inject(AuthService),
@@ -212,6 +214,19 @@ describe('RentCallsPage', () => {
       expect(text(view.root.querySelector('h1'))).toBe('Décembre 2026');
       expect(view.root.querySelector('app-error-state')).toBeNull();
       expect(view.root.querySelector('app-empty-state')).toBeNull();
+    });
+
+    it('keeps the room of the reminder banner in the skeleton from the 25th, and only then', async () => {
+      const hang = (fake: FakeParseClient) => fake.hangWhen((call) => call.op === 'find');
+      const on25 = await setup({ now: new Date(2026, 10, 25), before: hang });
+      await on25.open();
+      expect(on25.root.querySelectorAll('[data-skeleton="banner"]')).toHaveLength(1);
+
+      TestBed.resetTestingModule();
+      const on24 = await setup({ now: new Date(2026, 10, 24), before: hang });
+      await on24.open();
+      expect(on24.root.querySelectorAll('[data-skeleton="kpi"]')).toHaveLength(3);
+      expect(on24.root.querySelectorAll('[data-skeleton="banner"]')).toHaveLength(0);
     });
 
     it('replaces the skeleton by the real content, and nothing stays busy', async () => {
@@ -647,6 +662,22 @@ describe('RentCallsPage', () => {
       expect(view.root.querySelector('app-error-state')).toBeNull();
       expect(rowsOf(view.root)).toHaveLength(3);
       expect(retryButton(view.root)).toBeUndefined();
+    });
+
+    it('reads the date again on « Réessayer »: a page left open over a month change follows it', async () => {
+      const view = await setup({
+        now: new Date(2026, 10, 25),
+        before: (fake) => fake.failWhen((call) => call.op === 'find', parseError(100)),
+      });
+      await view.open();
+      expect(text(view.root.querySelector('h1'))).toBe('Décembre 2026');
+
+      view.clock.now = new Date(2026, 11, 28);
+      retryButton(view.root)?.click();
+      await view.settle();
+
+      expect(text(view.root.querySelector('h1'))).toBe('Janvier 2027');
+      expect(text(banner(view.root))).toBe('Les appels de loyer de janvier 2027 sont à envoyer.');
     });
 
     it('disables « Réessayer » while the retry runs, so a second tap starts no second request', async () => {

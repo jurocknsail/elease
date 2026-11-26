@@ -10,7 +10,13 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { ErrorState } from '../../shared/ui/error-state';
 import { Icon } from '../../shared/ui/icon';
 import { Pill } from '../../shared/ui/pill';
-import { RentCallRow, buildRows, showReminderBanner, summary } from './send-state';
+import {
+  REMINDER_FROM_DAY,
+  RentCallRow,
+  buildRows,
+  showReminderBanner,
+  summary,
+} from './send-state';
 
 /**
  * One row, two layouts. Below 768 px: two lines (lease + amount, tenant + status). From 768 px: one
@@ -18,7 +24,7 @@ import { RentCallRow, buildRows, showReminderBanner, summary } from './send-stat
  * fixed columns. Literal class strings: Tailwind scans the sources.
  */
 const ROW_GRID =
-  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_7.5rem_7rem] md:gap-x-4 md:px-5 md:py-2.5';
+  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_7.5rem_7rem] lg:gap-x-4 lg:px-5 lg:py-2.5';
 
 const SKELETON = 'animate-pulse rounded bg-border';
 
@@ -102,7 +108,7 @@ function capitalise(value: string): string {
         @if (failureInfo(); as info) {
           <div
             role="alert"
-            class="mt-6 flex flex-col gap-3 rounded-xl border border-danger bg-danger-soft px-4 py-3 text-sm text-text sm:flex-row sm:items-center sm:justify-between"
+            class="mt-6 flex flex-col gap-3 rounded-xl border border-warn/40 bg-warn-soft px-4 py-3 text-sm text-text sm:flex-row sm:items-center sm:justify-between"
           >
             <div>
               <p class="font-semibold">{{ info.title }}</p>
@@ -127,7 +133,7 @@ function capitalise(value: string): string {
         @if (reminder()) {
           <div
             role="status"
-            class="mt-6 flex items-start gap-3 rounded-xl border border-accent bg-accent-soft px-4 py-3 text-sm text-text"
+            class="mt-6 flex items-start gap-3 rounded-xl border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-text"
           >
             <app-icon name="clock" class="mt-0.5 size-5 text-accent" />
             <p class="font-medium">Les appels de loyer de {{ monthLabel() }} sont à envoyer.</p>
@@ -136,11 +142,11 @@ function capitalise(value: string): string {
 
         <section aria-labelledby="resume-titre" class="mt-6">
           <h2 id="resume-titre" class="sr-only">Résumé du mois</h2>
-          <dl class="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <dl class="grid grid-cols-2 gap-3 lg:grid-cols-3">
             <div class="rounded-xl border border-border bg-surface px-4 py-3 md:px-5 md:py-4">
               <dt class="text-xs font-medium text-muted md:text-sm">À envoyer</dt>
               <dd
-                class="mt-1 text-2xl font-semibold tabular-nums md:text-3xl"
+                class="mt-1 text-2xl font-semibold tabular-nums xl:text-3xl"
                 [class.text-accent]="totals().todo > 0"
               >
                 {{ totals().todo }}
@@ -148,15 +154,15 @@ function capitalise(value: string): string {
             </div>
             <div class="rounded-xl border border-border bg-surface px-4 py-3 md:px-5 md:py-4">
               <dt class="text-xs font-medium text-muted md:text-sm">Envoyés</dt>
-              <dd class="mt-1 text-2xl font-semibold tabular-nums md:text-3xl">
+              <dd class="mt-1 text-2xl font-semibold tabular-nums xl:text-3xl">
                 {{ totals().sent }}
               </dd>
             </div>
             <div
-              class="col-span-2 rounded-xl border border-border bg-surface px-4 py-3 md:col-span-1 md:px-5 md:py-4"
+              class="col-span-2 rounded-xl border border-border bg-surface px-4 py-3 lg:col-span-1 md:px-5 md:py-4"
             >
               <dt class="text-xs font-medium text-muted md:text-sm">Total du mois</dt>
-              <dd class="mt-1 text-2xl font-semibold tabular-nums md:text-3xl">
+              <dd class="mt-1 text-2xl font-semibold tabular-nums xl:text-3xl">
                 {{ totalLabel() }}
                 <span class="block text-xs font-normal text-muted">{{ leaseCountLabel() }}</span>
               </dd>
@@ -165,12 +171,12 @@ function capitalise(value: string): string {
         </section>
 
         <section class="mt-6 overflow-hidden rounded-xl border border-border bg-bg">
-          <h2 class="border-b border-border px-4 py-3 text-sm font-semibold md:px-5">
+          <h2 class="border-b border-border px-4 py-3 text-sm font-semibold lg:px-5">
             Détail par bail
           </h2>
           <div
             aria-hidden="true"
-            class="${ROW_GRID} hidden border-b border-border bg-surface py-2! text-xs font-medium text-muted md:grid"
+            class="${ROW_GRID} hidden border-b border-border bg-surface py-2! text-xs font-medium text-muted lg:grid"
           >
             <span>Bail</span>
             <span>Locataire</span>
@@ -186,17 +192,17 @@ function capitalise(value: string): string {
                   >{{ row.lease }}</span
                 >
                 <span
-                  class="col-start-1 row-start-2 truncate text-sm text-muted md:col-start-2 md:row-start-1"
+                  class="col-start-1 row-start-2 truncate text-sm text-muted lg:col-start-2 lg:row-start-1"
                   [attr.title]="row.holder"
                   >{{ row.holder }}</span
                 >
                 <app-pill
-                  class="col-start-2 row-start-2 justify-self-end md:col-start-3 md:row-start-1 md:justify-self-start"
+                  class="col-start-2 row-start-2 justify-self-end lg:col-start-3 lg:row-start-1 lg:justify-self-start"
                   [tone]="row.sent ? 'ok' : 'warn'"
                   >{{ row.sent ? 'Envoyé' : 'À envoyer' }}</app-pill
                 >
                 <span
-                  class="col-start-2 row-start-1 text-right text-sm font-semibold tabular-nums md:col-start-4"
+                  class="col-start-2 row-start-1 text-right text-sm font-semibold tabular-nums lg:col-start-4"
                   >{{ row.amount }}</span
                 >
               </li>
@@ -220,34 +226,49 @@ function capitalise(value: string): string {
         <div aria-busy="true">
           <p class="sr-only">Chargement des appels de loyer en cours.</p>
           <div aria-hidden="true">
-            <div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3">
+            @if (reserveBanner()) {
+              <!-- From the 25th the banner is nearly always there once the data is in: keep its room. -->
+              <div
+                data-skeleton="banner"
+                class="${SKELETON} mt-6 h-[66px] rounded-xl min-[480px]:h-12"
+              ></div>
+            }
+            <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
               @for (n of kpiPlaceholders; track n) {
                 <div
                   data-skeleton="kpi"
                   class="rounded-xl border border-border bg-surface px-4 py-3 md:px-5 md:py-4"
-                  [class]="n === 2 ? 'col-span-2 md:col-span-1' : ''"
+                  [class]="n === 2 ? 'col-span-2 lg:col-span-1' : ''"
                 >
-                  <span class="${SKELETON} block h-3.5 w-20"></span>
-                  <span class="${SKELETON} mt-2 block h-8 w-16 md:h-9"></span>
+                  <span class="flex h-4 items-center md:h-5">
+                    <span class="${SKELETON} h-3.5 w-20"></span>
+                  </span>
+                  <span class="${SKELETON} mt-1 block h-8 w-16 xl:h-9"></span>
+                  @if (n === 2) {
+                    <span class="flex h-4 items-center">
+                      <span class="${SKELETON} h-3 w-14"></span>
+                    </span>
+                  }
                 </div>
               }
             </div>
             <div class="mt-6 overflow-hidden rounded-xl border border-border bg-bg">
-              <div class="border-b border-border px-4 py-3 md:px-5">
-                <span class="${SKELETON} block h-4 w-28"></span>
+              <div class="border-b border-border px-4 py-3 lg:px-5">
+                <span class="${SKELETON} my-1 block h-3 w-28"></span>
               </div>
+              <div class="hidden h-[33px] border-b border-border bg-surface lg:block"></div>
               <ul class="divide-y divide-border">
                 @for (n of rowPlaceholders; track n) {
                   <li data-skeleton="row" class="${ROW_GRID}">
-                    <span class="${SKELETON} col-start-1 row-start-1 block h-4 w-3/4"></span>
+                    <span class="${SKELETON} col-start-1 row-start-1 my-0.5 block h-4 w-3/4"></span>
                     <span
-                      class="${SKELETON} col-start-1 row-start-2 block h-4 w-1/2 md:col-start-2 md:row-start-1"
+                      class="${SKELETON} col-start-1 row-start-2 my-0.5 block h-4 w-1/2 lg:col-start-2 lg:row-start-1"
                     ></span>
                     <span
-                      class="${SKELETON} col-start-2 row-start-2 block h-5 w-20 justify-self-end rounded-full md:col-start-3 md:row-start-1 md:justify-self-start"
+                      class="${SKELETON} col-start-2 row-start-2 block h-5 w-20 justify-self-end rounded-full lg:col-start-3 lg:row-start-1 lg:justify-self-start"
                     ></span>
                     <span
-                      class="${SKELETON} col-start-2 row-start-1 block h-4 w-16 justify-self-end md:col-start-4"
+                      class="${SKELETON} col-start-2 row-start-1 my-0.5 block h-4 w-16 justify-self-end lg:col-start-4"
                     ></span>
                   </li>
                 }
@@ -289,6 +310,8 @@ export class RentCallsPage {
   protected readonly rows = computed(() => this.data().map(toView));
   protected readonly totals = computed(() => summary(this.data()));
   protected readonly reminder = computed(() => showReminderBanner(this.today(), this.data()));
+  /** On and after the reminder day, the skeleton keeps the room the banner will most likely take. */
+  protected readonly reserveBanner = computed(() => this.today().getDate() >= REMINDER_FROM_DAY);
 
   /**
    * What the screen shows. Rows in memory always win (fresh or stale); with none, a failure is the
