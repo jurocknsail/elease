@@ -1,0 +1,125 @@
+import { Injectable } from '@angular/core';
+import Parse from 'parse';
+import { environment } from '../../../environments/environment';
+
+/** Parse error code for an expired or invalid session token. */
+export const INVALID_SESSION_TOKEN = 209;
+/** Parse error code for "object not found". */
+export const OBJECT_NOT_FOUND = 101;
+
+/** Raised when a write needs the signed-in user but there is none. Same code as an expired session. */
+export class NoSessionError extends Error {
+  readonly code = INVALID_SESSION_TOKEN;
+
+  constructor() {
+    super('Session expirée : veuillez vous reconnecter.');
+    this.name = 'NoSessionError';
+  }
+}
+
+/**
+ * The small slice of the Parse SDK the repositories use. Real `Parse.Object`, `Parse.Query` and
+ * `Parse.ACL` instances satisfy these shapes; specs provide an in-memory fake, so no test touches the
+ * SDK or the network.
+ */
+export interface RemoteAcl {
+  toJSON(): unknown;
+}
+
+export interface RemoteObject {
+  readonly id: string | undefined;
+  get(key: string): unknown;
+  set(key: string, value: unknown): unknown;
+  /** Removes the field on the server at the next save. */
+  unset(key: string): unknown;
+  /** Atomic server-side "append unless already present". */
+  addUnique(key: string, value: unknown): unknown;
+  /** Atomic server-side removal of every occurrence. */
+  remove(key: string, value: unknown): unknown;
+  setACL(acl: RemoteAcl): unknown;
+  save(): Promise<RemoteObject>;
+  destroy(): Promise<RemoteObject>;
+  toJSON(): Record<string, unknown>;
+}
+
+export interface RemoteQuery {
+  include(key: string): RemoteQuery;
+  ascending(key: string): RemoteQuery;
+  limit(count: number): RemoteQuery;
+  equalTo(key: string, value: unknown): RemoteQuery;
+  find(): Promise<RemoteObject[]>;
+  first(): Promise<RemoteObject | undefined>;
+}
+
+/**
+ * Gateway to the Parse SDK (Back4App). Repositories inject this class; specs replace it with a fake.
+ * Calls made through it return raw promises: the repositories wrap each one in `withTimeout`, and let
+ * Parse errors propagate unchanged.
+ */
+@Injectable({ providedIn: 'root', useFactory: () => new SdkParseClient() })
+export abstract class ParseClient {
+  /** A new, unsaved object of the given class. */
+  abstract newObject(className: string): RemoteObject;
+  /** An unfetched reference (pointer) to an existing object: enough to relate it, update it or destroy it. */
+  abstract objectRef(className: string, id: string): RemoteObject;
+  abstract query(className: string): RemoteQuery;
+  /** Fetches one object by id; rejects with Parse error 101 when it does not exist (or is not readable). */
+  abstract fetchById(className: string, id: string): Promise<RemoteObject>;
+  /** ACL readable and writable by the signed-in user only; throws `NoSessionError` without a session. */
+  abstract ownerAcl(): RemoteAcl;
+  abstract currentUser(): RemoteObject | null;
+}
+
+let sdkInitialized = false;
+
+/** Initializes the SDK on first use, never at import time. Idempotent. */
+function ensureSdk(): void {
+  if (sdkInitialized) {
+    return;
+  }
+  Parse.initialize(environment.parseAppId, environment.parseJsKey);
+  Parse.serverURL = environment.parseServerUrl;
+  sdkInitialized = true;
+}
+
+class SdkParseClient extends ParseClient {
+  override newObject(className: string): RemoteObject {
+    ensureSdk();
+    return new Parse.Object(className);
+  }
+
+  override objectRef(className: string, id: string): RemoteObject {
+    ensureSdk();
+    const ref = new Parse.Object(className);
+    ref.id = id;
+    return ref;
+  }
+
+  override query(className: string): RemoteQuery {
+    ensureSdk();
+    return new Parse.Query(className);
+  }
+
+  override fetchById(className: string, id: string): Promise<RemoteObject> {
+    ensureSdk();
+    return new Parse.Query(className).get(id);
+  }
+
+  override ownerAcl(): RemoteAcl {
+    ensureSdk();
+    const user = Parse.User.current();
+    if (!user) {
+      throw new NoSessionError();
+    }
+    // Same ACL as the legacy app: only the owner can read or write.
+    const acl = new Parse.ACL(user);
+    acl.setPublicReadAccess(false);
+    acl.setPublicWriteAccess(false);
+    return acl;
+  }
+
+  override currentUser(): RemoteObject | null {
+    ensureSdk();
+    return Parse.User.current() ?? null;
+  }
+}
