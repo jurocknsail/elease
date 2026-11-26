@@ -87,7 +87,8 @@ export class LeaseholderRepository {
     const holder = await withTimeout(this.client.fetchById(HOLDER_CLASS, holderId));
 
     const object = this.client.newObject(LEASE_CLASS);
-    writeLeaseFields(object, lease);
+    // Creating (also the restore path): the bookkeeping fields are part of what is stored.
+    writeLeaseFields(object, lease, { bookkeeping: true });
     object.setACL(this.client.ownerAcl());
     const savedLease = await withTimeout(object.save());
 
@@ -111,15 +112,23 @@ export class LeaseholderRepository {
     return created;
   }
 
+  /**
+   * Saves an edit. Only what the user changed is written: the lease is compared with the version in
+   * the state, and `lastSendDate`, `lastSentPeriod` and `revisionReminderSentFor` are never written
+   * (only `markLeasesSent` and the cloud job record them), so a stale copy cannot erase what another
+   * device or a reminder recorded. The state then shows the server's version of the lease.
+   */
   async updateLease(lease: Lease): Promise<void> {
     if (!lease.objectId) {
       throw new Error('Bail sans identifiant : enregistrement impossible.');
     }
-    // Fetched so that absent values can stay absent, see writeLeaseFields.
+    const base = this.state()
+      .flatMap((holder) => holder.leases)
+      .find((candidate) => candidate.objectId === lease.objectId);
     const object = await withTimeout(this.client.fetchById(LEASE_CLASS, lease.objectId));
-    writeLeaseFields(object, lease);
-    const saved = await withTimeout(object.save());
-    this.replaceLease(leaseFromParse(saved.toJSON()));
+    const changed = writeLeaseFields(object, lease, { bookkeeping: false, base });
+    const result = changed ? await withTimeout(object.save()) : object;
+    this.replaceLease(leaseFromParse(result.toJSON()));
   }
 
   /**
@@ -129,8 +138,20 @@ export class LeaseholderRepository {
    */
   async deleteLease(holderId: string, leaseId: string): Promise<void> {
     const holder = await withTimeout(this.client.fetchById(HOLDER_CLASS, holderId));
-    const lease = this.client.objectRef(LEASE_CLASS, leaseId);
 
+    // Never destroy a lease of another holder. It must still be linked on the server, or be known
+    // under this holder in the state (a retry after a timeout: the unlink already went through).
+    const linked = holder.get('leases');
+    const isLinked =
+      Array.isArray(linked) && linked.some((ref) => isRemoteObject(ref) && ref.id === leaseId);
+    const isKnown = this.state()
+      .find((candidate) => candidate.objectId === holderId)
+      ?.leases.some((candidate) => candidate.objectId === leaseId);
+    if (!isLinked && !isKnown) {
+      throw new Error("Ce bail n'appartient pas à ce locataire : suppression impossible.");
+    }
+
+    const lease = this.client.objectRef(LEASE_CLASS, leaseId);
     holder.remove('leases', lease);
     await withTimeout(holder.save());
 

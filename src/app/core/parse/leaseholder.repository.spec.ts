@@ -154,9 +154,32 @@ describe('LeaseholderRepository', () => {
       expect(Object.keys(holders[0].leases[0])).not.toContain('isSelected');
       expect(Object.keys(holders[0].leases[0])).not.toContain('indexing');
 
-      expect(fake.callsOf('find', 'Leaseholder')).toHaveLength(1);
+      const finds = fake.callsOf('find', 'Leaseholder');
+      expect(finds).toHaveLength(1);
+      expect(finds[0].query).toEqual({
+        include: ['leases'],
+        order: 'createdAt',
+        limit: 1000,
+        where: [],
+      });
       expect('set' in repo.leaseholders).toBe(false);
       expect('update' in repo.leaseholders).toBe(false);
+    });
+
+    it('loads two holders sharing the same e-mail address: nothing assumes e-mails are unique', async () => {
+      const { fake, repo } = setup();
+      fake.seed('Leaseholder', 'h4', {
+        name: 'Même Adresse',
+        email: 'julien.berger1421@gmail.com',
+        phone: '',
+        leases: [],
+      });
+
+      await repo.load();
+
+      const sharing = repo.leaseholders().filter((h) => h.email === 'julien.berger1421@gmail.com');
+      expect(sharing.map((h) => h.objectId)).toEqual(['h1', 'h4']);
+      expect(repo.leaseholders()).toHaveLength(4);
     });
 
     it('rejects with a BackendTimeoutError after 20 s when Back4App hangs and keeps the previous state', async () => {
@@ -408,7 +431,7 @@ describe('LeaseholderRepository', () => {
   });
 
   describe('updateLease', () => {
-    it('writes all legacy fields on the existing object, without isSelected or indexing, and refreshes the state', async () => {
+    it('writes only the fields that changed, without isSelected or indexing, and refreshes the state', async () => {
       const { fake, repo } = await loaded();
 
       await repo.updateLease({
@@ -424,9 +447,16 @@ describe('LeaseholderRepository', () => {
 
       const call = fake.callsOf('save', 'Lease')[0];
       expect(call.id).toBe('a');
-      expect(keysOf(saveOps(call))).toEqual(
-        [...LEGACY_KEYS, 'indexType', 'referenceIndexQuarter', 'referenceIndexValue'].sort(),
-      );
+      expect(keysOf(saveOps(call))).toEqual([
+        'charge',
+        'indexType',
+        'name',
+        'price',
+        'referenceIndexQuarter',
+        'referenceIndexValue',
+        'renewalDate',
+      ]);
+      expect(saveOps(call).every((op) => op.kind === 'set')).toBe(true);
       expect(call.acl).toBeUndefined();
       // The ignored legacy fields stay in the database untouched.
       const stored = fake.record('Lease', 'a')!.attrs;
@@ -467,10 +497,95 @@ describe('LeaseholderRepository', () => {
 
       await repo.updateLease({ ...repo.leaseholders()[0].leases[0], name: 'Autre nom' });
 
-      const keys = keysOf(saveOps(fake.callsOf('save', 'Lease')[0]));
-      expect(keys).not.toContain('charge');
-      expect(keys).not.toContain('renewalDate');
+      expect(keysOf(saveOps(fake.callsOf('save', 'Lease')[0]))).toEqual(['name']);
       expect(fake.record('Lease', 'a')!.attrs['lot']).toBe(0);
+    });
+
+    it('never writes lastSendDate, lastSentPeriod or revisionReminderSentFor, and shows the fresh server values afterwards', async () => {
+      const { fake, repo } = await loaded();
+      const stale = repo.leaseholders()[0].leases[0];
+      // Another device sent the rent call and the cloud job sent its reminder meanwhile.
+      const server = fake.record('Lease', 'a')!.attrs;
+      server['lastSendDate'] = 1761393600000;
+      server['lastSentPeriod'] = '2026-11';
+      server['revisionReminderSentFor'] = '2027-03-01';
+
+      await repo.updateLease({
+        ...stale,
+        price: 5,
+        // Even stale or edited bookkeeping values on the lease passed in must not reach the server.
+        lastSendDate: 1,
+        lastSentPeriod: '2025-01',
+        revisionReminderSentFor: '2025-01-01',
+      });
+
+      const ops = saveOps(fake.callsOf('save', 'Lease')[0]);
+      expect(keysOf(ops)).toEqual(['price']);
+      expect(server['lastSendDate']).toBe(1761393600000);
+      expect(server['lastSentPeriod']).toBe('2026-11');
+      expect(server['revisionReminderSentFor']).toBe('2027-03-01');
+      expect(server['price']).toBe(5);
+      expect(repo.leaseholders()[0].leases[0]).toMatchObject({
+        price: 5,
+        lastSendDate: 1761393600000,
+        lastSentPeriod: '2026-11',
+        revisionReminderSentFor: '2027-03-01',
+      });
+    });
+
+    it('does not remove an index field written elsewhere when the stale copy lacked it and the user did not clear it', async () => {
+      const { fake, repo } = await loaded();
+      const stale = repo.leaseholders()[0].leases[0];
+      expect(stale.indexType).toBeUndefined();
+      const server = fake.record('Lease', 'a')!.attrs;
+      server['indexType'] = 'ILC';
+      server['referenceIndexQuarter'] = '2025-T2';
+      server['referenceIndexValue'] = 133.7;
+
+      await repo.updateLease({ ...stale, price: 5 });
+
+      expect(saveOps(fake.callsOf('save', 'Lease')[0])).toEqual([
+        { kind: 'set', key: 'price', value: 5 },
+      ]);
+      expect(server['indexType']).toBe('ILC');
+      expect(server['referenceIndexValue']).toBe(133.7);
+      expect(repo.leaseholders()[0].leases[0]).toMatchObject({
+        indexType: 'ILC',
+        referenceIndexQuarter: '2025-T2',
+        referenceIndexValue: 133.7,
+      });
+    });
+
+    it('does not save when nothing changed, and still shows the server version', async () => {
+      const { fake, repo } = await loaded();
+      const unchanged = repo.leaseholders()[0].leases[0];
+      fake.record('Lease', 'a')!.attrs['price'] = 7777;
+
+      await repo.updateLease(unchanged);
+
+      expect(fake.callsOf('save')).toEqual([]);
+      expect(repo.leaseholders()[0].leases[0].price).toBe(7777);
+    });
+
+    it('writes every non-bookkeeping field, and removes nothing, when the lease is not in the state', async () => {
+      const { fake, repo } = setup(); // not loaded: the base version is unknown
+      expect(fake.record('Lease', 'b')!.attrs['charge']).toBe(80);
+
+      await repo.updateLease({
+        ...newLease({ charge: null, renewalDate: null, lot: null, lastSendDate: 42 }),
+        objectId: 'b',
+      });
+
+      const ops = saveOps(fake.callsOf('save', 'Lease')[0]);
+      expect(keysOf(ops)).toEqual(
+        LEGACY_KEYS.filter(
+          (key) => !['charge', 'renewalDate', 'lot', 'lastSendDate'].includes(key),
+        ),
+      );
+      expect(ops.some((op) => op.kind === 'unset')).toBe(false);
+      // Nothing can prove the user cleared the charge: it stays.
+      expect(fake.record('Lease', 'b')!.attrs['charge']).toBe(80);
+      expect(fake.record('Lease', 'b')!.attrs['lastSendDate']).toBe(0);
     });
 
     it('rejects a lease without objectId before any remote call', async () => {
@@ -558,6 +673,28 @@ describe('LeaseholderRepository', () => {
         pointer('Lease', 'b'),
       ]);
       expect(leaseNames(repo, 'h1')).toEqual(['Bail A', 'Bail B']);
+    });
+
+    it('refuses to destroy a lease that does not belong to the holder, and touches nothing', async () => {
+      const { fake, repo } = await loaded();
+      const before = repo.leaseholders();
+
+      // Lease a belongs to h1, not h2.
+      await expect(repo.deleteLease('h2', 'a')).rejects.toThrow('appartient');
+
+      expect(fake.callsOf('destroy')).toEqual([]);
+      expect(fake.callsOf('save')).toEqual([]);
+      expect(fake.record('Lease', 'a')).toBeDefined();
+      expect(fake.record('Leaseholder', 'h1')?.attrs['leases']).toHaveLength(3);
+      expect(fake.record('Leaseholder', 'h2')?.attrs['leases']).toEqual([pointer('Lease', 'c')]);
+      expect(repo.leaseholders()).toBe(before);
+    });
+
+    it('refuses an unknown lease id as well', async () => {
+      const { fake, repo } = await loaded();
+
+      await expect(repo.deleteLease('h3', 'nope')).rejects.toThrow('appartient');
+      expect(fake.callsOf('destroy')).toEqual([]);
     });
 
     it('does not destroy the lease when unlinking fails', async () => {

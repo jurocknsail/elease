@@ -20,10 +20,22 @@ export type FakeOp =
   | { kind: 'addUnique'; key: string; value: unknown }
   | { kind: 'remove'; key: string; value: unknown };
 
+/** What a query asked for, as the repositories built it. */
+export interface FakeQueryParams {
+  include: string[];
+  /** Ascending sort key. */
+  order?: string;
+  limit?: number;
+  /** `equalTo` constraints, pointers in their JSON form. */
+  where: Array<[string, unknown]>;
+}
+
 export interface FakeCall {
   op: 'find' | 'fetch' | 'save' | 'destroy';
   className: string;
   id?: string;
+  /** Parameters of a `find`. */
+  query?: FakeQueryParams;
   /** Field operations carried by a save. */
   ops?: readonly FakeOp[];
   /** ACL set on the object before a save. */
@@ -90,15 +102,23 @@ export class FakeParseClient implements ParseClient {
 
   // ----- test helpers -----
 
-  /** Puts a record in the fake server. `attrs` use the Parse JSON encoding (pointers via `pointer()`). */
-  seed(className: string, id: string, attrs: Record<string, unknown> = {}): void {
+  /**
+   * Puts a record in the fake server. `attrs` use the Parse JSON encoding (pointers via `pointer()`).
+   * `createdAt` (a logical tick) defaults to "now", i.e. after every record seeded before.
+   */
+  seed(
+    className: string,
+    id: string,
+    attrs: Record<string, unknown> = {},
+    options: { createdAt?: number } = {},
+  ): void {
     const tick = this.tick();
     this.records.set(`${className}:${id}`, {
       className,
       id,
       attrs: clone(attrs),
       acl: this.userId ? { [this.userId]: { read: true, write: true } } : undefined,
-      createdAt: tick,
+      createdAt: options.createdAt ?? tick,
       updatedAt: tick,
     });
   }
@@ -456,7 +476,16 @@ class FakeQuery implements RemoteQuery {
   }
 
   async find(): Promise<RemoteObject[]> {
-    await this.client.gate({ op: 'find', className: this.className });
+    await this.client.gate({
+      op: 'find',
+      className: this.className,
+      query: {
+        include: [...this.includes],
+        order: this.sortKey,
+        limit: Number.isFinite(this.max) ? this.max : undefined,
+        where: this.constraints.map(([key, value]) => [key, clone(value)]),
+      },
+    });
     let records = this.client
       .recordsOf(this.className)
       .filter((record) =>

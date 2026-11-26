@@ -189,6 +189,33 @@ describe('leaseToParseFields', () => {
     expect('indexing' in fields).toBe(false);
   });
 
+  it('round-trips the real-shaped lease: present legacy fields unchanged, absent ones null, nothing else', () => {
+    const json = realShapedLease();
+    const fields = leaseToParseFields(leaseFromParse(json));
+
+    for (const key of [
+      'isPro',
+      'name',
+      'lot',
+      'streetNumber',
+      'streetName',
+      'optionalAddressInfo',
+      'postalCode',
+      'city',
+      'lastSendDate',
+      'price',
+    ]) {
+      expect(fields[key], key).toEqual(json[key]);
+    }
+    expect(fields['lot']).toBe(0);
+    expect(fields['charge']).toBeNull();
+    expect(fields['renewalDate']).toBeNull();
+    expect(fields['additionalCharges']).toEqual([]);
+    expect('isSelected' in fields).toBe(false);
+    expect('indexing' in fields).toBe(false);
+    expect(Object.keys(fields).sort()).toEqual(LEGACY_KEYS);
+  });
+
   it('round-trips the legacy fields unchanged', () => {
     const json: Record<string, unknown> = {
       ...realShapedLease(),
@@ -249,78 +276,191 @@ describe('leaseToParseFields', () => {
 });
 
 describe('writeLeaseFields', () => {
+  const BOOKKEEPING = ['lastSendDate', 'lastSentPeriod', 'revisionReminderSentFor'];
+
   /** Minimal writable object recording what is sent. */
-  function target(initial: Record<string, unknown> = {}) {
-    const values = { ...initial };
+  function target() {
     const log: Array<[string, string, unknown?]> = [];
-    const object = {
-      get: (key: string) => values[key],
+    const object: Pick<RemoteObject, 'set' | 'unset'> = {
       set: (key: string, value: unknown) => {
         log.push(['set', key, value]);
-        values[key] = value;
       },
       unset: (key: string) => {
         log.push(['unset', key]);
-        delete values[key];
       },
     };
-    return { object: object as unknown as Pick<RemoteObject, 'get' | 'set' | 'unset'>, log };
+    return { object, log };
   }
 
-  it('never sends null: an absent charge, renewalDate or lot stays absent', () => {
-    const { object, log } = target();
-    writeLeaseFields(object, baseLease({ charge: null, renewalDate: null, lot: null }));
+  const keysSet = (log: Array<[string, string, unknown?]>) =>
+    log.filter(([op]) => op === 'set').map(([, key]) => key);
+  const keysUnset = (log: Array<[string, string, unknown?]>) =>
+    log.filter(([op]) => op === 'unset').map(([, key]) => key);
 
-    const keys = log.map(([, key]) => key);
-    expect(keys).not.toContain('charge');
-    expect(keys).not.toContain('renewalDate');
-    expect(keys).not.toContain('lot');
-    expect(log.some(([, , value]) => value === null)).toBe(false);
-  });
+  describe('on creation (no base lease)', () => {
+    it('never sends null: an absent charge, renewalDate or lot is simply not stored', () => {
+      const { object, log } = target();
+      writeLeaseFields(object, baseLease({ charge: null, renewalDate: null, lot: null }), {
+        bookkeeping: true,
+      });
 
-  it('removes a stored value that the lease no longer has', () => {
-    const { object, log } = target({ charge: 50, renewalDate: 1767225600000, lot: 2 });
-    writeLeaseFields(object, baseLease({ charge: null, renewalDate: null, lot: null }));
-
-    expect(
-      log
-        .filter(([op]) => op === 'unset')
-        .map(([, key]) => key)
-        .sort(),
-    ).toEqual(['charge', 'lot', 'renewalDate']);
-  });
-
-  it('leaves an explicit stored null untouched', () => {
-    const { object, log } = target({ charge: null });
-    writeLeaseFields(object, baseLease({ charge: null }));
-
-    expect(log.map(([, key]) => key)).not.toContain('charge');
-  });
-
-  it('keeps lot 0 and charge 0 as real values', () => {
-    const { object, log } = target();
-    writeLeaseFields(object, baseLease({ lot: 0, charge: 0 }));
-
-    expect(log).toContainEqual(['set', 'lot', 0]);
-    expect(log).toContainEqual(['set', 'charge', 0]);
-  });
-
-  it('clears the editable index fields but never the bookkeeping ones', () => {
-    const { object, log } = target({
-      indexType: 'IRL',
-      referenceIndexQuarter: '2025-T2',
-      referenceIndexValue: 143.5,
-      lastSentPeriod: '2026-12',
-      revisionReminderSentFor: '2027-03-01',
+      expect(keysSet(log)).not.toContain('charge');
+      expect(keysSet(log)).not.toContain('renewalDate');
+      expect(keysSet(log)).not.toContain('lot');
+      expect(keysUnset(log)).toEqual([]);
+      expect(log.some(([, , value]) => value === null)).toBe(false);
     });
-    writeLeaseFields(object, baseLease());
 
-    expect(
-      log
-        .filter(([op]) => op === 'unset')
-        .map(([, key]) => key)
-        .sort(),
-    ).toEqual(['indexType', 'referenceIndexQuarter', 'referenceIndexValue']);
+    it('keeps lot 0 and charge 0 as real values', () => {
+      const { object, log } = target();
+      writeLeaseFields(object, baseLease({ lot: 0, charge: 0 }), { bookkeeping: true });
+
+      expect(log).toContainEqual(['set', 'lot', 0]);
+      expect(log).toContainEqual(['set', 'charge', 0]);
+    });
+
+    it('writes the bookkeeping fields only when asked to', () => {
+      const lease = baseLease({
+        lastSendDate: 1761393600000,
+        lastSentPeriod: '2026-11',
+        revisionReminderSentFor: '2027-03-01',
+      });
+
+      const withBookkeeping = target();
+      writeLeaseFields(withBookkeeping.object, lease, { bookkeeping: true });
+      expect(keysSet(withBookkeeping.log)).toEqual(expect.arrayContaining(BOOKKEEPING));
+
+      const without = target();
+      writeLeaseFields(without.object, lease, { bookkeeping: false });
+      for (const key of BOOKKEEPING) {
+        expect(keysSet(without.log)).not.toContain(key);
+      }
+      expect(keysSet(without.log)).toContain('name');
+    });
+
+    it('never removes anything when it cannot prove the user cleared it', () => {
+      const { object, log } = target();
+      writeLeaseFields(object, baseLease({ charge: null, renewalDate: null, lot: null }), {
+        bookkeeping: false,
+      });
+
+      expect(keysUnset(log)).toEqual([]);
+    });
+  });
+
+  describe('against the base lease the user started from', () => {
+    it('writes only the fields that differ, and reports it', () => {
+      const { object, log } = target();
+      const base = baseLease();
+
+      const written = writeLeaseFields(
+        object,
+        { ...base, price: 600 },
+        { bookkeeping: false, base },
+      );
+
+      expect(log).toEqual([['set', 'price', 600]]);
+      expect(written).toBe(true);
+    });
+
+    it('writes nothing, and reports it, when nothing changed', () => {
+      const { object, log } = target();
+      const base = baseLease();
+
+      const written = writeLeaseFields(
+        object,
+        { ...base, additionalCharges: [{ title: 'Parking', amount: 25 }] },
+        { bookkeeping: false, base },
+      );
+
+      expect(log).toEqual([]);
+      expect(written).toBe(false);
+    });
+
+    it('compares additional charges by value', () => {
+      const { object, log } = target();
+      const base = baseLease();
+
+      writeLeaseFields(
+        object,
+        { ...base, additionalCharges: [{ title: 'Parking', amount: 30 }] },
+        { bookkeeping: false, base },
+      );
+
+      expect(log).toEqual([['set', 'additionalCharges', [{ title: 'Parking', amount: 30 }]]]);
+    });
+
+    it('removes charge, renewalDate and lot only when the base had a value and the lease has none', () => {
+      const { object, log } = target();
+      const base = baseLease({ charge: 50, renewalDate: 1767225600000, lot: 2 });
+
+      writeLeaseFields(
+        object,
+        { ...base, charge: null, renewalDate: null, lot: null },
+        { bookkeeping: false, base },
+      );
+
+      expect(keysUnset(log).sort()).toEqual(['charge', 'lot', 'renewalDate']);
+      expect(keysSet(log)).toEqual([]);
+    });
+
+    it('leaves a value that was already absent in the base alone', () => {
+      const { object, log } = target();
+      const base = baseLease({ charge: null, renewalDate: null, lot: null });
+
+      writeLeaseFields(object, { ...base, name: 'Autre' }, { bookkeeping: false, base });
+
+      expect(log).toEqual([['set', 'name', 'Autre']]);
+    });
+
+    it('clears an editable index field only when the base had it', () => {
+      const withIndex = baseLease({
+        indexType: 'IRL',
+        referenceIndexQuarter: '2025-T2',
+        referenceIndexValue: 143.5,
+      });
+      const cleared = target();
+      writeLeaseFields(
+        cleared.object,
+        {
+          ...withIndex,
+          indexType: undefined,
+          referenceIndexQuarter: undefined,
+          referenceIndexValue: undefined,
+        },
+        { bookkeeping: false, base: withIndex },
+      );
+      expect(keysUnset(cleared.log).sort()).toEqual([
+        'indexType',
+        'referenceIndexQuarter',
+        'referenceIndexValue',
+      ]);
+
+      // The base never had them (another device may have written them since): leave them alone.
+      const absent = target();
+      const base = baseLease();
+      writeLeaseFields(absent.object, { ...base, price: 1 }, { bookkeeping: false, base });
+      expect(absent.log).toEqual([['set', 'price', 1]]);
+    });
+
+    it('never writes the bookkeeping fields, even if they differ from the base', () => {
+      const { object, log } = target();
+      const base = baseLease({ lastSendDate: 0 });
+
+      writeLeaseFields(
+        object,
+        {
+          ...base,
+          price: 1,
+          lastSendDate: 99,
+          lastSentPeriod: '2025-01',
+          revisionReminderSentFor: '2025-01-01',
+        },
+        { bookkeeping: false, base },
+      );
+
+      expect(log).toEqual([['set', 'price', 1]]);
+    });
   });
 });
 

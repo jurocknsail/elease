@@ -79,6 +79,11 @@ function ensureSdk(): void {
   }
   Parse.initialize(environment.parseAppId, environment.parseJsKey);
   Parse.serverURL = environment.parseServerUrl;
+  // The browser build defaults to single-instance mode: all objects with the same id share their
+  // pending changes, so the changes of a failed save leak into the next save of an unrelated object
+  // with that id (and a failed Remove op blocks the next AddUnique on the same field). Every object
+  // here is independent: turn it off before any object exists. @types/parse does not declare it.
+  (Parse.Object as unknown as { disableSingleInstance(): void }).disableSingleInstance();
   sdkInitialized = true;
 }
 

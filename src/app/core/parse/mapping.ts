@@ -111,31 +111,73 @@ const CLEARABLE_INDEX_FIELDS = [
 ] as const;
 
 /**
+ * Fields recorded by a send (`markLeasesSent`) or by the cloud job, never by an edit: an in-memory
+ * copy may be stale, and writing it back would erase what another device or the job recorded.
+ */
+const BOOKKEEPING_FIELDS: readonly string[] = [
+  'lastSendDate',
+  'lastSentPeriod',
+  'revisionReminderSentFor',
+];
+
+export interface WriteLeaseOptions {
+  /** Write the bookkeeping fields too. Only creating a lease does (restore keeps them). */
+  bookkeeping: boolean;
+  /**
+   * The lease as the user started from it (the one in the repository state). When given, only the
+   * fields that differ from it are written, and a field is removed only if the base had a value and
+   * the lease has none: that is the proof the user cleared it. Without it, every field is written
+   * and nothing is ever removed.
+   */
+  base?: Lease;
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
  * Applies `leaseToParseFields(lease)` to a Parse object without altering what is stored for absent
- * values: a `null` field (no charge, no renewal date, no lot) is never written, so a missing value
- * does not become `0`, a date or an explicit `null`; it is only removed (`unset`) when the object
- * currently holds a value. Lot 0 and charge 0 are real values and are written as such. The reminder
- * bookkeeping fields (`lastSentPeriod`, `revisionReminderSentFor`) are written when defined and never
- * removed, so a stale copy cannot erase what a send or a cloud job recorded.
+ * values: a `null` field (no charge, no renewal date, no lot) is never sent, so a missing value does
+ * not become `0`, a date or an explicit `null`; it is only removed (`unset`) when the base proves the
+ * user cleared it. Lot 0 and charge 0 are real values and are written as such. The editable index
+ * fields are cleared the same way. Returns whether anything was set or removed.
  */
 export function writeLeaseFields(
-  target: Pick<RemoteObject, 'get' | 'set' | 'unset'>,
+  target: Pick<RemoteObject, 'set' | 'unset'>,
   lease: Lease,
-): void {
+  options: WriteLeaseOptions,
+): boolean {
+  const { base } = options;
+  const baseFields = base ? leaseToParseFields(base) : undefined;
+  let written = false;
+
   for (const [key, value] of Object.entries(leaseToParseFields(lease))) {
-    if (value === null) {
-      if (target.get(key) != null) {
-        target.unset(key);
-      }
-    } else {
+    if (!options.bookkeeping && BOOKKEEPING_FIELDS.includes(key)) {
+      continue;
+    }
+    const before = baseFields?.[key];
+    if (baseFields && sameValue(value, before)) {
+      continue;
+    }
+    if (value !== null) {
       target.set(key, value);
-    }
-  }
-  for (const key of CLEARABLE_INDEX_FIELDS) {
-    if (lease[key] === undefined && target.get(key) != null) {
+      written = true;
+    } else if (baseFields && before != null) {
       target.unset(key);
+      written = true;
     }
   }
+
+  if (base) {
+    for (const key of CLEARABLE_INDEX_FIELDS) {
+      if (lease[key] === undefined && base[key] !== undefined) {
+        target.unset(key);
+        written = true;
+      }
+    }
+  }
+  return written;
 }
 
 /** A lease entry that was actually loaded (`include`), not a bare or dangling pointer. */

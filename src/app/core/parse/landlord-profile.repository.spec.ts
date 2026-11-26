@@ -79,6 +79,42 @@ describe('LandlordProfileRepository', () => {
       expect(fake.callsOf('save')).toEqual([]);
     });
 
+    it('queries the own profile by user pointer, oldest first, one result', async () => {
+      const { fake, repo } = setup();
+
+      await repo.get();
+
+      const finds = fake.callsOf('find', 'LandlordProfile');
+      expect(finds).toHaveLength(1);
+      expect(finds[0].query).toEqual({
+        include: [],
+        order: 'createdAt',
+        limit: 1,
+        where: [['user', pointer('_User', 'user-1')]],
+      });
+    });
+
+    it('takes the oldest profile when duplicates exist', async () => {
+      const { fake, repo } = setup();
+      const attrs = (name: string) => ({
+        name,
+        addressLines: [],
+        issueCity: '',
+        legalNotice: '',
+        emailSignature: '',
+        user: pointer('_User', 'user-1'),
+      });
+      // The newer one is stored first on purpose: only the creation date tells them apart.
+      fake.seed('LandlordProfile', 'newer', attrs('SCI RÉCENTE'), { createdAt: 500 });
+      fake.seed('LandlordProfile', 'older', attrs('SCI ANCIENNE'), { createdAt: 5 });
+
+      const profile = await repo.get();
+
+      expect(profile.objectId).toBe('older');
+      expect(profile.name).toBe('SCI ANCIENNE');
+      expect(fake.callsOf('save')).toEqual([]);
+    });
+
     it('creates only one profile when called twice at the same time', async () => {
       const { fake, repo } = setup();
 
