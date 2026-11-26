@@ -8,6 +8,7 @@
       "resources": {
         "files": [
           "/icons/*.png",
+          "/media/inter-latin-wght-normal-*.woff2",
           "/index.csr.html",
           "/index.html",
           "/manifest.webmanifest",
