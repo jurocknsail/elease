@@ -1,4 +1,4 @@
-import { Injectable, InjectionToken, inject } from '@angular/core';
+import { Injectable, InjectionToken, inject, signal } from '@angular/core';
 import { APP_ENV } from '../app-env';
 import { AuthService } from '../auth/auth.service';
 import { SessionErrorHandler } from '../auth/session-error';
@@ -134,7 +134,27 @@ export class RentCallSender {
   private readonly auth = inject(AuthService);
   private readonly session = inject(SessionErrorHandler);
 
+  /**
+   * How many `send` calls are running right now, app-wide (this service is a root singleton). A screen
+   * that is left and opened again while a send runs must not start a second one: the first has not
+   * recorded anything yet, so the leases still look « À envoyer » and the tenant would get two e-mails.
+   */
+  readonly inFlight = signal(0);
+
   async send(
+    groups: ReadonlyMap<string, EmailGroup>,
+    p: BillingPeriod,
+    profile: LandlordProfile,
+  ): Promise<SendResult[]> {
+    this.inFlight.update((count) => count + 1);
+    try {
+      return await this.sendAll(groups, p, profile);
+    } finally {
+      this.inFlight.update((count) => count - 1);
+    }
+  }
+
+  private async sendAll(
     groups: ReadonlyMap<string, EmailGroup>,
     p: BillingPeriod,
     profile: LandlordProfile,

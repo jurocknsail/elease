@@ -6,7 +6,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { APP_ENV, AppEnv } from '../../core/app-env';
 import { NOW } from '../../core/clock';
-import { SEND_CLOCK } from '../../core/email/rent-call-sender';
+import { RentCallSender, SEND_CLOCK } from '../../core/email/rent-call-sender';
 import { LeaseholderRepository } from '../../core/parse/leaseholder.repository';
 import { ParseClient } from '../../core/parse/parse-client';
 import {
@@ -860,6 +860,109 @@ describe('SendPage', () => {
 
       const sent = attachmentsOf(clouds(view.fake)[0]).map((a) => a.Filename);
       expect(sent).toEqual(['dupont-studio-12_2026.pdf', 'martin-commerce-12_2026.pdf']);
+    });
+  });
+
+  describe('an e-mail send that is running blocks every instance of the page (app-wide guard)', () => {
+    it('a page opened again while a send is pending cannot send, and comes back after a fresh load once it ends', async () => {
+      let finish!: () => void;
+      const pending = new Promise<unknown>((resolve) => (finish = () => resolve([])));
+      const view = await setup();
+      const sender = TestBed.inject(RentCallSender);
+      const sendAll = vi
+        .spyOn(sender as unknown as { sendAll: () => Promise<unknown> }, 'sendAll')
+        .mockImplementation(() => pending);
+      await view.open();
+      sendButton(view.root).click();
+      await view.settle();
+      expect(sendAll).toHaveBeenCalledTimes(1);
+      expect(sender.inFlight()).toBe(1);
+
+      // The user goes to another screen and comes back: a NEW instance of the page.
+      await view.harness.navigateByUrl('/locataires');
+      await view.open();
+      const dialogsBefore = view.dialog.opened.length;
+      expect(sendButton(view.root).disabled).toBe(true);
+      expect(reason(view.root)).toBe('Envoi en cours…');
+      await (view.page as unknown as { send(): Promise<void> }).send();
+      expect(sendAll).toHaveBeenCalledTimes(1);
+      expect(view.dialog.opened.length).toBe(dialogsBefore);
+
+      const loadsBefore = view.fake.callsOf('find', 'Leaseholder').length;
+      finish();
+      await view.settle();
+
+      expect(sender.inFlight()).toBe(0);
+      expect(view.fake.callsOf('find', 'Leaseholder').length).toBeGreaterThan(loadsBefore);
+      expect(sendButton(view.root).disabled).toBe(false);
+    });
+
+    it('« Réessayer » and « Marquer comme envoyé » do nothing while a send is running elsewhere', async () => {
+      const view = await setup({
+        before: (fake) =>
+          fake.failWhen((call) => call.op === 'cloud', parseError(100, 'Connexion perdue')),
+      });
+      await view.open();
+      sendButton(view.root).click();
+      await view.settle();
+      const sender = TestBed.inject(RentCallSender);
+      sender.inFlight.set(1); // another page's send
+      const opened = view.dialog.opened.length;
+
+      buttons(view.root, 'Marquer comme envoyé')[0].click();
+      await view.settle();
+
+      expect(view.dialog.opened.length).toBe(opened);
+      expect(view.fake.callsOf('save', 'Lease')).toHaveLength(0);
+    });
+  });
+
+  describe('test mode and maybe-sent flags', () => {
+    it('shows « Mode test » and says nothing is delivered also in production with the sandbox on', async () => {
+      const view = await setup({ env: { production: true, sandbox: true } });
+      await view.open();
+      expect(text(view.root.querySelector('header'))).toContain('Mode test');
+
+      sendButton(view.root).click();
+      await view.settle();
+
+      expect(view.dialog.opened[0].message).toContain('Mode test : aucun e-mail ne sera livré');
+    });
+
+    it('delivered but not recorded: the leases show « Peut-être envoyé » and re-selecting them is warned about', async () => {
+      const view = await setup({
+        before: (fake) =>
+          fake.failWhen(
+            (call) => call.op === 'save' && call.className === 'Lease',
+            parseError(141, 'refus'),
+          ),
+      });
+      await view.open();
+      sendButton(view.root).click();
+      await view.settle();
+
+      // Studio was not recorded (its save failed once): its row is flagged; select it again.
+      const flagged = rowsOf(view.root).filter((row) =>
+        plain(text(row)).includes('Peut-être envoyé'),
+      );
+      expect(flagged.length).toBeGreaterThan(0);
+      (flagged[0].querySelector('span[aria-hidden="true"]') as HTMLElement).click();
+      view.harness.detectChanges();
+      await view.settle();
+      sendButton(view.root).click();
+      await view.settle();
+
+      const second = view.dialog.opened.at(-1)!;
+      expect(second.message).toContain('Attention : 1 appel déjà envoyé ou peut-être envoyé');
+      expect(second.confirmLabel).toBe('Envoyer quand même');
+    });
+
+    it('the confirm label is plain « Envoyer » when nothing is repeated', async () => {
+      const view = await setup();
+      await view.open();
+      sendButton(view.root).click();
+      await view.settle();
+      expect(view.dialog.opened[0].confirmLabel).toBe('Envoyer');
     });
   });
 

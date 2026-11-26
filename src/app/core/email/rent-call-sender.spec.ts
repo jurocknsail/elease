@@ -124,6 +124,46 @@ describe('RentCallSender', () => {
     vi.restoreAllMocks();
   });
 
+  describe('in-flight counter (app-wide: a screen opened again must see a running send)', () => {
+    it('counts the sends that are running, and is back to 0 when they end, also after a failure', async () => {
+      const { fake, sender } = setup();
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => (release = resolve));
+      const original = fake.runCloud.bind(fake);
+      fake.runCloud = async (name, params) => {
+        await gate;
+        return original(name, params);
+      };
+      expect(sender.inFlight()).toBe(0);
+
+      const first = sender.send(
+        new Map([[A, group(['Agi'], pdf('la1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+      const second = sender.send(
+        new Map([[B, group(['Bob'], pdf('lb1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+      expect(sender.inFlight()).toBe(2);
+
+      release();
+      await Promise.all([first, second]);
+      expect(sender.inFlight()).toBe(0);
+    });
+
+    it('is back to 0 when the groups are malformed', async () => {
+      const { sender } = setup();
+      await sender.send(
+        new Map([[A, null as unknown as EmailGroup]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+      expect(sender.inFlight()).toBe(0);
+    });
+  });
+
   describe('one e-mail per recipient address', () => {
     it('calls the cloud function sendEmail once per address, and gives one result per address in order', async () => {
       const { fake, sender } = setup();

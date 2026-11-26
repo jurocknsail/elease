@@ -37,6 +37,14 @@ export const routes: Routes = [
         title: 'Envoi des appels de loyer',
         // Two panes (list and PDF preview): the shell gives this screen the whole width.
         data: { fullWidth: true },
+        // Leaving while an e-mail is being sent loses the result (the send itself goes on).
+        canDeactivate: [
+          (page: { hasSendInProgress?: () => boolean }) =>
+            !page.hasSendInProgress?.() ||
+            window.confirm(
+              'Un envoi est en cours : si vous quittez cette page, le résultat ne sera pas affiché. Quitter ?',
+            ),
+        ],
         loadComponent: () => import('./features/rent-calls/send.page').then((m) => m.SendPage),
       },
       {

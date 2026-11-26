@@ -25,6 +25,7 @@ import {
   periodLabel,
 } from '../../core/billing/period';
 import { NOW } from '../../core/clock';
+import { effectiveSandbox } from '../../core/email/email-guard';
 import { groupByEmail, recipientKey, type EmailGroup } from '../../core/email/rent-call-email';
 import { RentCallSender, SEND_CLOCK, type SendResult } from '../../core/email/rent-call-sender';
 import { formatEuro } from '../../core/format/fr';
@@ -589,7 +590,8 @@ export class SendPage {
   private readonly backRef = viewChild<ElementRef<HTMLElement>>('back');
   private readonly resultsRef = viewChild<ElementRef<HTMLElement>>('results');
 
-  protected readonly testMode = this.env.production !== true;
+  /** Nothing reaches the tenants: outside production, and in production with the Mailjet sandbox on. */
+  protected readonly testMode = effectiveSandbox(this.env);
   protected readonly rowPlaceholders = [0, 1, 2, 3];
 
   // ---- call date -------------------------------------------------------------------------------
@@ -748,7 +750,7 @@ export class SendPage {
 
   /** Why the send button is disabled, or null when it is enabled. Announced under the button. */
   protected readonly blockReason = computed<string | null>(() => {
-    if (this.sending()) {
+    if (this.sending() || this.sender.inFlight() > 0) {
       return 'Envoi en cours…';
     }
     if (!this.fresh()) {
@@ -844,6 +846,26 @@ export class SendPage {
   constructor() {
     void this.refresh();
 
+    // A send started by ANOTHER instance of this page (left and opened again) is still running: nothing
+    // may be sent meanwhile (`blockReason`). When it ends, what was recorded is read again before the
+    // button comes back.
+    let otherSendRunning = false;
+    effect(() => {
+      const running = this.sender.inFlight() > 0;
+      untracked(() => {
+        if (this.sendGuard) {
+          return;
+        }
+        if (running) {
+          otherSendRunning = true;
+        } else if (otherSendRunning) {
+          otherSendRunning = false;
+          this.freshFlag.set(false);
+          void this.refresh();
+        }
+      });
+    });
+
     // Focus follows the full-screen preview: into it when it opens, back to the list when it closes.
     let wasOpen = false;
     effect(() => {
@@ -871,6 +893,8 @@ export class SendPage {
   /** Loads the data again (and the profile), then applies it. Never throws. */
   protected async refresh(): Promise<void> {
     if (this.refreshing) {
+      // A load is already running and may have started before what made this one necessary.
+      this.reloadAfter = true;
       return;
     }
     this.refreshing = true;
@@ -884,6 +908,17 @@ export class SendPage {
         this.firstLoadDone.set(true);
       }
     }
+    if (this.reloadAfter && !this.destroyed) {
+      this.reloadAfter = false;
+      await this.refresh();
+    }
+  }
+
+  private reloadAfter = false;
+
+  /** True while this page is sending (the confirmation, the checks, the e-mails): leaving costs the results. */
+  hasSendInProgress(): boolean {
+    return this.sendGuard;
   }
 
   private refreshing = false;
@@ -1306,7 +1341,7 @@ export class SendPage {
    * the button is disabled while `sending`.
    */
   protected async send(): Promise<void> {
-    if (this.sendGuard || this.blockReason() !== null) {
+    if (this.sendGuard || this.sender.inFlight() > 0 || this.blockReason() !== null) {
       return;
     }
     this.sendGuard = true;
@@ -1346,7 +1381,7 @@ export class SendPage {
         repeats,
         withoutAddress,
       }),
-      confirmLabel: 'Envoyer',
+      confirmLabel: repeats > 0 ? 'Envoyer quand même' : 'Envoyer',
     });
     if (!confirmed) {
       return;
@@ -1465,7 +1500,9 @@ export class SendPage {
       if (outcome.kind === 'sent' || outcome.kind === 'warning' || outcome.kind === 'uncertain') {
         outcome.result.leaseIds.forEach((id) => leave.add(id));
       }
-      if (outcome.kind === 'uncertain') {
+      // Mailed but not recorded (warning) is as unsure as an uncertain send: the lease stays « À envoyer »
+      // in the data, so it is flagged « Peut-être envoyé » and a later re-selection is warned about.
+      if (outcome.kind === 'uncertain' || outcome.kind === 'warning') {
         outcome.result.leaseIds.forEach((id) => uncertain.add(id));
       }
     }
@@ -1484,7 +1521,12 @@ export class SendPage {
    * group, after a fresh look at the statuses (never for a delivered or uncertain group).
    */
   protected async retry(outcome: Outcome): Promise<void> {
-    if (this.sendGuard || outcome.kind !== 'failed' || !this.fresh()) {
+    if (
+      this.sendGuard ||
+      this.sender.inFlight() > 0 ||
+      outcome.kind !== 'failed' ||
+      !this.fresh()
+    ) {
       return;
     }
     const profile = this.profile();
@@ -1532,7 +1574,7 @@ export class SendPage {
    * WITHOUT sending anything (for the user who checked the mailbox).
    */
   protected async markSent(outcome: Outcome): Promise<void> {
-    if (this.sendGuard || outcome.kind !== 'uncertain') {
+    if (this.sendGuard || this.sender.inFlight() > 0 || outcome.kind !== 'uncertain') {
       return;
     }
     this.sendGuard = true;
