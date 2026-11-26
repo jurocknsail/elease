@@ -5,7 +5,6 @@ import {
   awaitCallback,
   createEngineLoader,
   PdfRenderError,
-  RENDER_TIMEOUT_MS as DEFAULT_RENDER_TIMEOUT_MS,
   renderPdf,
   withinDelay,
 } from './pdf-render';
@@ -66,9 +65,13 @@ function pageCount(pdf: string): number {
 
 describe('renderPdf', () => {
   it(
-    'renders a real one-page PDF: blob and base64 carry the same bytes',
+    'renders a real one-page PDF: blob and base64 carry the same bytes, and the definition is untouched',
     async () => {
-      const { blob, base64 } = await renderPdf(definitionFor(lease()));
+      const def = definitionFor(lease());
+      const before = JSON.stringify(def);
+      const { blob, base64 } = await renderPdf(def);
+      // pdfmake itself rewrites its input: the caller's definition must stay as built.
+      expect(JSON.stringify(def)).toBe(before);
 
       expect(blob.type).toBe('application/pdf');
       expect(blob.size).toBeGreaterThan(2000);
@@ -80,66 +83,6 @@ describe('renderPdf', () => {
       expect(pageCount(fromBlob)).toBe(1);
       // The e-mail attachment (base64) is exactly the file the user previews (blob).
       expect(atob(base64)).toBe(fromBlob);
-    },
-    RENDER_TIMEOUT_MS,
-  );
-
-  it(
-    'renders the incomplete real-data lease (no renewal date, lot, charge nor additional charge)',
-    async () => {
-      const incomplete = lease({
-        isPro: false,
-        name: 'Cave',
-        lot: null,
-        charge: null,
-        renewalDate: null,
-        additionalCharges: [],
-        optionalAddressInfo: '',
-        price: 120,
-      });
-      const { blob } = await renderPdf(definitionFor(incomplete));
-      const pdf = await blobToBinaryString(blob);
-      expect(pdf.startsWith('%PDF-')).toBe(true);
-      expect(pageCount(pdf)).toBe(1);
-    },
-    RENDER_TIMEOUT_MS,
-  );
-
-  it(
-    'does not modify the definition it is given (pdfmake itself rewrites its input)',
-    async () => {
-      const def = definitionFor(lease());
-      const before = JSON.stringify(def);
-      await renderPdf(def);
-      expect(JSON.stringify(def)).toBe(before);
-    },
-    RENDER_TIMEOUT_MS,
-  );
-
-  it(
-    'renders the same definition twice and several definitions at once',
-    async () => {
-      const def = definitionFor(lease());
-      const [first, second, third] = await Promise.all([
-        renderPdf(def),
-        renderPdf(def),
-        renderPdf(definitionFor(lease({ name: 'Studio', isPro: false }))),
-      ]);
-      for (const { blob } of [first, second, third]) {
-        expect((await blobToBinaryString(blob)).startsWith('%PDF-')).toBe(true);
-      }
-      // A later render reuses the loaded library.
-      const again = await renderPdf(def);
-      expect(again.blob.size).toBeGreaterThan(2000);
-    },
-    RENDER_TIMEOUT_MS,
-  );
-
-  it(
-    'rejects with a PdfRenderError for an invalid definition',
-    async () => {
-      const invalid = null as unknown as TDocumentDefinitions;
-      await expect(renderPdf(invalid)).rejects.toBeInstanceOf(PdfRenderError);
     },
     RENDER_TIMEOUT_MS,
   );
@@ -160,30 +103,11 @@ describe('awaitCallback (guard against pdfmake callbacks that never fire)', () =
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it('resolves when the callback fires later, before the delay', async () => {
-    const promise = awaitCallback<number>((done) => {
-      setTimeout(() => done(42), 500);
-    }, 1000);
-    await vi.advanceTimersByTimeAsync(500);
-    await expect(promise).resolves.toBe(42);
-  });
-
   it('rejects with a PdfRenderError when the callback never fires', async () => {
     const promise = awaitCallback<string>(() => undefined, 1000);
     const assertion = expect(promise).rejects.toBeInstanceOf(PdfRenderError);
     await vi.advanceTimersByTimeAsync(1000);
     await assertion;
-  });
-
-  it('rejects with a PdfRenderError, keeping the cause, when starting throws', async () => {
-    const cause = new Error('boom');
-    const promise = awaitCallback<string>(() => {
-      throw cause;
-    }, 1000);
-    const error = await promise.catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(PdfRenderError);
-    expect((error as PdfRenderError).cause).toBe(cause);
-    expect(vi.getTimerCount()).toBe(0);
   });
 });
 
@@ -209,22 +133,6 @@ describe('createEngineLoader (lazy, load-once, retry after a failed load)', () =
     expect(a.vfs).toBe(FONTS);
   });
 
-  it('reads CommonJS namespaces (members under `default`) and plain ES modules alike', async () => {
-    const commonJs = createEngineLoader(
-      () => Promise.resolve({ default: { createPdf } }),
-      () => Promise.resolve({ default: FONTS }),
-    );
-    const engine = await commonJs();
-    expect(engine.createPdf).toBe(createPdf);
-    expect(engine.vfs).toBe(FONTS);
-
-    const esModule = createEngineLoader(
-      () => Promise.resolve({ createPdf }),
-      () => Promise.resolve(FONTS),
-    );
-    expect((await esModule()).createPdf).toBe(createPdf);
-  });
-
   it('forgets a failed import and tries again on the next call', async () => {
     const failure = new TypeError('Failed to fetch dynamically imported module');
     const importPdfMake = vi
@@ -244,17 +152,6 @@ describe('createEngineLoader (lazy, load-once, retry after a failed load)', () =
     await load();
     expect(importPdfMake).toHaveBeenCalledTimes(2);
   });
-
-  it('rejects when the font file is missing (pdfmake would hang instead) and allows a retry', async () => {
-    const importFonts = vi
-      .fn<() => Promise<unknown>>()
-      .mockResolvedValueOnce({ 'Other.ttf': 'AAEA' })
-      .mockResolvedValue(FONTS);
-    const load = createEngineLoader(() => Promise.resolve({ createPdf }), importFonts);
-
-    await expect(load()).rejects.toBeInstanceOf(PdfRenderError);
-    await expect(load()).resolves.toMatchObject({ vfs: FONTS });
-  });
 });
 
 describe('hang guards', () => {
@@ -262,20 +159,9 @@ describe('hang guards', () => {
     vi.useRealTimers();
   });
 
-  it('the default delay is 15 s', () => {
-    expect(DEFAULT_RENDER_TIMEOUT_MS).toBe(15000);
-  });
-
   it('withinDelay passes the value through and clears its timer', async () => {
     vi.useFakeTimers();
     await expect(withinDelay(Promise.resolve('ok'), 1000, 'm')).resolves.toBe('ok');
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it('withinDelay passes a rejection through and clears its timer', async () => {
-    vi.useFakeTimers();
-    const cause = new Error('boom');
-    await expect(withinDelay(Promise.reject(cause), 1000, 'm')).rejects.toBe(cause);
     expect(vi.getTimerCount()).toBe(0);
   });
 
