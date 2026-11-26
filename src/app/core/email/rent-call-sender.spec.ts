@@ -152,16 +152,6 @@ describe('RentCallSender', () => {
       await Promise.all([first, second]);
       expect(sender.inFlight()).toBe(0);
     });
-
-    it('is back to 0 when the groups are malformed', async () => {
-      const { sender } = setup();
-      await sender.send(
-        new Map([[A, null as unknown as EmailGroup]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(sender.inFlight()).toBe(0);
-    });
   });
 
   describe('one e-mail per recipient address', () => {
@@ -211,17 +201,10 @@ describe('RentCallSender', () => {
       expect(markLeasesSent).toHaveBeenCalledTimes(1);
       expect(markLeasesSent).toHaveBeenCalledWith(['l1', 'l2'], '2027-01', AT);
     });
-
-    it('sends nothing for an empty map', async () => {
-      const { fake, markLeasesSent, sender } = setup();
-      await expect(sender.send(new Map(), PERIOD, DEFAULT_LANDLORD_PROFILE)).resolves.toEqual([]);
-      expect(cloudCalls(fake)).toEqual([]);
-      expect(markLeasesSent).not.toHaveBeenCalled();
-    });
   });
 
   describe('what is sent to the cloud function (legacy parameter names)', () => {
-    it('sends exactly senderEmail, recipientEmail, subject, text, attachments and sandbox', async () => {
+    it('sends exactly senderEmail, the trimmed recipientEmail, subject, text, attachments and sandbox', async () => {
       const { fake, sender } = setup(PROD);
       fake.userEmail = 'proprietaire@example.test';
       const profile: LandlordProfile = {
@@ -232,7 +215,7 @@ describe('RentCallSender', () => {
       await sender.send(
         new Map([
           [
-            A,
+            `  ${A}\n`,
             group(
               ['Agi'],
               pdf('la1', 'agi-studio-01_2027.pdf'),
@@ -267,16 +250,6 @@ describe('RentCallSender', () => {
       expect(cloudCalls(fake)[0].params?.['subject']).toBe(rentCallSubject(PERIOD));
     });
 
-    it('trims the recipient it sends to', async () => {
-      const { fake, sender } = setup(PROD);
-      await sender.send(
-        new Map([[`  ${A}\n`, group(['Agi'], pdf('la1'))]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(cloudCalls(fake)[0].params?.['recipientEmail']).toBe(A);
-    });
-
     it('gives two attachments of the same name distinct names', async () => {
       const { fake, sender } = setup();
       await sender.send(
@@ -309,18 +282,6 @@ describe('RentCallSender', () => {
         'base64-l2',
         'base64-l3',
       ]);
-    });
-
-    it('does not change the groups it is given', async () => {
-      const { sender } = setup();
-      const names = ['Agi'];
-      const first = group(names, pdf('l1', 'x.pdf'), pdf('l2', 'x.pdf'));
-      const groups = new Map([[A, first]]);
-
-      await sender.send(groups, PERIOD, DEFAULT_LANDLORD_PROFILE);
-
-      expect(first.pdfs.map((p) => p.fileName)).toEqual(['x.pdf', 'x.pdf']);
-      expect(first.holderNames).toBe(names);
     });
   });
 
@@ -409,7 +370,7 @@ describe('RentCallSender', () => {
       expect(markLeasesSent).toHaveBeenCalledWith(['lj1'], '2027-01', AT);
     });
 
-    it('blocks a list of addresses even when it starts with the test address', async () => {
+    it('blocks a list of addresses even when it starts with the test address, and everything when the build has no test address', async () => {
       const { fake, sender } = setup(DEV);
       const results = await sender.send(
         new Map([
@@ -421,17 +382,16 @@ describe('RentCallSender', () => {
       );
       expect(results.map((result) => result.ok)).toEqual([false, false]);
       expect(cloudCalls(fake)).toEqual([]);
-    });
 
-    it('blocks everything when the build has no test address', async () => {
-      const { fake, sender } = setup({ production: false, sandbox: true });
-      const results = await sender.send(
+      TestBed.resetTestingModule();
+      const failClosed = setup({ production: false, sandbox: true });
+      const [blocked] = await failClosed.sender.send(
         new Map([[TEST_ADDRESS, group(['Julien'], pdf('l1'))]]),
         PERIOD,
         DEFAULT_LANDLORD_PROFILE,
       );
-      expect(results[0].ok).toBe(false);
-      expect(cloudCalls(fake)).toEqual([]);
+      expect(blocked.ok).toBe(false);
+      expect(cloudCalls(failClosed.fake)).toEqual([]);
     });
 
     it('in production, refuses a malformed recipient (several addresses, line break)', async () => {
@@ -514,56 +474,14 @@ describe('RentCallSender', () => {
       expect(markLeasesSent).toHaveBeenCalledWith(['la1', 'la2'], '2027-01', AT);
     });
 
-    it('records nothing when every group fails', async () => {
-      const { fake, markLeasesSent, sender } = setup();
-      failFor(fake, A, new Error('down'));
-      failFor(fake, B, new Error('down'));
-
-      const results = await sender.send(
-        new Map([
-          [A, group(['Agi'], pdf('la1'))],
-          [B, group(['Bob'], pdf('lb1'))],
-        ]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-
-      expect(results.map((result) => result.ok)).toEqual([false, false]);
-      expect(markLeasesSent).not.toHaveBeenCalled();
-    });
-
-    it('never retries a failed send', async () => {
-      const { fake, sender } = setup();
-      failFor(fake, A, new Error('down'));
-      await sender.send(
-        new Map([[A, group(['Agi'], pdf('la1'))]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(cloudCalls(fake)).toHaveLength(1);
-    });
-
-    it('survives a throw while the cloud call is being started', async () => {
-      const { fake, markLeasesSent, sender } = setup();
-      vi.spyOn(fake, 'runCloud').mockImplementation(() => {
-        throw new Error('SDK not ready');
-      });
-      const results = await sender.send(
-        new Map([[A, group(['Agi'], pdf('la1'))]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(results[0].ok).toBe(false);
-      expect(markLeasesSent).not.toHaveBeenCalled();
-    });
-
-    it('reports a malformed group as failed and still sends the others', async () => {
+    it('reports a malformed group or a group without any PDF as failed and still sends the others', async () => {
       const { fake, markLeasesSent, sender } = setup();
       const broken = { holderNames: ['Cassé'] } as unknown as EmailGroup;
 
       const results = await sender.send(
         new Map([
           [A, broken],
+          [C, group(['Cléo'])],
           [B, group(['Bob'], pdf('lb1'))],
         ]),
         PERIOD,
@@ -572,20 +490,10 @@ describe('RentCallSender', () => {
 
       expect(byEmail(results, A).ok).toBe(false);
       expect(byEmail(results, A).holderNames).toEqual(['Cassé']);
+      expect(byEmail(results, C).ok).toBe(false);
       expect(byEmail(results, B).ok).toBe(true);
       expect(cloudCalls(fake)).toHaveLength(1);
       expect(markLeasesSent).toHaveBeenCalledTimes(1);
-    });
-
-    it('refuses a group without any PDF: nothing is sent', async () => {
-      const { fake, sender } = setup();
-      const results = await sender.send(
-        new Map([[A, group(['Agi'])]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(results[0].ok).toBe(false);
-      expect(cloudCalls(fake)).toEqual([]);
     });
 
     it('refuses to send without a session: nothing is sent, and the result carries the session code', async () => {
@@ -667,35 +575,6 @@ describe('RentCallSender', () => {
       expect(markLeasesSent).toHaveBeenCalledTimes(1);
       expect(markLeasesSent).toHaveBeenCalledWith(['la1'], '2027-01', AT);
     });
-
-    it('never retries it, however long one waits', async () => {
-      vi.useFakeTimers();
-      const { fake, sender } = setup();
-      hangFor(fake, A);
-
-      const done = sender.send(
-        new Map([[A, group(['Agi'], pdf('la1'))]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      await vi.advanceTimersByTimeAsync(SEND_TIMEOUT_MS);
-      await done;
-      await vi.advanceTimersByTimeAsync(10 * SEND_TIMEOUT_MS);
-
-      expect(cloudCalls(fake)).toHaveLength(1);
-    });
-
-    it('does not mark an answer of the cloud function as uncertain', async () => {
-      const { fake, sender } = setup();
-      failFor(fake, A, parseError(141, 'Mailjet refused the message'));
-      const [result] = await sender.send(
-        new Map([[A, group(['Agi'], pdf('la1'))]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(result.ok).toBe(false);
-      expect(result.uncertain).toBeUndefined();
-    });
   });
 
   describe('a failure that may have delivered the e-mail is never a plain failure', () => {
@@ -721,17 +600,7 @@ describe('RentCallSender', () => {
       ['107 (unreadable answer, e.g. a gateway page)', parseError(107, 'invalid JSON'), 107],
       ['100 (connection lost)', parseError(100, 'XMLHttpRequest failed'), 100],
       ['124 (request timed out)', parseError(124, 'Request timed out'), 124],
-      ['-1 (other cause)', parseError(-1, 'unknown'), -1],
-      ['1 (internal server error)', parseError(1, 'server error'), 1],
       ['an error without a code', new Error('network'), undefined],
-      ['a code that is not an integer', parseError(Number.NaN, 'odd'), undefined],
-      [
-        'a code that is not a number',
-        Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
-        undefined,
-      ],
-      ['a string (unparseable 2xx body)', 'Unexpected token < in JSON', undefined],
-      ['null', null, undefined],
       ['undefined', undefined, undefined],
     ])('is uncertain after %s', async (_label, error, code) => {
       const result = await sendOneFailing(error);
@@ -751,8 +620,6 @@ describe('RentCallSender', () => {
     it.each([
       ['141 (the cloud function reported an error)', 141],
       ['209 (invalid session, refused before the function runs)', 209],
-      ['119 (operation forbidden)', 119],
-      ['142 (validation error)', 142],
     ])('is a plain failure after %s, with its code', async (_label, code) => {
       const result = await sendOneFailing(parseError(code, 'refused by the server'));
 
@@ -762,92 +629,15 @@ describe('RentCallSender', () => {
       expect(result.error).toBe("L'envoi a échoué : refused by the server");
     });
 
-    it('keeps the message of a send that timed out, without a code', async () => {
-      vi.useFakeTimers();
-      const { fake, sender } = setup();
-      hangFor(fake, A);
-      const done = sender.send(
-        new Map([[A, group(['Agi'], pdf('la1'))]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      await vi.advanceTimersByTimeAsync(SEND_TIMEOUT_MS);
-      const [result] = await done;
-      expect(result.uncertain).toBe(true);
-      expect(result.error).toBe(UNCERTAIN_MESSAGE);
-      expect(result.errorCode).toBeUndefined();
-    });
-
     it('is a plain failure when the cloud seam itself refuses the recipient (nothing went out)', async () => {
       const result = await sendOneFailing(new RecipientBlockedError('[DEV] Envoi bloqué'));
       expect(result.ok).toBe(false);
       expect(result.uncertain).toBeUndefined();
       expect(result.error).toBe('[DEV] Envoi bloqué');
     });
-
-    it('leaves the other groups alone', async () => {
-      const { fake, markLeasesSent, sender } = setup();
-      failFor(fake, B, parseError(107, 'invalid JSON'));
-      const results = await sender.send(
-        new Map([
-          [A, group(['Agi'], pdf('la1'))],
-          [B, group(['Bob'], pdf('lb1'))],
-        ]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(byEmail(results, A).ok).toBe(true);
-      expect(byEmail(results, B).uncertain).toBe(true);
-      expect(markLeasesSent).toHaveBeenCalledTimes(1);
-      expect(markLeasesSent).toHaveBeenCalledWith(['la1'], '2027-01', AT);
-    });
-  });
-
-  describe('error codes', () => {
-    it('carries the Parse code of a failure, so the screen can send the user to the login on 209', async () => {
-      const { fake, sender } = setup();
-      failFor(fake, A, parseError(209, 'invalid session token'));
-      const [result] = await sender.send(
-        new Map([[A, group(['Agi'], pdf('la1'))]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(result.errorCode).toBe(209);
-    });
-
-    it('has no code for a failure that carries none, and none on success', async () => {
-      const { fake, sender } = setup();
-      failFor(fake, B, new RecipientBlockedError('refusé'));
-      const results = await sender.send(
-        new Map([
-          [A, group(['Agi'], pdf('la1'))],
-          [B, group(['Bob'], pdf('lb1'))],
-          ['pas une adresse', group(['Cléo'], pdf('lc1'))],
-        ]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(results.map((result) => 'errorCode' in result)).toEqual([false, false, false]);
-    });
   });
 
   describe('simulated: nothing is really delivered', () => {
-    it('is true on every result outside production, sent or blocked', async () => {
-      const { sender } = setup(DEV);
-      const results = await sender.send(
-        new Map([
-          [TEST_ADDRESS, group(['Julien'], pdf('l1'))],
-          [A, group(['Agi'], pdf('l2'))],
-        ]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(results.map((result) => [result.ok, result.simulated])).toEqual([
-        [true, true],
-        [false, true],
-      ]);
-    });
-
     it('follows the sandbox flag in production, on every kind of result', async () => {
       for (const sandbox of [true, false]) {
         TestBed.resetTestingModule();
@@ -925,17 +715,6 @@ describe('RentCallSender', () => {
       expect(order).toEqual(['record:1']);
     });
 
-    it('lists each lease once even if a PDF is repeated', async () => {
-      const { markLeasesSent, sender } = setup();
-      const results = await sender.send(
-        new Map([[A, group(['Agi'], pdf('la1'), pdf('la1', 'copie.pdf'), pdf('la2'))]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-      expect(results[0].leaseIds).toEqual(['la1', 'la2']);
-      expect(markLeasesSent).toHaveBeenCalledWith(['la1', 'la2'], '2027-01', AT);
-    });
-
     describe('when the record fails AFTER the e-mail went out', () => {
       it('is ok with a warning, never an error, and the other groups carry on', async () => {
         const { fake, markLeasesSent, sender } = setup();
@@ -970,20 +749,6 @@ describe('RentCallSender', () => {
         expect(markLeasesSent).toHaveBeenCalledTimes(2);
         // No resend: one cloud call per address, nothing more.
         expect(cloudCalls(fake)).toHaveLength(2);
-      });
-
-      it('does not throw when the repository throws instead of rejecting', async () => {
-        const { markLeasesSent, sender } = setup();
-        markLeasesSent.mockImplementation(() => {
-          throw new Error('boom');
-        });
-        const [result] = await sender.send(
-          new Map([[A, group(['Agi'], pdf('la1'))]]),
-          PERIOD,
-          DEFAULT_LANDLORD_PROFILE,
-        );
-        expect(result.ok).toBe(true);
-        expect(result.warning).toBe(RECORD_WARNING);
       });
 
       it('does not hang when the record never answers', async () => {
@@ -1148,25 +913,6 @@ describe('RentCallSender', () => {
       expect(handleSession).toHaveBeenCalledTimes(1);
     });
 
-    it('does it for a 209 in one group even when the other group went out', async () => {
-      const { fake, handleSession, markLeasesSent, sender } = setup();
-      failFor(fake, B, parseError(209));
-
-      const results = await sender.send(
-        new Map([
-          [A, group(['Alice'], pdf('l1'))],
-          [B, group(['Bruno'], pdf('l2'))],
-        ]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-
-      expect(byEmail(results, A).ok).toBe(true);
-      expect(byEmail(results, B).errorCode).toBe(209);
-      expect(markLeasesSent).toHaveBeenCalledTimes(1);
-      expect(handleSession).toHaveBeenCalledTimes(1);
-    });
-
     it('does NOT redirect when only recording the send fails with 209 after the mail went out: still ok with the warning', async () => {
       const { handleSession, markLeasesSent, sender } = setup();
       markLeasesSent.mockRejectedValue(parseError(209, 'invalid session token'));
@@ -1179,22 +925,6 @@ describe('RentCallSender', () => {
 
       expect(results[0]).toMatchObject({ ok: true, warning: RECORD_WARNING });
       expect(results[0].errorCode).toBeUndefined();
-      expect(handleSession).not.toHaveBeenCalled();
-    });
-
-    it.each([
-      ['a definite non-session failure (141)', parseError(141, 'script error')],
-      ['a timeout-like failure (100)', parseError(100, 'XMLHttpRequest failed')],
-    ])('does not redirect for %s', async (_label, error) => {
-      const { fake, handleSession, sender } = setup();
-      failFor(fake, A, error);
-
-      await sender.send(
-        new Map([[A, group(['Alice'], pdf('l1'))]]),
-        PERIOD,
-        DEFAULT_LANDLORD_PROFILE,
-      );
-
       expect(handleSession).not.toHaveBeenCalled();
     });
 

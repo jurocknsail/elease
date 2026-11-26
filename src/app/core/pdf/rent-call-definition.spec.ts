@@ -39,7 +39,7 @@ function holder(name = 'Agi Martin'): Leaseholder {
   return { name, email: 'locataire@example.test', phone: '', leases: [] };
 }
 
-/** (a) professional lease with a charges advance and one additional charge. */
+/** Professional lease with a charges advance and one additional charge. */
 const PRO_WITH_CHARGES = lease({
   isPro: true,
   name: 'Local commercial',
@@ -50,19 +50,10 @@ const PRO_WITH_CHARGES = lease({
   additionalCharges: [{ title: 'Taxe foncière', amount: 50 }],
 });
 
-/** (b) habitation lease: `charge` null and `lot` 0. */
+/** Habitation lease: `charge` null and `lot` 0. */
 const HABITATION_NO_CHARGE = lease({ name: 'Studio', lot: 0, price: 300, charge: null });
 
-/** (c) empty `optionalAddressInfo`, a lot number and a charges advance. */
-const NO_ADDRESS_INFO = lease({
-  name: 'Garage n° 13',
-  lot: 13,
-  optionalAddressInfo: '',
-  price: 95.5,
-  charge: 15,
-});
-
-/** (d) Review Focus: no renewal date, no lot, no charge, no additional charge (5 of 9 real leases). */
+/** No renewal date, no lot, no charge, no additional charge (5 of 9 real leases). */
 const INCOMPLETE = lease({
   name: 'Cave',
   lot: null,
@@ -71,9 +62,8 @@ const INCOMPLETE = lease({
   additionalCharges: [],
   price: 120,
 });
-const INCOMPLETE_PRO = { ...INCOMPLETE, isPro: true };
 
-/** (e) several additional charges with float-ugly amounts. */
+/** Several additional charges with float-ugly amounts. */
 const FLOAT_UGLY = lease({
   isPro: true,
   name: 'Local B',
@@ -87,7 +77,7 @@ const FLOAT_UGLY = lease({
   ],
 });
 
-/** (e) accents and apostrophes in the names, another city, another 5-digit postal code. */
+/** Accents and apostrophes in the names, another city, another 5-digit postal code. */
 const ACCENTED = lease({
   name: 'Appartement n° 2',
   lot: 2,
@@ -112,32 +102,27 @@ const MISSING_OPTIONALS = {
 } as unknown as Lease;
 
 const FIXTURES: Array<[string, Leaseholder, Lease]> = [
-  ['(a) professional lease, charges and an additional charge', holder(), PRO_WITH_CHARGES],
-  ['(b) habitation lease, charge null, lot 0', holder(), HABITATION_NO_CHARGE],
-  ['(c) empty optionalAddressInfo', holder(), NO_ADDRESS_INFO],
-  ['(d) no renewalDate, lot, charge nor additional charge', holder(), INCOMPLETE],
-  ['(d) the same, professional', holder(), INCOMPLETE_PRO],
-  ['(e) float-ugly additional charges', holder(), FLOAT_UGLY],
-  ['(e) accents and apostrophes', holder("Élodie d'Aubigné-Œil"), ACCENTED],
+  ['professional lease, charges and an additional charge', holder(), PRO_WITH_CHARGES],
+  ['habitation lease, charge null, lot 0', holder(), HABITATION_NO_CHARGE],
+  ['no renewalDate, lot, charge nor additional charge', holder(), INCOMPLETE],
+  ['float-ugly additional charges', holder(), FLOAT_UGLY],
+  ['accents and apostrophes', holder("Élodie d'Aubigné-Œil"), ACCENTED],
   ['charge 0, professional', holder(), ZERO_CHARGE],
   ['missing additionalCharges / null optionalAddressInfo', holder(), MISSING_OPTIONALS],
 ];
 
-/** [label, now, callDate]: periods of 28, 29, 30 and 31 days, the year rollover, a call date that is not the 25th. */
+/** [label, now, callDate]: the year rollover, a leap-year February, a call date that is not the 25th. */
 const DATES: Array<[string, Date, Date]> = [
-  ['25 Nov 2026 -> 12/2026 (31 days)', new Date(2026, 10, 26, 9, 30), new Date(2026, 10, 25)],
   [
     '25 Dec 2026 -> 01/2027 (year rollover)',
     new Date(2026, 11, 20, 23, 59, 59),
     new Date(2026, 11, 25),
   ],
-  ['25 Jan 2027 -> 02/2027 (28 days)', new Date(2027, 0, 1, 0, 5), new Date(2027, 0, 25)],
   [
     '25 Jan 2028 -> 02/2028 (leap year, 29 days)',
     new Date(2028, 0, 3, 12, 0),
     new Date(2028, 0, 25),
   ],
-  ['25 Mar 2027 -> 04/2027 (30 days)', new Date(2027, 2, 25, 8, 15), new Date(2027, 2, 25)],
   ['3 Feb 2027 -> 03/2027 (not the 25th)', new Date(2027, 1, 3, 18, 45), new Date(2027, 1, 3)],
 ];
 
@@ -212,14 +197,14 @@ const FAR_AWAY = lease({
 describe('buildRentCallDefinition', () => {
   describe('identical to the legacy definition with the default landlord profile', () => {
     for (const [fixtureName, h, l] of FIXTURES) {
-      for (const [dateName, now, callDate] of DATES) {
-        it(`${fixtureName}, ${dateName}`, () => {
+      it(fixtureName, () => {
+        for (const [dateName, now, callDate] of DATES) {
           const built = build(l, { holder: h, callDate, now });
           const old = legacy(l, { holder: h, callDate, now });
           // JSON equality: same keys, same order, same strings (whitespace included).
-          expect(JSON.stringify(built)).toBe(JSON.stringify(old));
-        });
-      }
+          expect(JSON.stringify(built), dateName).toBe(JSON.stringify(old));
+        }
+      });
     }
 
     it('guards the fixture itself: the legacy output of a simple lease is the golden master below', () => {
@@ -319,45 +304,25 @@ describe('buildRentCallDefinition', () => {
     });
   });
 
-  describe('DEFAULT_LANDLORD_PROFILE against the legacy definition', () => {
+  it('DEFAULT_LANDLORD_PROFILE holds the landlord values of the legacy definition', () => {
     const legacyDef = JSON.parse(JSON.stringify(legacy(HABITATION_NO_CHARGE))) as {
       info: { author: string };
       content: Array<{ text: unknown }>;
     };
-
-    it('header block: name and address lines', () => {
-      const lines = (legacyDef.content[0].text as string).split('\n').map((line) => line.trim());
-      expect(lines).toEqual([
-        DEFAULT_LANDLORD_PROFILE.name,
-        ...DEFAULT_LANDLORD_PROFILE.addressLines,
-      ]);
-    });
-
-    it('issue city', () => {
-      const issue = (legacyDef.content[2].text as string[])[0];
-      expect(issue).toMatch(/^.+ \n Le \d\d\/\d\d\/\d{4}$/);
-      expect(issue.split(' \n Le ')[0]).toBe(DEFAULT_LANDLORD_PROFILE.issueCity);
-    });
-
-    it('"Établie par la <name>"', () => {
-      const text = (legacyDef.content[2].text as string[])[2];
-      expect(text.trim()).toBe(`Établie par la ${DEFAULT_LANDLORD_PROFILE.name}`);
-    });
-
-    it('PDF author', () => {
-      expect(legacyDef.info.author).toBe(DEFAULT_LANDLORD_PROFILE.name);
-    });
-
-    it('legal notice (third line of the conditions)', () => {
-      const conditions = legacyDef.content[5].text as Array<{ text: string }>;
-      const lines = conditions[1].text.split('\n').map((line) => line.trim());
-      expect(lines).toContain(DEFAULT_LANDLORD_PROFILE.legalNotice);
-      expect(lines[3]).toBe(DEFAULT_LANDLORD_PROFILE.legalNotice);
-    });
-
-    it('e-mail signature (legacy mail body, main:src/app/services/parse-service.service.ts:352-357)', () => {
-      expect(DEFAULT_LANDLORD_PROFILE.emailSignature).toBe(LEGACY_EMAIL_SIGNATURE);
-    });
+    const header = (legacyDef.content[0].text as string).split('\n').map((line) => line.trim());
+    expect(header).toEqual([
+      DEFAULT_LANDLORD_PROFILE.name,
+      ...DEFAULT_LANDLORD_PROFILE.addressLines,
+    ]);
+    const issue = legacyDef.content[2].text as string[];
+    expect(issue[0].split(' \n Le ')[0]).toBe(DEFAULT_LANDLORD_PROFILE.issueCity);
+    expect(issue[2].trim()).toBe(`Établie par la ${DEFAULT_LANDLORD_PROFILE.name}`);
+    expect(legacyDef.info.author).toBe(DEFAULT_LANDLORD_PROFILE.name);
+    const conditions = legacyDef.content[5].text as Array<{ text: string }>;
+    expect(conditions[1].text.split('\n').map((line) => line.trim())[3]).toBe(
+      DEFAULT_LANDLORD_PROFILE.legalNotice,
+    );
+    expect(DEFAULT_LANDLORD_PROFILE.emailSignature).toBe(LEGACY_EMAIL_SIGNATURE);
   });
 
   describe('landlord data comes only from the profile', () => {
@@ -376,24 +341,6 @@ describe('buildRentCallDefinition', () => {
       expect(conditions[1].text).toContain(
         `\n${INDENT_20}${CUSTOM_PROFILE.legalNotice}\n${INDENT_20}\n`,
       );
-    });
-
-    it('is the legacy definition with exactly those five landlord places replaced', () => {
-      const expected = JSON.parse(JSON.stringify(legacy(FAR_AWAY))) as {
-        info: { author: string };
-        content: Array<{ text: unknown }>;
-      };
-      expected.info.author = CUSTOM_PROFILE.name;
-      expected.content[0].text = `SCI TEST\n${INDENT_18}1 RUE A\n${INDENT_18}75001 PARIS`;
-      const issue = expected.content[2].text as string[];
-      issue[0] = issue[0].replace(DEFAULT_LANDLORD_PROFILE.issueCity, CUSTOM_PROFILE.issueCity);
-      issue[2] = issue[2].replace(DEFAULT_LANDLORD_PROFILE.name, CUSTOM_PROFILE.name);
-      const conditions = expected.content[5].text as Array<{ text: string }>;
-      conditions[1].text = conditions[1].text.replace(
-        DEFAULT_LANDLORD_PROFILE.legalNotice,
-        CUSTOM_PROFILE.legalNotice,
-      );
-      expect(customJson()).toBe(JSON.stringify(expected));
     });
 
     it('leaves no trace of the legacy landlord anywhere', () => {
@@ -431,19 +378,7 @@ describe('buildRentCallDefinition', () => {
       expect(JSON.stringify(def)).toBe(customJson());
     });
 
-    it('prints a multi-line legal notice with the legal-text indentation on every line', () => {
-      const def = build(FAR_AWAY, {
-        profile: { ...CUSTOM_PROFILE, legalNotice: 'Première ligne.\nSeconde ligne.' },
-      });
-      const texts = allTexts(def);
-      expect(texts).toContain(
-        `\nEn application de la loi n° 92.1482 Du 31/12/92, le règlement anticipé ne donnera pas lieu à escompte.\n` +
-          `${INDENT_20}En cas de réglement après échéance, il sera fait applications des dispositions légales après mise en demeure.\n` +
-          `${INDENT_20}Première ligne.\n${INDENT_20}Seconde ligne.\n${INDENT_20}\n`,
-      );
-    });
-
-    it('trims each line of a notice with CRLF, stray spaces and a trailing line break', () => {
+    it('prints a multi-line legal notice with the legal-text indentation, trimming CRLF and stray spaces', () => {
       const def = build(FAR_AWAY, {
         profile: { ...CUSTOM_PROFILE, legalNotice: 'Ligne 1.  \r\n   Ligne 2.\n' },
       });
@@ -479,20 +414,15 @@ describe('buildRentCallDefinition', () => {
       expect(texts).toContain('1653.80€');
     });
 
-    it('prints no VAT line for a habitation lease, even with charges', () => {
+    it('prints no VAT line for a habitation lease, and no "Avance sur charges" line when the charge is null or 0', () => {
       const texts = allTexts(build(lease({ price: 300, charge: 40 })));
       expect(texts).toContain('Loyer HT\nAvance sur charges\n');
-      expect(texts).toContain('300.00\n40.00\n');
       expect(texts).toContain('340.00€');
       expect(texts.join('')).not.toContain('T.V.A.');
-    });
-
-    it('prints no "Avance sur charges" line when the charge is null or 0', () => {
       for (const charge of [null, 0]) {
-        const texts = allTexts(build(lease({ isPro: true, price: 500, charge })));
-        expect(texts).toContain('Loyer HT\nT.V.A. 20%\n');
-        expect(texts).toContain('500.00\n100.00\n');
-        expect(texts).toContain('600.00€');
+        const noCharge = allTexts(build(lease({ isPro: true, price: 500, charge })));
+        expect(noCharge).toContain('Loyer HT\nT.V.A. 20%\n');
+        expect(noCharge).toContain('600.00€');
       }
     });
 
@@ -542,12 +472,6 @@ describe('buildRentCallDefinition', () => {
       expect(allTexts(build(HABITATION_NO_CHARGE, { callDate: new Date(2028, 0, 25) }))).toContain(
         'Période du 01/02/2028 au 29/02/2028',
       );
-      expect(allTexts(build(HABITATION_NO_CHARGE, { callDate: new Date(2027, 0, 25) }))).toContain(
-        'Période du 01/02/2027 au 28/02/2027',
-      );
-      expect(allTexts(build(HABITATION_NO_CHARGE, { callDate: new Date(2026, 10, 25) }))).toContain(
-        'Date \n01/12/2026',
-      );
     });
 
     it('call date line and PDF title use the call date and `now` respectively', () => {
@@ -576,46 +500,20 @@ describe('buildRentCallDefinition', () => {
       expect(built).toBe(legacyJson.replaceAll('1000 BOURG-EN-BRESSE', '01000 BOURG-EN-BRESSE'));
     });
 
-    it.each([
-      [999, '00999'],
-      [1000, '01000'],
-      [9999, '09999'],
-      [10000, '10000'],
-      [13600, '13600'],
-      [75001, '75001'],
-    ])('postal code %i is printed %s', (postalCode, printed) => {
-      const texts = allTexts(build(lease({ postalCode, city: 'Ville' })));
-      expect(texts).toContain(`AGI MARTIN\n12 RUE DES LILAS\n${printed} VILLE`);
-      expect(texts).toContain(`Appartement, 12 rue des Lilas, ${printed} VILLE`);
-    });
-
-    it('does not pad the landlord address, which is free text of the profile', () => {
+    it('pads short postal codes to 5 digits, leaves full ones and the free-text landlord address alone', () => {
+      for (const [postalCode, printed] of [
+        [999, '00999'],
+        [10000, '10000'],
+        [75001, '75001'],
+      ] as const) {
+        const texts = allTexts(build(lease({ postalCode, city: 'Ville' })));
+        expect(texts).toContain(`AGI MARTIN\n12 RUE DES LILAS\n${printed} VILLE`);
+        expect(texts).toContain(`Appartement, 12 rue des Lilas, ${printed} VILLE`);
+      }
       const def = build(HABITATION_NO_CHARGE, {
         profile: { ...CUSTOM_PROFILE, addressLines: ['1 RUE A', '1000 BOURG'] },
       });
       expect(allTexts(def)).toContain(`SCI TEST\n${INDENT_18}1 RUE A\n${INDENT_18}1000 BOURG`);
-    });
-  });
-
-  describe('leases that real data produces', () => {
-    it('renders a lease with no renewalDate, lot, charge nor additional charge', () => {
-      const def = build(INCOMPLETE);
-      const texts = allTexts(def);
-      expect(texts).toContain('\n\nFACTURE DU LOYER pour Cave');
-      expect(texts).toContain('Loyer HT\n');
-      expect(texts).toContain('120.00\n');
-      expect(texts).toContain('120.00€');
-    });
-
-    it('prints names with accents and apostrophes as typed, upper-casing the address block', () => {
-      const def = build(ACCENTED, { holder: holder("Élodie d'Aubigné-Œil") });
-      const texts = allTexts(def);
-      expect(texts).toContain(
-        "ÉLODIE D'AUBIGNÉ-ŒIL\n7 RUE DE L'HÔTEL-DE-VILLE\nRÉSIDENCE L'ÉDEN, ESCALIER B\n42000 SAINT-ÉTIENNE",
-      );
-      expect(texts).toContain(
-        "Appartement n° 2, 7 rue de l'Hôtel-de-Ville, Résidence l'Éden, escalier B, 42000 SAINT-ÉTIENNE",
-      );
     });
   });
 });

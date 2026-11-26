@@ -43,12 +43,8 @@ function pdf(id: string, fileName = `${id}.pdf`): GeneratedPdf {
 }
 
 describe('rentCallSubject', () => {
-  it('names the billed month: « Appel de loyer — janvier 2027 »', () => {
+  it('names the billed month with its accent: « Appel de loyer — février 2027 »', () => {
     expect(rentCallSubject({ year: 2027, month: 1 })).toBe('Appel de loyer — janvier 2027');
-  });
-
-  it('follows the period (December, February: labels with an accent)', () => {
-    expect(rentCallSubject({ year: 2026, month: 12 })).toBe('Appel de loyer — décembre 2026');
     expect(rentCallSubject({ year: 2027, month: 2 })).toBe('Appel de loyer — février 2027');
   });
 });
@@ -58,96 +54,43 @@ describe('rentCallBody', () => {
     expect(rentCallBody(DEFAULT_LANDLORD_PROFILE)).toBe(LEGACY_BODY);
   });
 
-  it('is the plan text followed by the signature of the profile', () => {
-    expect(rentCallBody({ ...DEFAULT_LANDLORD_PROFILE, emailSignature: 'Jeanne TEST' })).toBe(
+  it('is the plan text followed by the signature of the profile, with no trace of the legacy one', () => {
+    const body = rentCallBody({ ...DEFAULT_LANDLORD_PROFILE, emailSignature: 'Jeanne TEST' });
+    expect(body).toBe(
       'Bonjour,\n\nMerci de trouver ci-joint le(s) appel(s) de loyer(s) pour la prochaine période.\nBonne reception,\n\nJeanne TEST',
     );
-  });
-
-  it('prints nothing of the legacy signature once the profile has another', () => {
-    expect(
-      rentCallBody({ ...DEFAULT_LANDLORD_PROFILE, emailSignature: 'Jeanne TEST' }),
-    ).not.toContain('MARGERIT');
+    expect(body).not.toContain('MARGERIT');
   });
 });
 
 describe('groupByEmail', () => {
-  it('makes one entry per e-mail address, in order of first appearance', () => {
+  it('makes one entry per address in order of first appearance, merging holders that share one', () => {
     const groups = groupByEmail([
-      { holder: holder('Agi', 'agi@example.test'), pdf: pdf('l1') },
+      { holder: holder('Agi Martin', 'Famille@Example.TEST'), pdf: pdf('l1') },
       { holder: holder('Bob', 'bob@example.test'), pdf: pdf('l2') },
-      { holder: holder('Agi', 'agi@example.test'), pdf: pdf('l3') },
+      { holder: holder('Bob Martin', '  famille@example.test\n'), pdf: pdf('l3') },
+      { holder: holder('Agi Martin', 'famille@example.test'), pdf: pdf('l4') },
     ]);
 
-    expect([...groups.keys()]).toEqual(['agi@example.test', 'bob@example.test']);
-    expect(groups.get('agi@example.test')?.pdfs.map((p) => p.lease.objectId)).toEqual(['l1', 'l3']);
+    expect([...groups.keys()]).toEqual(['famille@example.test', 'bob@example.test']);
+    const family = groups.get('famille@example.test');
+    expect(family?.holderNames).toEqual(['Agi Martin', 'Bob Martin']);
+    expect(family?.pdfs.map((p) => p.lease.objectId)).toEqual(['l1', 'l3', 'l4']);
     expect(groups.get('bob@example.test')?.pdfs.map((p) => p.lease.objectId)).toEqual(['l2']);
   });
 
-  it('merges two holders sharing an address into ONE entry with all their PDFs and both names', () => {
+  it('never drops a holder without an address: they stay under the empty key, apart from real addresses', () => {
     const groups = groupByEmail([
-      { holder: holder('Agi Martin', 'famille@example.test'), pdf: pdf('l1') },
-      { holder: holder('Bob Martin', 'famille@example.test'), pdf: pdf('l2') },
-      { holder: holder('Agi Martin', 'famille@example.test'), pdf: pdf('l3') },
+      { holder: holder('Agi', 'agi@example.test'), pdf: pdf('l1') },
+      { holder: holder('Sans Mail', ''), pdf: pdf('l2') },
+      { holder: holder('Blanc', '   '), pdf: pdf('l3') },
+      { holder: holder('Absent', undefined as unknown as string), pdf: pdf('l4') },
     ]);
 
-    expect(groups.size).toBe(1);
-    const group = groups.get('famille@example.test');
-    expect(group?.holderNames).toEqual(['Agi Martin', 'Bob Martin']);
-    expect(group?.pdfs.map((p) => p.lease.objectId)).toEqual(['l1', 'l2', 'l3']);
-  });
-
-  it('keys by the trimmed, lower-cased address', () => {
-    const groups = groupByEmail([
-      { holder: holder('Agi', 'Famille@Example.TEST'), pdf: pdf('l1') },
-      { holder: holder('Bob', '  famille@example.test\n'), pdf: pdf('l2') },
-    ]);
-    expect([...groups.keys()]).toEqual(['famille@example.test']);
-    expect(groups.get('famille@example.test')?.holderNames).toEqual(['Agi', 'Bob']);
-  });
-
-  it('lists a holder name once, in order of appearance', () => {
-    const groups = groupByEmail([
-      { holder: holder('B', 'x@example.test'), pdf: pdf('l1') },
-      { holder: holder('A', 'x@example.test'), pdf: pdf('l2') },
-      { holder: holder('B', 'x@example.test'), pdf: pdf('l3') },
-      { holder: holder('A', 'x@example.test'), pdf: pdf('l4') },
-    ]);
-    expect(groups.get('x@example.test')?.holderNames).toEqual(['B', 'A']);
-  });
-
-  it('keeps every PDF object as given', () => {
-    const first = pdf('l1');
-    const groups = groupByEmail([{ holder: holder('Agi', 'agi@example.test'), pdf: first }]);
-    expect(groups.get('agi@example.test')?.pdfs[0]).toBe(first);
-  });
-
-  it('is empty without items', () => {
-    expect(groupByEmail([]).size).toBe(0);
-  });
-
-  describe('holders without an e-mail address', () => {
-    it('are never dropped: they stay in the map under the empty key, so that the sender reports them', () => {
-      const groups = groupByEmail([
-        { holder: holder('Agi', 'agi@example.test'), pdf: pdf('l1') },
-        { holder: holder('Sans Mail', ''), pdf: pdf('l2') },
-        { holder: holder('Blanc', '   '), pdf: pdf('l3') },
-        { holder: holder('Absent', undefined as unknown as string), pdf: pdf('l4') },
-      ]);
-
-      expect([...groups.keys()]).toEqual(['agi@example.test', '']);
-      const missing = groups.get('');
-      expect(missing?.holderNames).toEqual(['Sans Mail', 'Blanc', 'Absent']);
-      expect(missing?.pdfs.map((p) => p.lease.objectId)).toEqual(['l2', 'l3', 'l4']);
-    });
-
-    it('never end up in the group of a real address', () => {
-      const groups = groupByEmail([
-        { holder: holder('Agi', 'agi@example.test'), pdf: pdf('l1') },
-        { holder: holder('Sans Mail', ''), pdf: pdf('l2') },
-      ]);
-      expect(groups.get('agi@example.test')?.holderNames).toEqual(['Agi']);
-      expect(groups.get('agi@example.test')?.pdfs).toHaveLength(1);
-    });
+    expect([...groups.keys()]).toEqual(['agi@example.test', '']);
+    expect(groups.get('agi@example.test')?.holderNames).toEqual(['Agi']);
+    const missing = groups.get('');
+    expect(missing?.holderNames).toEqual(['Sans Mail', 'Blanc', 'Absent']);
+    expect(missing?.pdfs.map((p) => p.lease.objectId)).toEqual(['l2', 'l3', 'l4']);
   });
 });

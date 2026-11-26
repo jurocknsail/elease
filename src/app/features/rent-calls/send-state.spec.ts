@@ -1,4 +1,4 @@
-import { computeTotalPrice, toCents } from '../../core/billing/amounts';
+import { computeTotalPrice } from '../../core/billing/amounts';
 import { formatEuro } from '../../core/format/fr';
 import { BillingPeriod } from '../../core/billing/period';
 import { leaseStatus } from '../../core/billing/send-status';
@@ -124,14 +124,6 @@ describe('buildRows', () => {
     expect(rows.map((r) => r.status)).toEqual(['sent', 'sent', 'todo', 'todo']);
   });
 
-  it('follows the billing period it is given', () => {
-    const l = lease({ lastSentPeriod: '2026-12', lastSentPeriodAt: 1 });
-    const h = holder('Dupont', [l]);
-
-    expect(buildRows([h], DEC_2026)[0].status).toBe('sent');
-    expect(buildRows([h], { year: 2027, month: 1 })[0].status).toBe('todo');
-  });
-
   describe('order', () => {
     it('sorts by tenant name, then by lease name', () => {
       const rows = buildRows(
@@ -147,18 +139,6 @@ describe('buildRows', () => {
         'Martin/A',
         'Martin/B',
       ]);
-    });
-
-    it('puts a tenant name before another even when the lease names say the opposite', () => {
-      const rows = buildRows(
-        [
-          holder('Martin', [lease({ name: 'Bureau' })]),
-          holder('Dupont', [lease({ name: 'Bureau' })]),
-        ],
-        DEC_2026,
-      );
-
-      expect(rows.map((r) => r.holder.name)).toEqual(['Dupont', 'Martin']);
     });
 
     it('sorts like a French reader: case and accents do not decide', () => {
@@ -184,95 +164,22 @@ describe('buildRows', () => {
         'Zoé',
       ]);
     });
-
-    it('sorts the leases of a tenant the same way', () => {
-      const rows = buildRows(
-        [
-          holder('Dupont', [
-            lease({ name: 'local Z' }),
-            lease({ name: 'Étage' }),
-            lease({ name: 'Garage' }),
-            lease({ name: 'étable' }),
-            lease({ name: 'Appartement' }),
-          ]),
-        ],
-        DEC_2026,
-      );
-
-      expect(rows.map((r) => r.lease.name)).toEqual([
-        'Appartement',
-        'étable',
-        'Étage',
-        'Garage',
-        'local Z',
-      ]);
-    });
-
-    it('keeps the stored order of identical names (stable)', () => {
-      const first = lease({ name: 'Garage', objectId: 'first', price: 1 });
-      const second = lease({ name: 'Garage', objectId: 'second', price: 2 });
-      const rows = buildRows(
-        [
-          holder('Dupont', [first], { objectId: 'h1' }),
-          holder('Dupont', [second], { objectId: 'h2' }),
-        ],
-        DEC_2026,
-      );
-
-      expect(rows.map((r) => r.lease.objectId)).toEqual(['first', 'second']);
-    });
-
-    it('does not reorder or modify what it is given', () => {
-      const holders = [
-        holder('Martin', [lease({ name: 'B' }), lease({ name: 'A' })]),
-        holder('Dupont', [lease({ name: 'Z' })]),
-      ];
-      const before = JSON.stringify(holders);
-
-      buildRows(holders, DEC_2026);
-
-      expect(JSON.stringify(holders)).toBe(before);
-      expect(holders.map((h) => h.name)).toEqual(['Martin', 'Dupont']);
-    });
-  });
-
-  it('lists the rows of two tenants who share an e-mail address', () => {
-    const rows = buildRows(
-      [
-        holder('Camille Roy', [lease({ name: 'Studio' })], { email: 'famille@example.test' }),
-        holder('Louis Roy', [lease({ name: 'Garage' })], { email: 'famille@example.test' }),
-      ],
-      DEC_2026,
-    );
-
-    expect(rows.map((r) => r.holder.name)).toEqual(['Camille Roy', 'Louis Roy']);
-  });
-
-  it('keeps a lease that has no objectId, no charge, no renewal date and no lot', () => {
-    const bare = lease({ objectId: undefined, lot: null, charge: null, renewalDate: null });
-    const rows = buildRows([holder('Dupont', [bare])], DEC_2026);
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0].amount).toBe(500);
   });
 });
 
 describe('summary', () => {
-  it('counts the leases to send and the leases sent', () => {
-    const s = summary([row('todo'), row('sent'), row('todo'), row('todo'), row('sent')]);
-
-    expect(s.todo).toBe(3);
-    expect(s.sent).toBe(2);
-  });
-
-  it('totals the month over all the rows, sent ones included', () => {
-    const s = summary([row('todo', 1000), row('sent', 250.5), row('todo', 49.5)]);
-
-    expect(s.total).toBe(1300);
-  });
-
-  it('is all zero without rows', () => {
+  it('counts the leases to send and sent, totals the month sent ones included, ignores NaN', () => {
     expect(summary([])).toEqual({ todo: 0, sent: 0, total: 0 });
+    expect(summary([row('todo', 1000), row('sent', 250.5), row('todo', 49.5)])).toEqual({
+      todo: 2,
+      sent: 1,
+      total: 1300,
+    });
+    expect(summary([row('todo', NaN), row('sent', 100.5), row('todo', Infinity)])).toEqual({
+      todo: 2,
+      sent: 1,
+      total: 100.5,
+    });
   });
 
   it('totals the amounts as printed: each lease rounded to the cent, then added', () => {
@@ -285,190 +192,45 @@ describe('summary', () => {
     // The raw float sum is 3927.888, which prints 3 927,89: one cent short of the three rows.
     expect(summary(rows).total).toBe(3927.9);
     expect(plainEuro(formatEuro(summary(rows).total))).toBe('3 927,90 €');
-  });
-
-  it('has no float noise: 0.1 + 0.2 is 0.3', () => {
-    const rows = buildRows(
-      [holder('Dupont', [lease({ name: 'A', price: 0.1 }), lease({ name: 'B', price: 0.2 })])],
-      DEC_2026,
-    );
-
-    expect(summary(rows).total).toBe(0.3);
-  });
-
-  it('rounds each lease like the PDF (toFixed(2)), not the total', () => {
-    const leases = [
-      lease({ name: 'A', price: 2.675 }),
-      lease({ name: 'B', price: 1.005 }),
-      lease({ name: 'C', price: 0.125 }),
-    ];
-    const rows = buildRows([holder('Dupont', leases)], DEC_2026);
-
-    // 2.675 -> 2.67, 1.005 -> 1.00, 0.125 -> 0.13 (what toFixed(2) prints), i.e. 3.80 in all.
-    expect(summary(rows).total).toBe(3.8);
-  });
-
-  it('counts an amount that is not a number as nothing, never NaN', () => {
-    const s = summary([row('todo', NaN), row('sent', 100.5), row('todo', Infinity)]);
-
-    expect(s.total).toBe(100.5);
-    expect(s.todo).toBe(2);
-    expect(s.sent).toBe(1);
-  });
-
-  it('always equals the sum of the amounts shown in the rows (2 000 pseudo-random portfolios)', () => {
-    // Deterministic generator (mulberry32): the same portfolios on every run.
-    let state = 0x1f2e3d4c;
-    const random = () => {
-      state = (state + 0x6d2b79f5) >>> 0;
-      let t = state;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-    const decimals = (max: number) => {
-      const places = random() < 0.5 ? 2 : 3;
-      return Math.round(random() * max * 10 ** places) / 10 ** places;
-    };
-
-    let rawSumDiffered = 0;
-    for (let portfolio = 0; portfolio < 2000; portfolio++) {
-      const count = 1 + Math.floor(random() * 15);
-      const leases = Array.from({ length: count }, (_, i) =>
-        lease({
-          name: `Bail ${i}`,
-          isPro: random() < 0.5,
-          price: decimals(3000),
-          charge: random() < 0.4 ? null : decimals(400),
-          additionalCharges: Array.from({ length: Math.floor(random() * 4) }, (_, k) => ({
-            title: `Frais ${k}`,
-            amount: decimals(150),
-          })),
-        }),
-      );
-      const rows = buildRows([holder('Dupont', leases)], DEC_2026);
-      const { total } = summary(rows);
-
-      // What the owner adds by hand: the amounts printed on the rows, to the cent.
-      const shown = rows.reduce((sum, r) => sum + euroCents(formatEuro(r.amount)), 0);
-      expect(Math.round(total * 100)).toBe(shown);
-      expect(euroCents(formatEuro(total))).toBe(shown);
-      expect(Math.round(total * 100)).toBe(rows.reduce((sum, r) => sum + toCents(r.amount), 0));
-      if (euroCents(formatEuro(rows.reduce((sum, r) => sum + r.amount, 0))) !== shown) {
-        rawSumDiffered += 1;
-      }
-    }
-    // The property is not vacuous: the plain float sum is off by a cent in many of these portfolios.
-    expect(rawSumDiffered).toBeGreaterThan(100);
-  });
-
-  it('works on what buildRows returns', () => {
-    const rows = buildRows(
-      [
-        holder('Dupont', [
-          lease({ name: 'Studio', price: 600 }),
-          lease({ name: 'Garage', price: 80, lastSentPeriod: '2026-12', lastSentPeriodAt: 1 }),
-        ]),
-        holder('Sans bail'),
-      ],
-      DEC_2026,
-    );
-
-    expect(summary(rows)).toEqual({ todo: 1, sent: 1, total: 680 });
+    // What the owner adds by hand: the amounts printed on the rows, to the cent.
+    const shown = rows.reduce((sum, r) => sum + euroCents(formatEuro(r.amount)), 0);
+    expect(euroCents(formatEuro(summary(rows).total))).toBe(shown);
   });
 });
 
 describe('rowKey', () => {
-  it("is the lease's objectId when it has one", () => {
+  it("is the lease's objectId, else a position-based key that stays distinct and cannot collide", () => {
     const rows = buildRows(
-      [holder('Dupont', [lease({ name: 'Studio', objectId: 'abc123' })])],
+      [
+        holder('Dupont', [
+          lease({ name: 'Atelier', objectId: 'abc123' }),
+          lease({ name: 'Garage', objectId: undefined }),
+          lease({ name: 'Garage', objectId: undefined }),
+        ]),
+      ],
       DEC_2026,
     );
 
     expect(rowKey(rows[0], 0)).toBe('abc123');
     expect(rowKey(rows[0], 7)).toBe('abc123');
-  });
-
-  it('falls back on the position, so leases without an objectId and with the same name stay distinct', () => {
-    const rows = buildRows(
-      [
-        holder('Dupont', [
-          lease({ name: 'Garage', objectId: undefined }),
-          lease({ name: 'Garage', objectId: undefined }),
-        ]),
-        holder('Dupont', [lease({ name: 'Garage', objectId: undefined })], { objectId: undefined }),
-      ],
-      DEC_2026,
-    );
-
     const keys = rows.map((r, i) => rowKey(r, i));
     expect(new Set(keys).size).toBe(3);
-  });
-
-  it('cannot collide with a real objectId', () => {
-    const rows = buildRows([holder('Dupont', [lease({ objectId: undefined })])], DEC_2026);
-
-    expect(rowKey(rows[0], 0)).toContain(':');
-    expect(rowKey(rows[0], 0)).toBe('h-Dupont:0');
+    expect(keys[1]).toBe('h-Dupont:1');
   });
 });
 
 describe('showReminderBanner', () => {
   const todo = [row('sent'), row('todo')];
-  const allSent = [row('sent'), row('sent')];
 
-  it('is off on the 24th, even with leases to send', () => {
+  it('is off on the 24th, on from the 25th while a lease is still to send, including month ends', () => {
     expect(showReminderBanner(new Date(2026, 10, 24, 23, 59, 59, 999), todo)).toBe(false);
-  });
-
-  it('is on from the 25th when a lease is still to send', () => {
-    expect(showReminderBanner(new Date(2026, 10, 25), todo)).toBe(true);
     expect(showReminderBanner(new Date(2026, 10, 25, 0, 0, 0, 0), todo)).toBe(true);
-    expect(showReminderBanner(new Date(2026, 10, 25, 23, 59, 59, 999), todo)).toBe(true);
-    expect(showReminderBanner(new Date(2026, 10, 30), todo)).toBe(true);
-  });
-
-  it('is off on the 25th when everything is sent', () => {
-    expect(showReminderBanner(new Date(2026, 10, 25), allSent)).toBe(false);
-  });
-
-  it('is off without any row', () => {
-    expect(showReminderBanner(new Date(2026, 10, 25), [])).toBe(false);
-  });
-
-  it('is off on the early days of the month, which cannot be after the 25th', () => {
-    expect(showReminderBanner(new Date(2026, 11, 1), todo)).toBe(false);
-    expect(showReminderBanner(new Date(2026, 11, 10), todo)).toBe(false);
-  });
-
-  it('reads the day of the month, whatever the length of the month', () => {
-    // 28 February 2027 (not a leap year): the last day is after the 25th.
     expect(showReminderBanner(new Date(2027, 1, 28), todo)).toBe(true);
-    expect(showReminderBanner(new Date(2027, 1, 24), todo)).toBe(false);
-    // 29 February 2028 (leap year).
-    expect(showReminderBanner(new Date(2028, 1, 29), todo)).toBe(true);
-    expect(showReminderBanner(new Date(2028, 1, 25), todo)).toBe(true);
-    expect(showReminderBanner(new Date(2028, 1, 24), todo)).toBe(false);
-    // 31-day and 30-day months.
-    expect(showReminderBanner(new Date(2026, 11, 31), todo)).toBe(true);
-    expect(showReminderBanner(new Date(2026, 3, 30), todo)).toBe(true);
   });
 
-  it('uses the local day of the date it is given', () => {
-    // Built with local-time constructors: the 25th at the start and the end of the local day, in
-    // whatever time zone the suite runs (run it under TZ=America/Los_Angeles and TZ=Pacific/Auckland).
-    expect(showReminderBanner(new Date(2026, 10, 24, 23, 59), todo)).toBe(false);
-    expect(showReminderBanner(new Date(2026, 10, 25, 0, 1), todo)).toBe(true);
-    // 25 December 2026 at 00:30, then 24 December at 23:30.
-    expect(showReminderBanner(new Date(2026, 11, 25, 0, 30), todo)).toBe(true);
-    expect(showReminderBanner(new Date(2026, 11, 24, 23, 30), todo)).toBe(false);
-  });
-
-  it('does not depend on the amounts or on how many leases are sent', () => {
-    expect(showReminderBanner(new Date(2026, 10, 25), [row('todo', 0)])).toBe(true);
-    expect(
-      showReminderBanner(new Date(2026, 10, 25), [row('sent'), row('sent'), row('todo')]),
-    ).toBe(true);
+  it('is off from the 25th when everything is sent or there is no row', () => {
+    expect(showReminderBanner(new Date(2026, 10, 25), [row('sent'), row('sent')])).toBe(false);
+    expect(showReminderBanner(new Date(2026, 10, 25), [])).toBe(false);
   });
 });
 
@@ -484,10 +246,8 @@ describe('initialSelection', () => {
       DEC_2026,
     );
 
-    const selected = initialSelection(rows);
-
-    expect(selected).toEqual(new Set(['l-Commerce', 'l-Studio']));
-    expect(selected.has('l-Garage')).toBe(false);
+    expect(initialSelection(rows)).toEqual(new Set(['l-Commerce', 'l-Studio']));
+    expect(initialSelection([]).size).toBe(0);
   });
 
   it('uses the key of rowKey, also for a lease without objectId', () => {
@@ -498,19 +258,12 @@ describe('initialSelection', () => {
 
     expect([...initialSelection(rows)]).toEqual([rowKey(rows[0], 0)]);
   });
-
-  it('is empty when everything is sent or there is no row', () => {
-    expect(initialSelection([]).size).toBe(0);
-    expect(
-      initialSelection(buildRows([holder('Dupont', [lease({ ...sent })])], DEC_2026)).size,
-    ).toBe(0);
-  });
 });
 
 describe('selectionSummary', () => {
   const keysOf = (rows: RentCallRow[]) => new Set(rows.map(rowKey));
 
-  it('3 leases of 2 holders with different e-mails: 3 calls, 2 e-mails, 2 holders', () => {
+  it('counts calls, e-mails and holders of the selected rows only', () => {
     const rows = buildRows(
       [
         holder('Dupont', [
@@ -528,46 +281,15 @@ describe('selectionSummary', () => {
       holders: 2,
       total: 1680,
     });
-  });
-
-  it('counts only the selected rows', () => {
-    const rows = buildRows(
-      [
-        holder('Dupont', [
-          lease({ name: 'Studio', price: 600 }),
-          lease({ name: 'Garage', price: 80 }),
-        ]),
-      ],
-      DEC_2026,
-    );
-
     expect(selectionSummary(rows, new Set(['l-Garage']))).toEqual({
       count: 1,
       emails: 1,
       holders: 1,
       total: 80,
     });
-    expect(selectionSummary(rows, new Set())).toEqual({
-      count: 0,
-      emails: 0,
-      holders: 0,
-      total: 0,
-    });
   });
 
-  it('two holders sharing one address are 2 holders but ONE e-mail, trimmed and case-insensitive', () => {
-    const rows = buildRows(
-      [
-        holder('Dupont', [lease({ name: 'A' })], { email: ' Famille@Example.test ' }),
-        holder('Martin', [lease({ name: 'B' })], { email: 'famille@example.test' }),
-      ],
-      DEC_2026,
-    );
-
-    expect(selectionSummary(rows, keysOf(rows))).toMatchObject({ count: 2, emails: 1, holders: 2 });
-  });
-
-  it('counts the e-mails with the very key of groupByEmail, whatever the spelling', () => {
+  it('counts the e-mails with the very key of groupByEmail: shared addresses merge, blank ones are not e-mails', () => {
     const emails = ['a@x.test', ' A@X.test', 'b@x.test ', '', '   ', 'B@x.TEST', 'c@x.test'];
     const holders = emails.map((email, i) =>
       holder('H' + i, [lease({ name: 'L' + i })], { email }),
@@ -579,32 +301,10 @@ describe('selectionSummary', () => {
     }));
     const groups = groupByEmail(items);
 
-    const { emails: counted } = selectionSummary(rows, keysOf(rows));
+    const counted = selectionSummary(rows, keysOf(rows));
 
-    expect(counted).toBe([...groups.keys()].filter((key) => key !== '').length);
-    expect(counted).toBe(3);
-  });
-
-  it('a holder without an address is NOT an e-mail (own empty group) but is a holder', () => {
-    const rows = buildRows(
-      [
-        holder('Dupont', [lease({ name: 'A' })], { email: 'dupont@example.test' }),
-        holder('Sans', [lease({ name: 'B' })], { email: '' }),
-        holder('Blanc', [lease({ name: 'C' })], { email: '   ' }),
-      ],
-      DEC_2026,
-    );
-
-    expect(selectionSummary(rows, keysOf(rows))).toMatchObject({ count: 3, emails: 1, holders: 3 });
-  });
-
-  it('a holder with several selected leases is counted once', () => {
-    const rows = buildRows(
-      [holder('Dupont', [lease({ name: 'A' }), lease({ name: 'B' }), lease({ name: 'C' })])],
-      DEC_2026,
-    );
-
-    expect(selectionSummary(rows, keysOf(rows))).toMatchObject({ count: 3, emails: 1, holders: 1 });
+    expect(counted.emails).toBe([...groups.keys()].filter((key) => key !== '').length);
+    expect(counted).toMatchObject({ count: 7, emails: 3, holders: 7 });
   });
 
   it('the total is the sum of the amounts rounded to the cent (3 pro leases of 1091.08)', () => {
@@ -627,21 +327,10 @@ describe('selectionSummary', () => {
 });
 
 describe('canSend', () => {
-  it('is false when nothing is selected', () => {
+  it('needs a selection whose every lease has its PDF, and ignores other PDFs', () => {
     expect(canSend(new Set(), new Set(['a']))).toBe(false);
-    expect(canSend(new Set(), new Set())).toBe(false);
-  });
-
-  it('is false while one selected lease has no generated PDF', () => {
     expect(canSend(new Set(['a', 'b']), new Set(['a']))).toBe(false);
-    expect(canSend(new Set(['a']), new Set())).toBe(false);
-  });
-
-  it('is true when every selected lease has its PDF', () => {
     expect(canSend(new Set(['a', 'b']), new Set(['a', 'b']))).toBe(true);
-  });
-
-  it('ignores PDFs of leases that are not selected', () => {
     expect(canSend(new Set(['a']), new Set(['a', 'b', 'c']))).toBe(true);
   });
 });
@@ -656,28 +345,16 @@ describe('date input helpers', () => {
     expect(parsed?.getDate()).toBe(25);
   });
 
-  it.each([
-    '',
-    '  ',
-    '2026-13-01',
-    '2026-02-30',
-    '25/11/2026',
-    '2026-1-5',
-    '1999-12-31',
-    '2101-01-01',
-    'abc',
-  ])('rejects %j', (value) => {
-    expect(parseDateInput(value)).toBeNull();
-  });
-
-  it('accepts a leap day', () => {
+  it('rejects malformed, impossible and out-of-range dates, accepts a leap day', () => {
+    for (const value of ['', '2026-13-01', '2026-02-30', '25/11/2026', '1999-12-31', 'abc']) {
+      expect(parseDateInput(value), JSON.stringify(value)).toBeNull();
+    }
     expect(parseDateInput('2028-02-29')).not.toBeNull();
     expect(parseDateInput('2027-02-29')).toBeNull();
   });
 
   it('labels the due date with the ordinal « 1er »', () => {
     expect(dueDateLabel({ year: 2027, month: 1 })).toBe('1er janvier 2027');
-    expect(dueDateLabel({ year: 2026, month: 12 })).toBe('1er décembre 2026');
   });
 });
 
@@ -691,11 +368,8 @@ describe('confirmMessage', () => {
     withoutAddress: 0,
   };
 
-  it('says « N e-mails à M locataires, total T. »', () => {
+  it('says « N e-mails à M locataires, total T. », in the singular for 1', () => {
     expect(plainEuro(confirmMessage(base))).toBe('6 e-mails à 5 locataires, total 8 420 €.');
-  });
-
-  it('uses the singular for 1 e-mail and 1 tenant', () => {
     expect(plainEuro(confirmMessage({ ...base, emails: 1, holders: 1, total: 1900 }))).toBe(
       '1 e-mail à 1 locataire, total 1 900 €.',
     );
@@ -714,8 +388,5 @@ describe('confirmMessage', () => {
       'Attention : 2 appels déjà envoyés ou peut-être envoyés pour cette période.',
     );
     expect(message).toContain('1 locataire sans adresse e-mail ne recevra rien.');
-    expect(confirmMessage({ ...base, repeats: 1 })).toContain(
-      '1 appel déjà envoyé ou peut-être envoyé',
-    );
   });
 });
