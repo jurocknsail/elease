@@ -25,6 +25,8 @@ const NOV_2026: BillingPeriod = { year: 2026, month: 11 };
 const DEC_2026: BillingPeriod = { year: 2026, month: 12 };
 const JAN_2027: BillingPeriod = { year: 2027, month: 1 };
 const FEB_2027: BillingPeriod = { year: 2027, month: 2 };
+const MAR_2027: BillingPeriod = { year: 2027, month: 3 };
+const APR_2027: BillingPeriod = { year: 2027, month: 4 };
 
 /** Local timestamp: month is 1-12. */
 function at(year: number, month: number, day: number, hours = 0, minutes = 0): number {
@@ -37,9 +39,20 @@ describe('isSentForPeriod', () => {
       expect(isSentForPeriod(lease({ lastSentPeriod: '2026-12' }), DEC_2026)).toBe(true);
     });
 
-    it('is not sent when lastSentPeriod is another period and there is no send date', () => {
+    it('is not sent when lastSentPeriod is an earlier period and there is no send date', () => {
       expect(isSentForPeriod(lease({ lastSentPeriod: '2026-11' }), DEC_2026)).toBe(false);
-      expect(isSentForPeriod(lease({ lastSentPeriod: '2027-01' }), DEC_2026)).toBe(false);
+      expect(isSentForPeriod(lease({ lastSentPeriod: '2025-12' }), DEC_2026)).toBe(false);
+    });
+
+    it('a period recorded after p means p was sent first (send-ahead)', () => {
+      expect(isSentForPeriod(lease({ lastSentPeriod: '2027-01' }), DEC_2026)).toBe(true);
+      expect(isSentForPeriod(lease({ lastSentPeriod: '2027-03' }), FEB_2027)).toBe(true);
+    });
+
+    it('ignores a malformed lastSentPeriod', () => {
+      expect(isSentForPeriod(lease({ lastSentPeriod: 'oops' }), DEC_2026)).toBe(false);
+      expect(isSentForPeriod(lease({ lastSentPeriod: '' }), DEC_2026)).toBe(false);
+      expect(isSentForPeriod(lease({ lastSentPeriod: '2027-1' }), DEC_2026)).toBe(false);
     });
 
     it('year rollover: a December period alone says nothing about January', () => {
@@ -113,6 +126,102 @@ describe('isSentForPeriod', () => {
       expect(isSentForPeriod(l, NOV_2026)).toBe(true);
       expect(isSentForPeriod(l, JAN_2027)).toBe(false);
     });
+  });
+});
+
+/**
+ * Sends recorded by the new app write lastSentPeriod, lastSendDate and lastSentPeriodAt (equal to
+ * lastSendDate) in one save; the legacy app only rewrites lastSendDate.
+ */
+function sentByNewApp(period: string, sentAt: number, overrides: Partial<Lease> = {}): Lease {
+  return lease({
+    lastSentPeriod: period,
+    lastSendDate: sentAt,
+    lastSentPeriodAt: sentAt,
+    ...overrides,
+  });
+}
+
+describe('isSentForPeriod with lastSentPeriodAt (scenarios S1 to S6)', () => {
+  it('S1 on-time send: the January call sent on 25 Dec 2026 is sent for January, Feb is to do', () => {
+    const l = sentByNewApp('2027-01', at(2026, 12, 25));
+
+    expect(isSentForPeriod(l, JAN_2027)).toBe(true);
+    expect(isSentForPeriod(l, FEB_2027)).toBe(false);
+  });
+
+  it('S2 late send: the January call sent on 3 Jan 2027 does not hide February', () => {
+    const l = sentByNewApp('2027-01', at(2027, 1, 3));
+
+    expect(isSentForPeriod(l, JAN_2027)).toBe(true);
+    expect(isSentForPeriod(l, FEB_2027)).toBe(false);
+  });
+
+  it('S3 correction re-send: the January call re-sent on 12 Jan 2027 does not hide February', () => {
+    const l = sentByNewApp('2027-01', at(2027, 1, 12));
+
+    expect(isSentForPeriod(l, JAN_2027)).toBe(true);
+    expect(isSentForPeriod(l, FEB_2027)).toBe(false);
+  });
+
+  it('S4 early send: the February call sent on 5 Jan 2027 is sent for February, March is to do', () => {
+    const l = sentByNewApp('2027-02', at(2027, 1, 5));
+
+    expect(isSentForPeriod(l, FEB_2027)).toBe(true);
+    expect(isSentForPeriod(l, MAR_2027)).toBe(false);
+  });
+
+  it('S5 legacy send after a new-app send: the stale lastSentPeriod does not hide the December call already sent', () => {
+    // The new app sent November on 25 Oct; the legacy app then sent December on 25 Nov and only
+    // rewrote lastSendDate: lastSentPeriodAt no longer equals it.
+    const l = lease({
+      lastSentPeriod: '2026-11',
+      lastSentPeriodAt: at(2026, 10, 25),
+      lastSendDate: at(2026, 11, 25),
+    });
+
+    expect(isSentForPeriod(l, NOV_2026)).toBe(true);
+    expect(isSentForPeriod(l, DEC_2026)).toBe(true);
+    expect(isSentForPeriod(l, JAN_2027)).toBe(false);
+  });
+
+  it('S6 send-ahead: February then March sent on 26 Jan 2027, both are sent, April is to do', () => {
+    // After the second send the lease records March, with the same timestamp.
+    const l = sentByNewApp('2027-03', at(2027, 1, 26));
+
+    expect(isSentForPeriod(l, FEB_2027)).toBe(true);
+    expect(isSentForPeriod(l, MAR_2027)).toBe(true);
+    expect(isSentForPeriod(l, APR_2027)).toBe(false);
+  });
+
+  it('a lease with lastSentPeriod but no lastSentPeriodAt falls back on the date rule', () => {
+    const l = lease({ lastSentPeriod: '2027-01', lastSendDate: at(2027, 1, 3) });
+
+    expect(isSentForPeriod(l, JAN_2027)).toBe(true);
+    expect(isSentForPeriod(l, FEB_2027)).toBe(true);
+    expect(isSentForPeriod(l, MAR_2027)).toBe(false);
+  });
+
+  it('a lastSentPeriodAt without lastSentPeriod does not block the date fallback', () => {
+    const l = lease({ lastSentPeriodAt: at(2026, 10, 25), lastSendDate: at(2026, 10, 25) });
+
+    expect(isSentForPeriod(l, NOV_2026)).toBe(true);
+    expect(isSentForPeriod(l, DEC_2026)).toBe(false);
+  });
+
+  it('year rollover: a December 2026 send for January, then February, and a legacy send in January', () => {
+    const newApp = sentByNewApp('2027-01', at(2026, 12, 25));
+    expect(isSentForPeriod(newApp, JAN_2027)).toBe(true);
+    expect(isSentForPeriod(newApp, FEB_2027)).toBe(false);
+
+    // A legacy send on 25 Jan for February after that new-app send.
+    const legacyAfter = lease({
+      lastSentPeriod: '2027-01',
+      lastSentPeriodAt: at(2026, 12, 25),
+      lastSendDate: at(2027, 1, 25),
+    });
+    expect(isSentForPeriod(legacyAfter, FEB_2027)).toBe(true);
+    expect(isSentForPeriod(legacyAfter, MAR_2027)).toBe(false);
   });
 });
 

@@ -16,7 +16,8 @@ export function computeTVA(lease: Lease): number {
 /** Total of the rent call: rent (+ VAT if professional) + charges advance + additional charges. */
 export function computeTotalPrice(lease: Lease): number {
   const noChargesPrice = lease.isPro ? lease.price + computeTVA(lease) : lease.price;
-  // Loose `!= null` as in the legacy code: a missing charge (null or undefined) or 0 adds nothing.
+  // The legacy test is `charge != null && charge != 0`. Here `!= null` also covers undefined and
+  // `!== 0` is equivalent to the legacy `!= 0` for a number: a missing charge or 0 adds nothing.
   let totalPrice =
     lease.charge != null && lease.charge !== 0 ? noChargesPrice + lease.charge : noChargesPrice;
 

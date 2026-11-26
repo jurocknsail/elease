@@ -27,6 +27,12 @@ export interface Lease {
   lastSendDate: number;
   /** Billing period of the last rent call sent, 'YYYY-MM'. */
   lastSentPeriod?: string;
+  /**
+   * Milliseconds timestamp of the send that wrote `lastSentPeriod`: the new app saves it in the same
+   * write as `lastSentPeriod`, equal to the `lastSendDate` it writes. The legacy app only rewrites
+   * `lastSendDate`, so a `lastSendDate` that differs from this value is a later legacy send.
+   */
+  lastSentPeriodAt?: number;
   /** Anniversary date in milliseconds, null when not filled in yet. */
   renewalDate: number | null;
   indexType?: IndexType;

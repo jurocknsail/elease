@@ -42,6 +42,7 @@ function additionalChargesFromParse(value: unknown): AdditionalCharge[] {
 export function leaseFromParse(json: Json): Lease {
   const indexType: IndexType | undefined = INDEX_TYPES.find((type) => type === json['indexType']);
   const lastSentPeriod = optionalText(json['lastSentPeriod']);
+  const lastSentPeriodAt = finite(json['lastSentPeriodAt']);
   const referenceIndexQuarter = optionalText(json['referenceIndexQuarter']);
   const referenceIndexValue = finite(json['referenceIndexValue']);
   const revisionReminderSentFor = optionalText(json['revisionReminderSentFor']);
@@ -62,6 +63,7 @@ export function leaseFromParse(json: Json): Lease {
     lastSendDate: finite(json['lastSendDate']) ?? 0,
     renewalDate: finite(json['renewalDate']) ?? null,
     ...(lastSentPeriod !== undefined ? { lastSentPeriod } : {}),
+    ...(lastSentPeriodAt !== undefined ? { lastSentPeriodAt } : {}),
     ...(indexType !== undefined ? { indexType } : {}),
     ...(referenceIndexQuarter !== undefined ? { referenceIndexQuarter } : {}),
     ...(referenceIndexValue !== undefined ? { referenceIndexValue } : {}),
@@ -90,6 +92,7 @@ export function leaseToParseFields(lease: Lease): Json {
     charge: lease.charge,
     additionalCharges: lease.additionalCharges.map(({ title, amount }) => ({ title, amount })),
     ...(lease.lastSentPeriod !== undefined ? { lastSentPeriod: lease.lastSentPeriod } : {}),
+    ...(lease.lastSentPeriodAt !== undefined ? { lastSentPeriodAt: lease.lastSentPeriodAt } : {}),
     ...(lease.indexType !== undefined ? { indexType: lease.indexType } : {}),
     ...(lease.referenceIndexQuarter !== undefined
       ? { referenceIndexQuarter: lease.referenceIndexQuarter }
@@ -117,6 +120,7 @@ const CLEARABLE_INDEX_FIELDS = [
 const BOOKKEEPING_FIELDS: readonly string[] = [
   'lastSendDate',
   'lastSentPeriod',
+  'lastSentPeriodAt',
   'revisionReminderSentFor',
 ];
 

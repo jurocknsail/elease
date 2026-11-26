@@ -370,6 +370,7 @@ describe('LeaseholderRepository', () => {
         newLease({
           lastSendDate: 1761393600000,
           lastSentPeriod: '2026-11',
+          lastSentPeriodAt: 1761393600000,
           indexType: 'ILC',
           referenceIndexQuarter: '2025-T2',
           referenceIndexValue: 133.7,
@@ -381,6 +382,7 @@ describe('LeaseholderRepository', () => {
           ...LEGACY_KEYS,
           'indexType',
           'lastSentPeriod',
+          'lastSentPeriodAt',
           'referenceIndexQuarter',
           'referenceIndexValue',
         ].sort(),
@@ -501,13 +503,14 @@ describe('LeaseholderRepository', () => {
       expect(fake.record('Lease', 'a')!.attrs['lot']).toBe(0);
     });
 
-    it('never writes lastSendDate, lastSentPeriod or revisionReminderSentFor, and shows the fresh server values afterwards', async () => {
+    it('never writes lastSendDate, lastSentPeriod, lastSentPeriodAt or revisionReminderSentFor, and shows the fresh server values afterwards', async () => {
       const { fake, repo } = await loaded();
       const stale = repo.leaseholders()[0].leases[0];
       // Another device sent the rent call and the cloud job sent its reminder meanwhile.
       const server = fake.record('Lease', 'a')!.attrs;
       server['lastSendDate'] = 1761393600000;
       server['lastSentPeriod'] = '2026-11';
+      server['lastSentPeriodAt'] = 1761393600000;
       server['revisionReminderSentFor'] = '2027-03-01';
 
       await repo.updateLease({
@@ -516,6 +519,7 @@ describe('LeaseholderRepository', () => {
         // Even stale or edited bookkeeping values on the lease passed in must not reach the server.
         lastSendDate: 1,
         lastSentPeriod: '2025-01',
+        lastSentPeriodAt: 1,
         revisionReminderSentFor: '2025-01-01',
       });
 
@@ -523,12 +527,14 @@ describe('LeaseholderRepository', () => {
       expect(keysOf(ops)).toEqual(['price']);
       expect(server['lastSendDate']).toBe(1761393600000);
       expect(server['lastSentPeriod']).toBe('2026-11');
+      expect(server['lastSentPeriodAt']).toBe(1761393600000);
       expect(server['revisionReminderSentFor']).toBe('2027-03-01');
       expect(server['price']).toBe(5);
       expect(repo.leaseholders()[0].leases[0]).toMatchObject({
         price: 5,
         lastSendDate: 1761393600000,
         lastSentPeriod: '2026-11',
+        lastSentPeriodAt: 1761393600000,
         revisionReminderSentFor: '2027-03-01',
       });
     });
@@ -769,7 +775,7 @@ describe('LeaseholderRepository', () => {
   });
 
   describe('markLeasesSent', () => {
-    it('sets lastSendDate and lastSentPeriod, saves, and refreshes the state', async () => {
+    it('sets lastSendDate, lastSentPeriod and lastSentPeriodAt in one save, and refreshes the state', async () => {
       const { fake, repo } = await loaded();
       const sentAt = Date.UTC(2026, 10, 25, 9, 0, 0);
 
@@ -781,15 +787,23 @@ describe('LeaseholderRepository', () => {
       expect(saveOps(saves[0])).toEqual([
         { kind: 'set', key: 'lastSendDate', value: sentAt },
         { kind: 'set', key: 'lastSentPeriod', value: '2026-12' },
+        { kind: 'set', key: 'lastSentPeriodAt', value: sentAt },
       ]);
       expect(fake.record('Lease', 'a')?.attrs).toMatchObject({
         lastSendDate: sentAt,
         lastSentPeriod: '2026-12',
+        lastSentPeriodAt: sentAt,
       });
       const [a, b] = repo.leaseholders()[0].leases;
-      expect(a).toMatchObject({ objectId: 'a', lastSendDate: sentAt, lastSentPeriod: '2026-12' });
+      expect(a).toMatchObject({
+        objectId: 'a',
+        lastSendDate: sentAt,
+        lastSentPeriod: '2026-12',
+        lastSentPeriodAt: sentAt,
+      });
       expect(b.lastSendDate).toBe(0);
       expect(b.lastSentPeriod).toBeUndefined();
+      expect(b.lastSentPeriodAt).toBeUndefined();
     });
 
     it('handles several leases independently: successes are saved and reflected, then the first failure is thrown', async () => {

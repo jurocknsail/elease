@@ -114,9 +114,9 @@ export class LeaseholderRepository {
 
   /**
    * Saves an edit. Only what the user changed is written: the lease is compared with the version in
-   * the state, and `lastSendDate`, `lastSentPeriod` and `revisionReminderSentFor` are never written
-   * (only `markLeasesSent` and the cloud job record them), so a stale copy cannot erase what another
-   * device or a reminder recorded. The state then shows the server's version of the lease.
+   * the state, and `lastSendDate`, `lastSentPeriod`, `lastSentPeriodAt` and `revisionReminderSentFor`
+   * are never written (only `markLeasesSent` and the cloud job record them), so a stale copy cannot
+   * erase what another device or a reminder recorded. The state then shows the server's version of the lease.
    */
   async updateLease(lease: Lease): Promise<void> {
     if (!lease.objectId) {
@@ -208,7 +208,11 @@ export class LeaseholderRepository {
     this.removeHolder(id);
   }
 
-  /** Records that the rent calls of these leases were sent: `lastSendDate` and `lastSentPeriod`. */
+  /**
+   * Records that the rent calls of these leases were sent: `lastSendDate`, `lastSentPeriod` and
+   * `lastSentPeriodAt` (equal to `lastSendDate`, so a later legacy send, which only rewrites
+   * `lastSendDate`, can be told apart), all in the same save and nothing else.
+   */
   async markLeasesSent(leaseIds: string[], periodKey: string, at: number): Promise<void> {
     // Each lease on its own: those that succeed are saved and shown as sent even if another fails.
     const results = await Promise.allSettled(
@@ -216,6 +220,7 @@ export class LeaseholderRepository {
         const object = await withTimeout(this.client.fetchById(LEASE_CLASS, id));
         object.set('lastSendDate', at);
         object.set('lastSentPeriod', periodKey);
+        object.set('lastSentPeriodAt', at);
         const saved = await withTimeout(object.save());
         this.replaceLease(leaseFromParse(saved.toJSON()));
       }),

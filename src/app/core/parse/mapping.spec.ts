@@ -106,6 +106,7 @@ describe('leaseFromParse', () => {
 
     for (const key of [
       'lastSentPeriod',
+      'lastSentPeriodAt',
       'indexType',
       'referenceIndexQuarter',
       'referenceIndexValue',
@@ -124,6 +125,7 @@ describe('leaseFromParse', () => {
       renewalDate: 1772323200000,
       additionalCharges: [{ title: 'Garage', amount: 50 }],
       lastSentPeriod: '2026-12',
+      lastSentPeriodAt: 1764061200000,
       indexType: 'ILC',
       referenceIndexQuarter: '2025-T2',
       referenceIndexValue: 133.7,
@@ -137,11 +139,20 @@ describe('leaseFromParse', () => {
       renewalDate: 1772323200000,
       additionalCharges: [{ title: 'Garage', amount: 50 }],
       lastSentPeriod: '2026-12',
+      lastSentPeriodAt: 1764061200000,
       indexType: 'ILC',
       referenceIndexQuarter: '2025-T2',
       referenceIndexValue: 133.7,
       revisionReminderSentFor: '2027-03-01:pending',
     });
+  });
+
+  it('reads lastSentPeriodAt only when it is a finite number', () => {
+    for (const bad of ['1764061200000', null, Number.NaN, Number.POSITIVE_INFINITY, {}, true]) {
+      const lease = leaseFromParse({ ...realShapedLease(), lastSentPeriodAt: bad });
+      expect('lastSentPeriodAt' in lease).toBe(false);
+    }
+    expect(leaseFromParse({ ...realShapedLease(), lastSentPeriodAt: 0 }).lastSentPeriodAt).toBe(0);
   });
 
   it('tolerates null, NaN-like and malformed values', () => {
@@ -246,6 +257,7 @@ describe('leaseToParseFields', () => {
     const fields = leaseToParseFields(
       baseLease({
         lastSentPeriod: '2026-12',
+        lastSentPeriodAt: 1764061200000,
         indexType: 'IRL',
         referenceIndexQuarter: '2025-T2',
         referenceIndexValue: 143.5,
@@ -257,12 +269,14 @@ describe('leaseToParseFields', () => {
         ...LEGACY_KEYS,
         'indexType',
         'lastSentPeriod',
+        'lastSentPeriodAt',
         'referenceIndexQuarter',
         'referenceIndexValue',
         'revisionReminderSentFor',
       ].sort(),
     );
     expect(fields['lastSentPeriod']).toBe('2026-12');
+    expect(fields['lastSentPeriodAt']).toBe(1764061200000);
     expect(fields['referenceIndexValue']).toBe(143.5);
   });
 
@@ -276,7 +290,12 @@ describe('leaseToParseFields', () => {
 });
 
 describe('writeLeaseFields', () => {
-  const BOOKKEEPING = ['lastSendDate', 'lastSentPeriod', 'revisionReminderSentFor'];
+  const BOOKKEEPING = [
+    'lastSendDate',
+    'lastSentPeriod',
+    'lastSentPeriodAt',
+    'revisionReminderSentFor',
+  ];
 
   /** Minimal writable object recording what is sent. */
   function target() {
@@ -323,6 +342,7 @@ describe('writeLeaseFields', () => {
       const lease = baseLease({
         lastSendDate: 1761393600000,
         lastSentPeriod: '2026-11',
+        lastSentPeriodAt: 1761393600000,
         revisionReminderSentFor: '2027-03-01',
       });
 
@@ -454,10 +474,22 @@ describe('writeLeaseFields', () => {
           price: 1,
           lastSendDate: 99,
           lastSentPeriod: '2025-01',
+          lastSentPeriodAt: 99,
           revisionReminderSentFor: '2025-01-01',
         },
         { bookkeeping: false, base },
       );
+
+      expect(log).toEqual([['set', 'price', 1]]);
+    });
+
+    it('never unsets lastSentPeriodAt, even when the stale copy lacks it', () => {
+      const { object, log } = target();
+      const base = baseLease({ lastSentPeriod: '2026-11', lastSentPeriodAt: 5 });
+      const { lastSentPeriodAt: dropped, ...withoutAt } = base;
+      expect(dropped).toBe(5);
+
+      writeLeaseFields(object, { ...withoutAt, price: 1 }, { bookkeeping: false, base });
 
       expect(log).toEqual([['set', 'price', 1]]);
     });

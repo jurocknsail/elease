@@ -14,20 +14,30 @@ const EURO_CENTS = new Intl.NumberFormat('fr-FR', {
   maximumFractionDigits: 2,
 });
 
+/** Shown for a value that is not a finite number (en dash). */
+const NO_AMOUNT = '\u2013';
+
 /**
- * Amount as '1 900 €' (whole) or '1 900,50 €' (with cents; never '1 900,00 €').
+ * Amount as '1 900 €' (whole) or '1 900,50 €' (with cents; never '1 900,00 €'). A value that is not
+ * finite shows an en dash.
+ *
+ * The amount is first rounded with `toFixed(2)`, exactly as the PDF prints amounts, so what the screen
+ * shows always equals what the PDF bills (Intl alone rounds half to even and can differ by a cent).
  *
  * Intl separates thousands with a narrow no-break space (U+202F) and the euro sign with a no-break
  * space (U+00A0), so an amount never wraps across lines. Any plain space an engine would emit is
  * turned into U+00A0 for the same reason.
  */
 export function formatEuro(n: number): string {
-  // Anything below half a cent displays as 0, never as '-0 €'.
-  const amount = Math.abs(n) < 0.005 ? 0 : n;
-  const hasCents = EURO_CENTS.formatToParts(amount).some(
-    (part) => part.type === 'fraction' && part.value !== '00',
-  );
-  return (hasCents ? EURO_CENTS : EURO_WHOLE).format(amount).replace(/\u0020/g, '\u00A0');
+  if (!Number.isFinite(n)) {
+    return NO_AMOUNT;
+  }
+  const rounded = Number(n.toFixed(2));
+  // Zero displays as 0, never as '-0 €'.
+  const amount = rounded === 0 ? 0 : rounded;
+  return (Number.isInteger(amount) ? EURO_WHOLE : EURO_CENTS)
+    .format(amount)
+    .replace(/\u0020/g, '\u00A0');
 }
 
 /** Postal codes are stored as numbers: restore the leading zero of 01000-09999. */
@@ -37,23 +47,38 @@ export function formatPostalCode(n: number): string {
 
 /** Characters allowed between the digits of a phone number: spaces (incl. no-break), dots, dashes, brackets. */
 const PHONE_SEPARATORS = /[\s.\-()]/g;
+/**
+ * Invisible direction and zero-width characters that iOS Contacts and WhatsApp add when copying a
+ * number: U+200B-U+200F, U+202A-U+202E, U+2060-U+2069, U+FEFF.
+ */
+const INVISIBLE_CHARACTERS = /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/g;
 /** '+33' or '0033', an optional trunk '0' (as in '+33 (0)6...'), then the 9 remaining digits. */
 const FRENCH_INTERNATIONAL = /^(?:\+|00)330?(\d{9})$/;
 const FRENCH_NATIONAL = /^0\d{9}$/;
+const FRENCH_COUNTRY_PREFIX = /^(?:\+|00)33/;
+/** Ten digits, whatever the first one: everything the legacy validator accepted. */
+const TEN_DIGITS = /^\d{10}$/;
+/** International form of any country, E.164 shape: '+' or '00', then 7 to 15 digits. */
+const INTERNATIONAL = /^(?:\+|00)[1-9]\d{6,14}$/;
+
+function withoutSeparators(value: string): string {
+  return value.replace(PHONE_SEPARATORS, '');
+}
 
 /**
- * Normalises a French phone number to the 10-digit national form '0612345678'. Spaces, dots,
- * dashes, brackets, '+33', '0033' and '(0)' are accepted. Blank input gives ''. Anything that is
- * not recognisable as a French number is returned trimmed but otherwise untouched. Never throws.
+ * Normalises a French phone number to the 10-digit national form '0612345678'. Invisible direction
+ * and zero-width characters are removed first; then spaces, dots, dashes, brackets, '+33', '0033'
+ * and '(0)' are accepted. Blank input gives ''. Anything that is not recognisable as a French number
+ * is returned trimmed (and cleaned of invisible characters) but otherwise untouched. Never throws.
  */
 export function normalizePhone(input: string): string {
   // Defensive: the stored value can be missing at run time.
-  const trimmed = typeof input === 'string' ? input.trim() : '';
+  const trimmed = typeof input === 'string' ? input.replace(INVISIBLE_CHARACTERS, '').trim() : '';
   if (trimmed === '') {
     return '';
   }
 
-  const compact = trimmed.replace(PHONE_SEPARATORS, '');
+  const compact = withoutSeparators(trimmed);
   const international = FRENCH_INTERNATIONAL.exec(compact);
   if (international) {
     return '0' + international[1];
@@ -64,10 +89,22 @@ export function normalizePhone(input: string): string {
   return trimmed;
 }
 
-/** A phone number is optional: empty is valid, otherwise it must normalise to 10 digits starting with 0. */
+/**
+ * The phone number is optional and used nowhere else, so only obvious garbage is refused. Valid:
+ * empty; a +33 / 0033 number that normalises to the 10-digit French form; otherwise ten digits
+ * (what the legacy validator accepted) or an international number of any other country
+ * ('+' or '00' then 7 to 15 digits), which is kept as typed.
+ */
 export function isValidPhone(input: string): boolean {
   const normalized = normalizePhone(input);
-  return normalized === '' || FRENCH_NATIONAL.test(normalized);
+  if (normalized === '') {
+    return true;
+  }
+  const compact = withoutSeparators(normalized);
+  if (FRENCH_COUNTRY_PREFIX.test(compact)) {
+    return FRENCH_NATIONAL.test(normalized);
+  }
+  return TEN_DIGITS.test(compact) || INTERNATIONAL.test(compact);
 }
 
 /** Date from a millisecond timestamp, as dd/MM/yyyy in local time. Callers handle 0 ("never"). */
