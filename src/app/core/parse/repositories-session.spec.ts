@@ -77,10 +77,6 @@ const OPERATIONS: Operation[] = [
   ],
   ['LeaseholderRepository.deleteLease', ({ holders }) => holders.deleteLease('h1', 'a')],
   ['LeaseholderRepository.deleteLeaseholder', ({ holders }) => holders.deleteLeaseholder('h1')],
-  [
-    'LeaseholderRepository.markLeasesSent',
-    ({ holders }) => holders.markLeasesSent(['a'], '2027-01', 1_700_000_000_000),
-  ],
   ['LandlordProfileRepository.get', ({ profile }) => profile.get()],
   [
     'LandlordProfileRepository.save',
@@ -149,6 +145,34 @@ describe('expired session (Parse code 209) in the repositories', () => {
     await context.holders.deleteLeaseholder('h1').catch(() => undefined);
 
     expect(logout).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('LeaseholderRepository.markLeasesSent after a delivered e-mail', () => {
+  const run = ({ holders }: ReturnType<typeof setup>) =>
+    holders.markLeasesSent(['a'], '2027-01', 1_700_000_000_000);
+
+  it('rethrows a 209 but neither signs out nor redirects, so the send screen can show its warning', async () => {
+    const context = setup();
+    const expired = parseError(209, 'invalid session token');
+    context.fake.failWhen(() => true, expired, false);
+
+    await expect(run(context)).rejects.toBe(expired);
+
+    expect(context.auth.user()).not.toBeNull();
+    expect(context.fake.userId).not.toBeNull();
+    expect(context.router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('leaves the session alone for any other error', async () => {
+    const context = setup();
+    const other = parseError(141, 'Cloud Code script failed.');
+    context.fake.failWhen(() => true, other, false);
+
+    await expect(run(context)).rejects.toBe(other);
+
+    expect(context.auth.user()).not.toBeNull();
+    expect(context.router.navigate).not.toHaveBeenCalled();
   });
 });
 

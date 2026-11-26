@@ -253,27 +253,35 @@ export class LeaseholderRepository {
    * Records that the rent calls of these leases were sent: `lastSendDate`, `lastSentPeriod` and
    * `lastSentPeriodAt` (equal to `lastSendDate`, so a later legacy send, which only rewrites
    * `lastSendDate`, can be told apart), all in the same save and nothing else.
+   *
+   * Unlike the other operations it does NOT sign the user out on an expired session (Parse 209): it
+   * runs right after the e-mail went out, and redirecting to the login screen would replace the send
+   * screen before it could show « e-mail envoyé, ne le renvoyez pas ». The error is still rethrown;
+   * the next request redirects.
    */
   async markLeasesSent(leaseIds: string[], periodKey: string, at: number): Promise<void> {
-    return this.guarded(async () => {
-      // Each lease on its own: those that succeed are saved and shown as sent even if another fails.
-      const results = await Promise.allSettled(
-        leaseIds.map(async (id) => {
-          const object = await withTimeout(this.client.fetchById(LEASE_CLASS, id));
-          object.set('lastSendDate', at);
-          object.set('lastSentPeriod', periodKey);
-          object.set('lastSentPeriodAt', at);
-          const saved = await withTimeout(object.save());
-          this.replaceLease(leaseFromParse(saved.toJSON()));
-        }),
-      );
-      const failure = results.find(
-        (result): result is PromiseRejectedResult => result.status === 'rejected',
-      );
-      if (failure) {
-        throw failure.reason;
-      }
-    });
+    return this.guarded(
+      async () => {
+        // Each lease on its own: those that succeed are saved and shown as sent even if another fails.
+        const results = await Promise.allSettled(
+          leaseIds.map(async (id) => {
+            const object = await withTimeout(this.client.fetchById(LEASE_CLASS, id));
+            object.set('lastSendDate', at);
+            object.set('lastSentPeriod', periodKey);
+            object.set('lastSentPeriodAt', at);
+            const saved = await withTimeout(object.save());
+            this.replaceLease(leaseFromParse(saved.toJSON()));
+          }),
+        );
+        const failure = results.find(
+          (result): result is PromiseRejectedResult => result.status === 'rejected',
+        );
+        if (failure) {
+          throw failure.reason;
+        }
+      },
+      { handleSessionError: false },
+    );
   }
 
   /**
@@ -284,12 +292,15 @@ export class LeaseholderRepository {
    * Only while the session that asked is still the current one: a 209 that arrives after a sign-out
    * (and perhaps another account's sign-in) belongs to the old session and must not end the new one.
    */
-  private async guarded<T>(operation: () => Promise<T>): Promise<T> {
+  private async guarded<T>(
+    operation: () => Promise<T>,
+    options: { handleSessionError: boolean } = { handleSessionError: true },
+  ): Promise<T> {
     const epoch = this.epoch;
     try {
       return await operation();
     } catch (error) {
-      if (epoch === this.epoch) {
+      if (options.handleSessionError && epoch === this.epoch) {
         this.session.handle(error);
       }
       throw error;
