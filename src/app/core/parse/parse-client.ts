@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import Parse from 'parse';
 import { environment } from '../../../environments/environment';
 import { assertRecipientAllowed, effectiveSandbox } from '../email/email-guard';
+import { MinimalEventEmitter } from './event-emitter';
 
 /** Parse error code for an expired or invalid session token. */
 export const INVALID_SESSION_TOKEN = 209;
@@ -100,6 +101,13 @@ function ensureSdk(): void {
   if (sdkInitialized) {
     return;
   }
+  // The SDK's own emitter is `require('events')` inside a try/catch, which a browser bundle cannot
+  // satisfy: without this, `Parse.initialize` throws « EventEmitter is not a constructor » (verified in
+  // a real browser, development and production builds). `setIfNeeded` then keeps ours.
+  (Parse.CoreManager as unknown as { set(key: string, value: unknown): void }).set(
+    'EventEmitter',
+    MinimalEventEmitter,
+  );
   Parse.initialize(environment.parseAppId, environment.parseJsKey);
   Parse.serverURL = environment.parseServerUrl;
   // The browser build defaults to single-instance mode: all objects with the same id share their

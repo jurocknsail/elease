@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import Parse from 'parse';
 import { environment } from '../../../environments/environment';
 import { RecipientBlockedError } from '../email/email-guard';
+import { MinimalEventEmitter } from './event-emitter';
 import { INVALID_SESSION_TOKEN, NoSessionError, ParseClient } from './parse-client';
 
 /**
@@ -32,6 +33,11 @@ describe('ParseClient (SDK adapter)', () => {
     client.newObject('Lease');
     expect(initialize).toHaveBeenCalledTimes(1);
     expect(initialize.mock.calls[0].every((argument) => typeof argument === 'string')).toBe(true);
+
+    // The SDK's emitter comes from `require('events')`, which a browser bundle cannot resolve: without
+    // ours `Parse.initialize` throws « EventEmitter is not a constructor » in the browser.
+    const manager = Parse.CoreManager as unknown as { get(key: string): unknown };
+    expect(manager.get('EventEmitter')).toBe(MinimalEventEmitter);
 
     // No automatic re-sending of a failed request (a re-sent sendEmail could deliver twice).
     const coreManager = Parse.CoreManager as unknown as { get(key: string): unknown };
