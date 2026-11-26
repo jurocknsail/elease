@@ -6,8 +6,36 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" />
+    <script>
+      // Applies the theme before the stylesheet and Angular load, to avoid a flash of the wrong theme.
+      // Mirrors ThemeService (src/app/core/theme/theme.service.ts): same storage key, same fallback to
+      // 'system', same colours as --color-bg in src/styles.css. ThemeService takes over once the app starts.
+      (function () {
+        var mode = 'system';
+        try {
+          var stored = localStorage.getItem('elease.theme');
+          if (stored === 'light' || stored === 'dark' || stored === 'system') {
+            mode = stored;
+          }
+        } catch (e) {
+          // Storage unavailable: keep following the system.
+        }
+        var dark =
+          mode === 'dark' ||
+          (mode === 'system' &&
+            typeof matchMedia === 'function' &&
+            matchMedia('(prefers-color-scheme: dark)').matches);
+        var theme = dark ? 'dark' : 'light';
+        var root = document.documentElement;
+        root.dataset.theme = theme;
+        root.style.colorScheme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute('content', dark ? '#0f1115' : '#ffffff');
+        }
+      })();
+    </script>
     <meta name="format-detection" content="telephone=no" />
     <link rel="icon" type="image/png" href="icons/icon-192.png" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />

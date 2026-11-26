@@ -8,6 +8,7 @@ import { ThemeService } from './core/theme/theme.service';
   template: '<router-outlet />',
 })
 export class App {
-  // Instantiated at startup so the persisted theme is applied before first paint.
+  // Instantiated at startup so ThemeService keeps the theme in sync (toggle, OS changes, theme-color).
+  // The first paint is handled by the inline script in index.html, which applies the persisted theme.
   private readonly theme = inject(ThemeService);
 }

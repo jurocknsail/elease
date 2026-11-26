@@ -1,23 +1,54 @@
 import { TestBed } from '@angular/core/testing';
 import { ThemeService } from './theme.service';
 
-function stubMatchMedia(dark: boolean): void {
+const DARK_QUERY = '(prefers-color-scheme: dark)';
+
+interface MediaChangeEvent {
+  matches: boolean;
+}
+
+interface MatchMediaStub {
+  /** Simulates the OS switching between light and dark: updates `matches` and fires `change`. */
+  setOsDark(dark: boolean): void;
+}
+
+function stubMatchMedia(dark: boolean): MatchMediaStub {
+  let osDark = dark;
+  const listeners = new Set<(event: MediaChangeEvent) => void>();
   vi.stubGlobal('matchMedia', (query: string) => ({
-    matches: dark && query === '(prefers-color-scheme: dark)',
+    get matches() {
+      return osDark && query === DARK_QUERY;
+    },
     media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
+    addEventListener: (_type: string, listener: (event: MediaChangeEvent) => void) => {
+      listeners.add(listener);
+    },
+    removeEventListener: (_type: string, listener: (event: MediaChangeEvent) => void) => {
+      listeners.delete(listener);
+    },
   }));
+  return {
+    setOsDark(next: boolean): void {
+      osDark = next;
+      listeners.forEach((listener) => listener({ matches: next }));
+    },
+  };
+}
+
+function themeColorMeta(): HTMLMetaElement | null {
+  return document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
 }
 
 describe('ThemeService', () => {
   beforeEach(() => {
     localStorage.clear();
     delete document.documentElement.dataset['theme'];
+    themeColorMeta()?.remove();
     stubMatchMedia(false);
   });
 
   afterEach(() => {
+    themeColorMeta()?.remove();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -53,5 +84,69 @@ describe('ThemeService', () => {
     const service = TestBed.inject(ThemeService);
     expect(service.mode()).toBe('dark');
     expect(service.effective()).toBe('dark');
+  });
+
+  it('follows an OS preference change while in system mode', () => {
+    const media = stubMatchMedia(false);
+    const service = TestBed.inject(ThemeService);
+    service.setMode('system');
+    expect(service.effective()).toBe('light');
+
+    media.setOsDark(true);
+    expect(service.effective()).toBe('dark');
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+
+    media.setOsDark(false);
+    expect(service.effective()).toBe('light');
+    expect(document.documentElement.dataset['theme']).toBe('light');
+  });
+
+  it('ignores an OS preference change in an explicit mode', () => {
+    const media = stubMatchMedia(false);
+    const service = TestBed.inject(ThemeService);
+    service.setMode('light');
+
+    media.setOsDark(true);
+    expect(service.effective()).toBe('light');
+    expect(document.documentElement.dataset['theme']).toBe('light');
+
+    service.setMode('dark');
+    media.setOsDark(false);
+    expect(service.effective()).toBe('dark');
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+  });
+
+  it('keeps meta[name=theme-color] in sync with the effective theme', () => {
+    const meta = document.createElement('meta');
+    meta.name = 'theme-color';
+    meta.content = '#ffffff';
+    document.head.append(meta);
+
+    const service = TestBed.inject(ThemeService);
+    service.setMode('dark');
+    expect(meta.content).toBe('#0f1115');
+    service.setMode('light');
+    expect(meta.content).toBe('#ffffff');
+  });
+
+  it('updates meta[name=theme-color] when the OS preference changes in system mode', () => {
+    const meta = document.createElement('meta');
+    meta.name = 'theme-color';
+    meta.content = '#ffffff';
+    document.head.append(meta);
+
+    const media = stubMatchMedia(false);
+    TestBed.inject(ThemeService);
+    expect(meta.content).toBe('#ffffff');
+
+    media.setOsDark(true);
+    expect(meta.content).toBe('#0f1115');
+  });
+
+  it('creates meta[name=theme-color] when the page does not define one', () => {
+    expect(themeColorMeta()).toBeNull();
+    const service = TestBed.inject(ThemeService);
+    service.setMode('dark');
+    expect(themeColorMeta()?.content).toBe('#0f1115');
   });
 });

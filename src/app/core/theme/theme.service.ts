@@ -3,8 +3,15 @@ import { Injectable, computed, signal } from '@angular/core';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type EffectiveTheme = 'light' | 'dark';
 
+// The inline script in src/index.html applies the same logic before first paint: keep both in sync.
 const STORAGE_KEY = 'elease.theme';
 const DARK_QUERY = '(prefers-color-scheme: dark)';
+
+/** Browser/status bar colour per effective theme: the `--color-bg` token of each theme in src/styles.css. */
+export const THEME_COLORS: Readonly<Record<EffectiveTheme, string>> = {
+  light: '#ffffff',
+  dark: '#0f1115',
+};
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
@@ -43,6 +50,17 @@ export class ThemeService {
     const theme = this.effective();
     document.documentElement.dataset['theme'] = theme;
     document.documentElement.style.colorScheme = theme;
+    this.themeColorMeta().content = THEME_COLORS[theme];
+  }
+
+  private themeColorMeta(): HTMLMetaElement {
+    let meta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      document.head.append(meta);
+    }
+    return meta;
   }
 
   private readStoredMode(): ThemeMode {
