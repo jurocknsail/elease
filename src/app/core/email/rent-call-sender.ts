@@ -1,10 +1,12 @@
 import { Injectable, InjectionToken, inject } from '@angular/core';
 import { APP_ENV } from '../app-env';
+import { AuthService } from '../auth/auth.service';
+import { SessionErrorHandler } from '../auth/session-error';
 import { periodKey, type BillingPeriod } from '../billing/period';
 import type { LandlordProfile } from '../models/landlord-profile';
 import { uniqueAttachmentNames } from '../pdf/file-name';
 import { LeaseholderRepository } from '../parse/leaseholder.repository';
-import { NoSessionError, ParseClient } from '../parse/parse-client';
+import { INVALID_SESSION_TOKEN, NoSessionError, ParseClient } from '../parse/parse-client';
 import { BackendTimeoutError, withTimeout } from '../parse/with-timeout';
 import { assertRecipientAllowed, effectiveSandbox, RecipientBlockedError } from './email-guard';
 import { rentCallBody, rentCallSubject, type EmailGroup } from './rent-call-email';
@@ -129,6 +131,8 @@ export class RentCallSender {
   private readonly leaseholders = inject(LeaseholderRepository);
   private readonly env = inject(APP_ENV);
   private readonly now = inject(SEND_CLOCK);
+  private readonly auth = inject(AuthService);
+  private readonly session = inject(SessionErrorHandler);
 
   async send(
     groups: ReadonlyMap<string, EmailGroup>,
@@ -137,11 +141,12 @@ export class RentCallSender {
   ): Promise<SendResult[]> {
     // One send date for the whole action, read once.
     const at = this.now();
+    const user = this.auth.user();
     const entries = [...groups.entries()];
     const outcomes = await Promise.allSettled(
       entries.map(([email, group]) => this.sendGroup(email, group, p, profile, at)),
     );
-    return outcomes.map((outcome, index) => {
+    const results = outcomes.map((outcome, index) => {
       if (outcome.status === 'fulfilled') {
         return outcome.value;
       }
@@ -156,6 +161,24 @@ export class RentCallSender {
         leaseIds: [],
       };
     });
+    this.redirectOnExpiredSession(results, user);
+    return results;
+  }
+
+  /**
+   * An expired session (Parse 209) refused a send, or there was none: sign out and go to the login
+   * screen, ONCE for the whole send whatever the number of groups. The results are returned unchanged.
+   * Only the send step reports a 209 here: a failure to record a send that went out (`ok` with a
+   * `warning`) carries no code and never redirects. Skipped when the user who started the send is no
+   * longer the signed-in one (a 209 for an old session must not end a new one).
+   */
+  private redirectOnExpiredSession(results: readonly SendResult[], startedBy: unknown): void {
+    if (
+      results.some((result) => result.errorCode === INVALID_SESSION_TOKEN) &&
+      this.auth.user() === startedBy
+    ) {
+      this.session.handle(new NoSessionError());
+    }
   }
 
   private async sendGroup(

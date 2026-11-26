@@ -280,12 +280,18 @@ export class LeaseholderRepository {
    * Runs one operation of the public API. An expired session (Parse 209, also thrown synchronously by
    * `ownerAcl()`) signs the user out and sends them to the login screen; the original error is always
    * rethrown, so the screen that asked stops its spinner and can show it.
+   *
+   * Only while the session that asked is still the current one: a 209 that arrives after a sign-out
+   * (and perhaps another account's sign-in) belongs to the old session and must not end the new one.
    */
   private async guarded<T>(operation: () => Promise<T>): Promise<T> {
+    const epoch = this.epoch;
     try {
       return await operation();
     } catch (error) {
-      this.session.handle(error);
+      if (epoch === this.epoch) {
+        this.session.handle(error);
+      }
       throw error;
     }
   }

@@ -115,6 +115,93 @@ describe('AuthService', () => {
     });
   });
 
+  describe('a login that succeeds after the timeout', () => {
+    /** First call to `logIn` answers only when `release()` is called; later calls are immediate. */
+    function lateFirstLogin(fake: FakeParseClient) {
+      const original = fake.logIn.bind(fake);
+      let release!: () => void;
+      let first = true;
+      vi.spyOn(fake, 'logIn').mockImplementation((username, password) => {
+        if (!first) {
+          return original(username, password);
+        }
+        first = false;
+        return new Promise<void>((resolve, reject) => {
+          release = () => original(username, password).then(resolve, reject);
+        });
+      });
+      return () => release();
+    }
+
+    it('does not leave the SDK signed in while the screen said it failed: it signs out', async () => {
+      const { fake, auth } = setup();
+      const release = lateFirstLogin(fake);
+      vi.useFakeTimers();
+
+      const outcome = auth.login('julien', PASSWORD).catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(LOGIN_TIMEOUT_MS);
+      expect(await outcome).toBeInstanceOf(BackendTimeoutError);
+      // (`user()` is deliberately not read here: the stored session has never been looked at.)
+
+      release();
+      await vi.advanceTimersByTimeAsync(0);
+
+      // UI and SDK agree: signed out (the SDK session was removed through `logOut`).
+      expect(auth.user()).toBeNull();
+      expect(fake.userId).toBeNull();
+      expect(fake.callsOf('logout')).toHaveLength(1);
+    });
+
+    it('leaves the session alone when the user meanwhile signed in with the same account', async () => {
+      const { fake, auth } = setup();
+      const release = lateFirstLogin(fake);
+      vi.useFakeTimers();
+
+      const outcome = auth.login('julien', PASSWORD).catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(LOGIN_TIMEOUT_MS);
+      expect(await outcome).toBeInstanceOf(BackendTimeoutError);
+      await auth.login('julien', PASSWORD);
+      expect(auth.user()?.username).toBe('julien');
+
+      release();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(auth.user()?.username).toBe('julien');
+      expect(fake.userId).not.toBeNull();
+      expect(fake.callsOf('logout')).toEqual([]);
+    });
+
+    it('does nothing when the login that timed out finally fails', async () => {
+      const { fake, auth } = setup();
+      vi.spyOn(fake, 'logIn').mockImplementation(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            setTimeout(
+              () => reject(parseError(100, 'XMLHttpRequest failed')),
+              LOGIN_TIMEOUT_MS + 1000,
+            );
+          }),
+      );
+      vi.useFakeTimers();
+
+      const outcome = auth.login('julien', PASSWORD).catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(LOGIN_TIMEOUT_MS + 2000);
+
+      expect(await outcome).toBeInstanceOf(BackendTimeoutError);
+      expect(fake.callsOf('logout')).toEqual([]);
+      expect(auth.user()).toBeNull();
+    });
+
+    it('does not interfere with a login that answers in time', async () => {
+      const { fake, auth } = setup();
+
+      await auth.login('julien', PASSWORD);
+
+      expect(auth.user()?.username).toBe('julien');
+      expect(fake.callsOf('logout')).toEqual([]);
+    });
+  });
+
   describe('logout', () => {
     it('signs out: no user, and the client session is gone', async () => {
       const { fake, auth } = setup();

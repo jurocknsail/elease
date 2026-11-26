@@ -5,6 +5,8 @@ import { DEFAULT_LANDLORD_PROFILE, type LandlordProfile } from '../models/landlo
 import type { Lease } from '../models/lease';
 import type { Leaseholder } from '../models/leaseholder';
 import { LeaseholderRepository } from '../parse/leaseholder.repository';
+import { AuthService } from '../auth/auth.service';
+import { SessionErrorHandler } from '../auth/session-error';
 import { ParseClient } from '../parse/parse-client';
 import { FakeParseClient, parseError, pointer } from '../parse/testing/fake-parse-client';
 import { assertRecipientAllowed, RecipientBlockedError } from './email-guard';
@@ -77,16 +79,19 @@ type MarkLeasesSent = LeaseholderRepository['markLeasesSent'];
 function setup(env: AppEnv = PROD, now: (() => number) | null = () => AT) {
   const fake = new FakeParseClient();
   const markLeasesSent = vi.fn<MarkLeasesSent>(() => Promise.resolve());
+  // The expired-session redirect is observed, never performed.
+  const handleSession = vi.fn((_error: unknown) => true);
   TestBed.configureTestingModule({
     providers: [
       { provide: ParseClient, useValue: fake },
       { provide: LeaseholderRepository, useValue: { markLeasesSent } },
+      { provide: SessionErrorHandler, useValue: { handle: handleSession } },
       { provide: APP_ENV, useValue: env },
       // `null`: keep the default clock of the application.
       ...(now ? [{ provide: SEND_CLOCK, useValue: now }] : []),
     ],
   });
-  return { fake, markLeasesSent, sender: TestBed.inject(RentCallSender) };
+  return { fake, markLeasesSent, handleSession, sender: TestBed.inject(RentCallSender) };
 }
 
 function cloudCalls(fake: FakeParseClient) {
@@ -1061,6 +1066,126 @@ describe('RentCallSender', () => {
       for (const spy of spies) {
         expect(spy).not.toHaveBeenCalled();
       }
+    });
+  });
+  describe('an expired session (Parse 209) while sending', () => {
+    it('sends the user to the login screen ONCE for the whole send, whatever the number of groups', async () => {
+      const { fake, handleSession, sender } = setup();
+      failFor(fake, A, parseError(209, 'invalid session token'));
+      failFor(fake, B, parseError(209, 'invalid session token'));
+
+      const results = await sender.send(
+        new Map([
+          [A, group(['Alice'], pdf('l1'))],
+          [B, group(['Bruno'], pdf('l2'))],
+        ]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+
+      expect(handleSession).toHaveBeenCalledTimes(1);
+      expect(handleSession.mock.calls[0][0]).toMatchObject({ code: 209 });
+      // The results are returned unchanged.
+      expect(results.map((r) => [r.email, r.ok, r.errorCode])).toEqual([
+        [A, false, 209],
+        [B, false, 209],
+      ]);
+      expect(results.every((r) => !r.uncertain)).toBe(true);
+    });
+
+    it('also does it when there is no session at all (no cloud call is made)', async () => {
+      const { fake, handleSession, sender } = setup();
+      fake.userId = null;
+
+      const results = await sender.send(
+        new Map([[A, group(['Alice'], pdf('l1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+
+      expect(cloudCalls(fake)).toEqual([]);
+      expect(results[0].errorCode).toBe(209);
+      expect(handleSession).toHaveBeenCalledTimes(1);
+    });
+
+    it('does it for a 209 in one group even when the other group went out', async () => {
+      const { fake, handleSession, markLeasesSent, sender } = setup();
+      failFor(fake, B, parseError(209));
+
+      const results = await sender.send(
+        new Map([
+          [A, group(['Alice'], pdf('l1'))],
+          [B, group(['Bruno'], pdf('l2'))],
+        ]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+
+      expect(byEmail(results, A).ok).toBe(true);
+      expect(byEmail(results, B).errorCode).toBe(209);
+      expect(markLeasesSent).toHaveBeenCalledTimes(1);
+      expect(handleSession).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT redirect when only recording the send fails with 209 after the mail went out: still ok with the warning', async () => {
+      const { handleSession, markLeasesSent, sender } = setup();
+      markLeasesSent.mockRejectedValue(parseError(209, 'invalid session token'));
+
+      const results = await sender.send(
+        new Map([[A, group(['Alice'], pdf('l1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+
+      expect(results[0]).toMatchObject({ ok: true, warning: RECORD_WARNING });
+      expect(results[0].errorCode).toBeUndefined();
+      expect(handleSession).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a definite non-session failure (141)', parseError(141, 'script error')],
+      ['a timeout-like failure (100)', parseError(100, 'XMLHttpRequest failed')],
+    ])('does not redirect for %s', async (_label, error) => {
+      const { fake, handleSession, sender } = setup();
+      failFor(fake, A, error);
+
+      await sender.send(
+        new Map([[A, group(['Alice'], pdf('l1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+
+      expect(handleSession).not.toHaveBeenCalled();
+    });
+
+    it('does not sign out a session that started after the send did (a stale 209)', async () => {
+      const { fake, handleSession, sender } = setup();
+      fake.addAccount('autre', 'another pass');
+      const auth = TestBed.inject(AuthService);
+      failFor(fake, A, parseError(209, 'invalid session token'));
+      // The 209 comes back only after the user signed out and another account signed in.
+      const original = fake.runCloud.bind(fake);
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      vi.spyOn(fake, 'runCloud').mockImplementation(async (name, params) => {
+        await gate;
+        return original(name, params);
+      });
+
+      const sending = sender.send(
+        new Map([[A, group(['Alice'], pdf('l1'))]]),
+        PERIOD,
+        DEFAULT_LANDLORD_PROFILE,
+      );
+      await auth.logout();
+      await auth.login('autre', 'another pass');
+      release();
+      const results = await sending;
+
+      expect(results[0].errorCode).toBe(209);
+      expect(handleSession).not.toHaveBeenCalled();
     });
   });
 });

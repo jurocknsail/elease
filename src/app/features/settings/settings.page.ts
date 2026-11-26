@@ -47,7 +47,9 @@ export class SettingsPage {
   private readonly router = inject(Router);
 
   protected async logout(): Promise<void> {
-    await this.auth.logout();
+    // Not awaited: the user and the in-memory data are gone before the first `await` inside, and the
+    // wait for the server to revoke the session (up to 3 s) must not delay the redirect.
+    void this.auth.logout();
     await this.router.navigateByUrl('/login');
   }
 }

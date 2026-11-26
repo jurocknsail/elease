@@ -152,6 +152,65 @@ describe('expired session (Parse code 209) in the repositories', () => {
   });
 });
 
+describe('a stale session error (Parse code 209) never signs out the NEXT session', () => {
+  /** Holds the next query until `release()`, then makes it fail with `error`. */
+  function holdThenFail(fake: FakeParseClient, error: unknown) {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const original = fake.query.bind(fake);
+    vi.spyOn(fake, 'query').mockImplementation((className) => {
+      const query = original(className);
+      query.find = async () => {
+        await gate;
+        throw error;
+      };
+      return query;
+    });
+    return release;
+  }
+
+  it.each([
+    ['LeaseholderRepository.load', ({ holders }: ReturnType<typeof setup>) => holders.load()],
+    ['LandlordProfileRepository.get', ({ profile }: ReturnType<typeof setup>) => profile.get()],
+  ])(
+    '%s: A asks, A signs out, B signs in, then the 209 meant for A arrives',
+    async (_name, run) => {
+      const context = setup();
+      const { fake, auth, router } = context;
+      fake.addAccount('autre', 'another pass');
+      const expired = parseError(209, 'invalid session token');
+      const release = holdThenFail(fake, expired);
+
+      const asking = run(context).catch((error: unknown) => error);
+      await auth.logout();
+      await auth.login('autre', 'another pass');
+      release();
+
+      // The original error still reaches the caller...
+      expect(await asking).toBe(expired);
+      // ...but B stays signed in, and nothing was redirected (an existing ?returnUrl= is kept).
+      expect(auth.user()?.username).toBe('autre');
+      expect(fake.userId).not.toBeNull();
+      expect(router.navigate).not.toHaveBeenCalled();
+    },
+  );
+
+  it('still signs out for a 209 that belongs to the current session', async () => {
+    const context = setup();
+    const { fake, auth, router, holders } = context;
+    const release = holdThenFail(fake, parseError(209));
+
+    const asking = holders.load().catch((error: unknown) => error);
+    release();
+    await asking;
+
+    expect(auth.user()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('sign-out and the repositories', () => {
   /** Delays the answer of the next query until `release` is called. */
   function delayQuery(fake: FakeParseClient) {

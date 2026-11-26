@@ -14,6 +14,9 @@ export const routes: Routes = [
     path: 'login',
     title: 'Connexion',
     canActivate: [guestGuard],
+    // Also when only the query changes: a crafted `?returnUrl=/%6Cogin` makes the router decode the
+    // address to /login again, and the guard (which keeps a signed-in user off this page) must run.
+    runGuardsAndResolvers: 'always',
     loadComponent: () => import('./features/login/login.page').then((m) => m.LoginPage),
   },
   {

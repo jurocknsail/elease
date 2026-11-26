@@ -96,6 +96,20 @@ describe('routes', () => {
     expect(router.url).toBe('/login?returnUrl=%2Flocataires');
   });
 
+  it('a crafted returnUrl that spells the login page (/%6Cogin) does not leave a signed-in user on /login', async () => {
+    const { router, fake } = setup(false);
+    fake.addAccount('julien', 'pass');
+    const harness = await RouterTestingHarness.create('/login?returnUrl=%2F%256Cogin');
+    const page = harness.fixture.nativeElement as HTMLElement;
+    (page.querySelector('input[name="username"]') as HTMLInputElement).value = 'julien';
+    (page.querySelector('input[name="password"]') as HTMLInputElement).value = 'pass';
+
+    page.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
+
+    // Angular decodes /%6Cogin to /login: only the query changes, so the guard must run again.
+    await vi.waitFor(() => expect(router.url).toBe('/appels'));
+  });
+
   it('keeps a signed-in user away from /login', async () => {
     const { router } = setup(true);
 

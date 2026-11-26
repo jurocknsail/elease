@@ -18,6 +18,8 @@ export class LandlordProfileRepository {
   private readonly client = inject(ParseClient);
   private readonly session = inject(SessionErrorHandler);
   private pendingGet: Promise<LandlordProfile> | null = null;
+  /** Bumped at every sign-out: a session error that arrives for an older session is ignored. */
+  private epoch = 0;
 
   constructor() {
     inject(AuthService).onLogout(() => this.reset());
@@ -28,6 +30,7 @@ export class LandlordProfileRepository {
    * not share the previous user's pending request (nothing else is kept in memory).
    */
   reset(): void {
+    this.epoch += 1;
     this.pendingGet = null;
   }
 
@@ -75,12 +78,18 @@ export class LandlordProfileRepository {
    * Runs one operation of the public API. An expired session (Parse 209, also thrown synchronously
    * when there is no current user) signs the user out and sends them to the login screen; the
    * original error is always rethrown so the screen stops its spinner.
+   *
+   * Only while the session that asked is still the current one: a 209 that arrives after a sign-out
+   * (and perhaps another account's sign-in) belongs to the old session and must not end the new one.
    */
   private async guarded<T>(operation: () => Promise<T>): Promise<T> {
+    const epoch = this.epoch;
     try {
       return await operation();
     } catch (error) {
-      this.session.handle(error);
+      if (epoch === this.epoch) {
+        this.session.handle(error);
+      }
       throw error;
     }
   }

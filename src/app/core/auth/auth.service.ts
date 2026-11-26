@@ -1,6 +1,6 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { ParseClient } from '../parse/parse-client';
-import { withTimeout } from '../parse/with-timeout';
+import { BackendTimeoutError, withTimeout } from '../parse/with-timeout';
 
 export interface SessionUser {
   username: string;
@@ -38,7 +38,15 @@ export class AuthService {
    * is never stored, logged or put in an error.
    */
   async login(username: string, password: string): Promise<void> {
-    await withTimeout(this.client.logIn(username, password), LOGIN_TIMEOUT_MS);
+    const request = this.client.logIn(username, password);
+    try {
+      await withTimeout(request, LOGIN_TIMEOUT_MS);
+    } catch (error) {
+      if (error instanceof BackendTimeoutError) {
+        this.dropLateSession(request);
+      }
+      throw error;
+    }
     this.current.set(this.restore() ?? { username, email: '' });
   }
 
@@ -62,6 +70,23 @@ export class AuthService {
     } catch {
       // Already signed out locally; the server revokes the token on its own expiry otherwise.
     }
+  }
+
+  /**
+   * A login that timed out is not cancelled: the SDK may still receive the answer and store a session
+   * the screen never heard about (it said « Le serveur ne répond pas »). When it does, sign out again,
+   * so the interface and the SDK agree. Unless the user meanwhile signed in with that same account
+   * (a retry that went through): then there is nothing to undo.
+   */
+  private dropLateSession(request: Promise<void>): void {
+    request.then(
+      () => {
+        if (this.current()?.username !== this.restore()?.username) {
+          void this.logout();
+        }
+      },
+      () => undefined,
+    );
   }
 
   /** Runs `listener` at every sign-out, synchronously. Returns a function that removes it. */
