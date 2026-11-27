@@ -10,7 +10,7 @@
  *   dryRun, force, sandbox: real booleans only (absent = false); any other value fails the job.
  *   dryRun    true: build the messages, return them, send nothing and write nothing.
  *             Anything else (absent, false): the e-mails are REALLY sent.
- *   force     (monthly only) true: act even when today (Europe/Paris) is not the 25th.
+ *   force     (monthly only) true: act even before the 25th (Europe/Paris).
  *   sandbox   true: Mailjet SandboxMode (the request is validated, nothing is delivered); the revision
  *             job then writes no mark.
  *
@@ -110,7 +110,7 @@ function leasesOfGroup(group) {
 }
 
 /**
- * sendMonthlyReminder. Acts only when today (Europe/Paris) is the 25th, unless `force`.
+ * sendMonthlyReminder. Acts every day from the 25th (Europe/Paris) to the end of the month, unless `force`; it sends nothing once every lease is sent for the coming period (`lastSentPeriod` / `lastSendDate`, same rule as the app).
  * Result: counts, subjects, and in dryRun the messages.
  */
 async function runMonthlyReminder(params, deps) {
@@ -127,8 +127,8 @@ async function runMonthlyReminder(params, deps) {
     subjects: [],
     errors: [],
   };
-  if (!options.force && today.day !== REMINDER_DAY) {
-    result.skipped = 'pas le 25 (utilisez force pour tester)';
+  if (!options.force && today.day < REMINDER_DAY) {
+    result.skipped = 'avant le ' + REMINDER_DAY + ' (utilisez force pour tester)';
     return result;
   }
   result.period = periodKey(billingPeriod(now));
@@ -414,7 +414,7 @@ function logResult(name, result) {
   );
 }
 
-/** Registers the two jobs on `Parse.Cloud`. The job result is the JSON of the run summary. */
+/** Registers the jobs on `Parse.Cloud` (the two reminders and the combined `sendReminders`). The job result is the JSON of the run summary. */
 function registerJobs(Parse, deps) {
   const actual = deps || defaultDeps(Parse);
   Parse.Cloud.job('sendMonthlyReminder', async (request) => {
@@ -425,6 +425,24 @@ function registerJobs(Parse, deps) {
   Parse.Cloud.job('sendRevisionReminder', async (request) => {
     const result = await runRevisionReminder(request.params, actual);
     logResult('sendRevisionReminder', result);
+    return JSON.stringify(result);
+  });
+  // The free Back4App plan allows ONE scheduled job: this one runs both reminders (daily at 09:00 Paris).
+  // A failure of one reminder never prevents the other; the result holds both summaries.
+  Parse.Cloud.job('sendReminders', async (request) => {
+    const result = {};
+    for (const [key, run] of [
+      ['monthly', runMonthlyReminder],
+      ['revision', runRevisionReminder],
+    ]) {
+      try {
+        result[key] = await run(request.params, actual);
+        logResult(key === 'monthly' ? 'sendMonthlyReminder' : 'sendRevisionReminder', result[key]);
+      } catch (error) {
+        result[key] = { failed: describeError(error) };
+        console.log('[sendReminders] ' + key + ' en échec : ' + describeError(error));
+      }
+    }
     return JSON.stringify(result);
   });
 }

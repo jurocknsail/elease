@@ -108,7 +108,7 @@ function buildRevisionReminder(input) {
       `Indice : ${formatIndex(lease.referenceIndexValue)} (${quarterLabel(lease.referenceIndexQuarter)}) → ${formatIndex(state.newIndex)} (${quarter})`,
       `Loyer hors charges : ${formatEuro(lease.price)} → ${formatEuro(state.proposedRent)}`,
       '',
-      "Rien n'est appliqué automatiquement. Pour que le nouveau loyer figure dans l'appel du 25 qui précède l'anniversaire, ouvrez le bail dans l'application et appliquez la révision.",
+      "Rien n'est appliqué automatiquement. Pour que le nouveau loyer figure dans l'appel du mois qui précède l'anniversaire, ouvrez le bail dans l'application et appliquez la révision.",
     ];
   } else {
     const given = input.publication;

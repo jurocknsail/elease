@@ -2,7 +2,7 @@
 
 Deux jobs, qui n'écrivent **jamais** aux locataires (expéditeur = destinataire = e-mail du compte propriétaire) :
 
-- `sendMonthlyReminder` : le 25 (Europe/Paris), « N appels de loyer à envoyer pour <mois suivant> ».
+- `sendMonthlyReminder` : **tous les jours à partir du 25 jusqu'à la fin du mois** (Europe/Paris), tant qu'un bail n'est pas envoyé pour la période suivante (même règle que l'app : `lastSentPeriod` / `lastSendDate`) ; aucun mail dès que tout est envoyé. « N appels de loyer à envoyer pour <mois suivant> ».
 - `sendRevisionReminder` : quotidien, rappel de révision de loyer à J-45 de la date anniversaire (proposition de loyer, ou « indice pas encore publié » puis renvoi à la publication).
 
 ## Fichiers
@@ -44,7 +44,7 @@ TZ=Pacific/Auckland node --test  # les dates ne dépendent pas du fuseau du proc
 | --- | --- |
 | `onlyUser` | nom d'utilisateur : seul ce propriétaire est traité. **Toujours `"julien"` en développement.** Présent mais vide/non texte : le job échoue (jamais élargi à tous). |
 | `dryRun` | `true` : le résultat contient les messages (`messages`), rien n'est envoyé, rien n'est écrit. Absent ou `false` : **envoi réel**. |
-| `force` | mensuel seulement : `true` agit même si on n'est pas le 25 (Europe/Paris). Sans lui, un autre jour ne fait rien. |
+| `force` | mensuel seulement : `true` agit même avant le 25 (Europe/Paris). Sans lui, avant le 25 le job ne fait rien. |
 | `sandbox` | `true` : mode bac à sable Mailjet (le message est accepté, pas livré). Le job révision n'écrit alors **pas** `revisionReminderSentFor` (l'essai ne supprime pas le vrai rappel). |
 
 Les jobs sans `dryRun` envoient réellement ; avec `onlyUser:"julien"` ils n'écrivent qu'à l'adresse e-mail de julien. Le job révision écrit sur le bail **uniquement** `revisionReminderSentFor`, **après** un envoi réussi : `AAAA-MM-JJ` (proposition envoyée) ou `AAAA-MM-JJ:pending` (indice pas encore publié, renvoi à la publication).
@@ -92,17 +92,16 @@ Dans l'app, connecté en `julien`, bail « Commerce » : date anniversaire = auj
 
 ## Planification
 
-- Dashboard Back4App → Server Settings → Background Jobs → planifier `sendMonthlyReminder` et `sendRevisionReminder`, chacun tous les jours à 09:00 (Europe/Paris), paramètres `{}`. Le mensuel agit seulement le 25.
-- Si la planification n'est pas disponible sur le forfait : crontab de l'Odroid (clés lues dans `~/elease-backup/.env`, jamais commitées ; vérifier les noms `APP_ID` / `MASTER_KEY` dans ce fichier) :
+Le forfait gratuit de Back4App n'autorise **qu'un seul job planifié** : le job `sendReminders` exécute les deux rappels (mensuel puis révision ; l'échec de l'un n'empêche pas l'autre). Il est planifié (Cloud Code → Jobs → Scheduled Jobs) **tous les jours à 08:00 UTC** (09:00 Paris en hiver, 10:00 en été), paramètres `{}`, à partir du 28 novembre 2026. Effet : le rappel mensuel part chaque jour **à partir du 25 jusqu'à la fin du mois, tant qu'un bail n'est pas envoyé pour la période suivante** ; le rappel de révision part à J-45 de la date anniversaire.
+
+Si la planification devenait indisponible, le crontab de l'Odroid peut déclencher le même job (clés lues dans `~/elease-backup/.env`, jamais commitées) :
 
 ```cron
-CRON_TZ=Europe/Paris
-0 9 * * * . $HOME/elease-backup/.env && curl -s -X POST -H "X-Parse-Application-Id: $APP_ID" -H "X-Parse-Master-Key: $MASTER_KEY" -H "Content-Type: application/json" -d '{}' https://parseapi.back4app.com/jobs/sendMonthlyReminder
-5 9 * * * . $HOME/elease-backup/.env && curl -s -X POST -H "X-Parse-Application-Id: $APP_ID" -H "X-Parse-Master-Key: $MASTER_KEY" -H "Content-Type: application/json" -d '{}' https://parseapi.back4app.com/jobs/sendRevisionReminder
+0 9 * * * . $HOME/elease-backup/.env && curl -s -X POST -H "X-Parse-Application-Id: $APP_ID" -H "X-Parse-Master-Key: $MASTER_KEY" -H "Content-Type: application/json" -d '{}' https://parseapi.back4app.com/jobs/sendReminders
 ```
 
 **Ne jamais lancer un job sans `onlyUser` pendant le développement** : sans lui, tous les propriétaires reçoivent leur mail. Seules les exécutions planifiées (`{}`) tournent sans `onlyUser`, une fois les essais terminés.
 
 ## État du déploiement (2026-11-27)
 
-Cloud code déployé en `v17` sur `elease-be` (`sendEmail` inchangé ; sauvegarde du `main.js` v16 conservée hors dépôt). Essais faits uniquement avec `onlyUser:"julien"` : dry runs, sandbox, puis un envoi réel de chaque job vers l'adresse de julien (bail de test restauré ensuite). **Les jobs ne sont pas planifiés** : voir « Planification ».
+Cloud code déployé (version `v20`) sur `elease-be` (`sendEmail` inchangé ; sauvegarde du `main.js` v16 conservée hors dépôt). Essais faits uniquement avec `onlyUser:"julien"` : dry runs, sandbox, puis un envoi réel de chaque job vers l'adresse de julien (bail de test restauré ensuite). **Le job combiné `sendReminders` est planifié** : voir « Planification ».

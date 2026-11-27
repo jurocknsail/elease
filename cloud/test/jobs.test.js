@@ -127,10 +127,11 @@ test('ownerIdFromAcl: the single user with write access', () => {
 
 // ---------------------------------------------------------------- monthly
 
-test('monthly: nothing happens when today (Paris) is not the 25th, unless forced', async () => {
+test('monthly: nothing happens before the 25th (Paris), unless forced', async () => {
   const deps = makeDeps({ now: noon(2026, 12, 24), holders: TWO_OWNERS });
   const result = await runMonthlyReminder({ onlyUser: 'julien' }, deps);
   assert.match(result.skipped, /25/);
+  assert.equal(result.sent, 0);
   assert.equal(deps.calls.queries, 0);
   assert.equal(deps.calls.sent.length, 0);
 
@@ -144,8 +145,18 @@ test('monthly: the 25th is read in Paris time (24 Dec 23:30Z is already the 25th
   const result = await runMonthlyReminder({ onlyUser: 'julien' }, deps);
   assert.equal(result.sent, 1);
   assert.equal(result.period, '2027-01');
-  const late = makeDeps({ now: new Date('2026-12-25T23:30:00Z'), holders: TWO_OWNERS });
-  assert.ok((await runMonthlyReminder({ onlyUser: 'julien' }, late)).skipped);
+  const early = makeDeps({ now: new Date('2026-12-23T23:30:00Z'), holders: TWO_OWNERS });
+  assert.ok((await runMonthlyReminder({ onlyUser: 'julien' }, early)).skipped);
+});
+
+test('monthly: the reminder repeats every day from the 25th to the end of the month, for the next period', async () => {
+  for (const day of [25, 26, 28, 31]) {
+    const deps = makeDeps({ now: noon(2026, 12, day), holders: TWO_OWNERS });
+    const result = await runMonthlyReminder({ onlyUser: 'julien' }, deps);
+    assert.equal(result.skipped, undefined, 'day ' + day);
+    assert.equal(result.sent, 1, 'day ' + day);
+    assert.equal(result.period, '2027-01', 'day ' + day);
+  }
 });
 
 test('monthly: onlyUser restricts the run to that owner', async () => {
@@ -424,15 +435,42 @@ test('revision: no tenant address anywhere, From = To = owner', async () => {
 
 // ---------------------------------------------------------------- wiring
 
-test('registerJobs registers the two jobs and returns the run summary as JSON', async () => {
+test('registerJobs registers the reminder jobs and returns the run summary as JSON', async () => {
   const registered = {};
   const fakeParse = { Cloud: { job: (name, fn) => (registered[name] = fn) } };
   const deps = makeDeps({ holders: TWO_OWNERS });
   registerJobs(fakeParse, deps);
-  assert.deepEqual(Object.keys(registered).sort(), ['sendMonthlyReminder', 'sendRevisionReminder']);
+  assert.deepEqual(Object.keys(registered).sort(), ['sendMonthlyReminder', 'sendReminders', 'sendRevisionReminder']);
   const output = await registered.sendMonthlyReminder({ params: { onlyUser: 'julien', dryRun: true } });
   assert.equal(JSON.parse(output).messages.length, 1);
   assert.equal(deps.calls.sent.length, 0);
+});
+
+test('sendReminders runs both reminders; one failing never stops the other', async () => {
+  const registered = {};
+  const fakeParse = { Cloud: { job: (name, fn) => (registered[name] = fn) } };
+  const deps = makeDeps({ holders: TWO_OWNERS });
+  registerJobs(fakeParse, deps);
+  const both = JSON.parse(await registered.sendReminders({ params: { onlyUser: 'julien', dryRun: true } }));
+  assert.equal(both.monthly.messages.length, 1);
+  assert.equal(both.revision.dryRun, true);
+  assert.equal(deps.calls.sent.length, 0);
+
+  // an invalid parameter makes both bodies fail: both are reported, nothing is thrown
+  const failed = JSON.parse(await registered.sendReminders({ params: { onlyUser: 'julien', dryRun: 'yes' } }));
+  assert.ok(failed.monthly.failed);
+  assert.ok(failed.revision.failed);
+
+  // the monthly body failing (unreadable holders) leaves the revision reminder running
+  const broken = makeDeps({ holders: TWO_OWNERS });
+  broken.queryLeaseholders = async () => {
+    throw new Error('boom');
+  };
+  const registeredBroken = {};
+  registerJobs({ Cloud: { job: (name, fn) => (registeredBroken[name] = fn) } }, broken);
+  const partial = JSON.parse(await registeredBroken.sendReminders({ params: { onlyUser: 'julien', dryRun: true } }));
+  assert.ok(partial.monthly.failed || partial.monthly.errors.length > 0);
+  assert.ok(partial.revision);
 });
 
 test('the real mail sender refuses to run without Mailjet keys (no network is reached)', async () => {
