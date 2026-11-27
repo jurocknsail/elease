@@ -38,12 +38,14 @@ TZ=Pacific/Auckland node --test  # les dates ne dépendent pas du fuseau du proc
 
 ## Paramètres des jobs (corps JSON de la requête)
 
+`dryRun`, `force` et `sandbox` n'acceptent que de vrais booléens JSON (`true` / `false`) ; absents, ils valent `false`. Toute autre valeur (`"true"`, `"yes"`, `1`…) fait échouer le job avec un message clair, sans rien faire.
+
 | Paramètre | Effet |
 | --- | --- |
 | `onlyUser` | nom d'utilisateur : seul ce propriétaire est traité. **Toujours `"julien"` en développement.** Présent mais vide/non texte : le job échoue (jamais élargi à tous). |
-| `dryRun` | `true` : le résultat contient les messages (`messages`), rien n'est envoyé, rien n'est écrit. Toute autre valeur (absent, `false`) : **envoi réel**. |
+| `dryRun` | `true` : le résultat contient les messages (`messages`), rien n'est envoyé, rien n'est écrit. Absent ou `false` : **envoi réel**. |
 | `force` | mensuel seulement : `true` agit même si on n'est pas le 25 (Europe/Paris). Sans lui, un autre jour ne fait rien. |
-| `sandbox` | `true` : mode bac à sable Mailjet (le message est validé, pas livré). |
+| `sandbox` | `true` : mode bac à sable Mailjet (le message est accepté, pas livré). Le job révision n'écrit alors **pas** `revisionReminderSentFor` (l'essai ne supprime pas le vrai rappel). |
 
 Les jobs sans `dryRun` envoient réellement ; avec `onlyUser:"julien"` ils n'écrivent qu'à l'adresse e-mail de julien. Le job révision écrit sur le bail **uniquement** `revisionReminderSentFor`, **après** un envoi réussi : `AAAA-MM-JJ` (proposition envoyée) ou `AAAA-MM-JJ:pending` (indice pas encore publié, renvoi à la publication).
 

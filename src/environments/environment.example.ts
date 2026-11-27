@@ -28,7 +28,7 @@ export const environment = {
 
   // Email sandbox mode
   // ------------------
-  // true  = Emails are NOT sent, only logged to console (safe for development)
+  // true  = Mailjet sandbox: the message is accepted by Mailjet but NOT delivered (safe for development)
   // false = Real emails are sent (use for production)
   sandbox: true,
 

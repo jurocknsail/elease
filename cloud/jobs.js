@@ -7,10 +7,12 @@
  * for both jobs (params of the job request):
  *   onlyUser  username: only that owner is processed. During development ALWAYS pass "julien".
  *             Present but not a non-empty string: the job fails (never silently widened to everyone).
+ *   dryRun, force, sandbox: real booleans only (absent = false); any other value fails the job.
  *   dryRun    true: build the messages, return them, send nothing and write nothing.
  *             Anything else (absent, false): the e-mails are REALLY sent.
  *   force     (monthly only) true: act even when today (Europe/Paris) is not the 25th.
- *   sandbox   true: Mailjet SandboxMode (the request is validated, nothing is delivered).
+ *   sandbox   true: Mailjet SandboxMode (the request is validated, nothing is delivered); the revision
+ *             job then writes no mark.
  *
  * The job bodies runMonthlyReminder / runRevisionReminder are plain async functions over injected `deps`
  * ({ queryLeaseholders, getOwner, sendMail, fetchObservations, saveReminderMark, now }), so that they are
@@ -26,8 +28,16 @@ const REMINDER_DAY = 25;
 const INSEE_TIMEOUT_MS = 15000;
 const PAGE_SIZE = 100;
 
-function isTrue(value) {
-  return value === true || value === 'true' || value === 1 || value === '1';
+/** An optional boolean parameter: absent (undefined or null) is false; anything but a real boolean is refused. */
+function readBoolean(params, name) {
+  const value = params[name];
+  if (value === undefined || value === null) {
+    return false;
+  }
+  if (typeof value !== 'boolean') {
+    throw new Error(name + ' doit être un booléen (true ou false), pas ' + JSON.stringify(value));
+  }
+  return value;
 }
 
 function readOptions(params) {
@@ -39,7 +49,12 @@ function readOptions(params) {
     }
     onlyUser = p.onlyUser.trim();
   }
-  return { onlyUser, dryRun: isTrue(p.dryRun), force: isTrue(p.force), sandbox: isTrue(p.sandbox) };
+  return {
+    onlyUser,
+    dryRun: readBoolean(p, 'dryRun'),
+    force: readBoolean(p, 'force'),
+    sandbox: readBoolean(p, 'sandbox'),
+  };
 }
 
 function describeError(error) {
@@ -259,6 +274,10 @@ async function runRevisionReminder(params, deps) {
           result.sent += 1;
         } else {
           result.sentPending += 1;
+        }
+        if (options.sandbox) {
+          // A sandbox run is not a real reminder: it must not suppress the real one for this anniversary.
+          continue;
         }
         try {
           await deps.saveReminderMark(lease.objectId, newMark);

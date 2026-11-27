@@ -95,6 +95,26 @@ test('readOptions: dryRun and force only when true; onlyUser must be a non-empty
   [' ', '', 7, true, {}].forEach((bad) => assert.throws(() => readOptions({ onlyUser: bad })));
 });
 
+test('readOptions: dryRun, force and sandbox accept real booleans only (absent is valid)', () => {
+  ['dryRun', 'force', 'sandbox'].forEach((name) => {
+    ['True', 'true', 'yes', 'false', '0', 1, 0, {}, []].forEach((bad) => {
+      assert.throws(() => readOptions({ [name]: bad }), new RegExp(name + ' doit être un booléen'), name + '=' + JSON.stringify(bad));
+    });
+    assert.equal(readOptions({ [name]: true })[name], true);
+    assert.equal(readOptions({ [name]: false })[name], false);
+    assert.equal(readOptions({ [name]: undefined })[name], false);
+    assert.equal(readOptions({ [name]: null })[name], false);
+  });
+});
+
+test('a job with a non-boolean dryRun fails and does nothing', async () => {
+  const deps = makeDeps({ now: REV_NOW, holders: revisionHolders(), observations: OBS });
+  await assert.rejects(runRevisionReminder({ onlyUser: 'julien', dryRun: 'true' }, deps), /dryRun/);
+  await assert.rejects(runMonthlyReminder({ onlyUser: 'julien', dryRun: 'yes' }, deps), /dryRun/);
+  assert.equal(deps.calls.queries, 0);
+  assert.equal(deps.calls.sent.length, 0);
+});
+
 test('ownerIdFromAcl: the single user with write access', () => {
   assert.equal(ownerIdFromAcl({ abc123: { read: true, write: true } }), 'abc123');
   assert.equal(ownerIdFromAcl({ '*': { read: true }, abc123: { read: true, write: true } }), 'abc123');
@@ -251,6 +271,14 @@ test('revision: published index sends the proposal, then marks only revisionRemi
   assert.equal(deps.calls.sent[0].message.subject, 'Révision du loyer — Commerce — 01/03/2026');
   assert.ok(deps.calls.sent[0].message.text.includes('1 113,36 €'));
   assert.deepEqual(deps.calls.fetches, ['ILAT']);
+});
+
+test('revision: a sandbox run sends in sandbox mode and writes no mark', async () => {
+  const deps = makeDeps({ now: REV_NOW, holders: revisionHolders(), observations: OBS });
+  const result = await runRevisionReminder({ onlyUser: 'julien', sandbox: true }, deps);
+  assert.equal(result.sent, 1);
+  assert.deepEqual(deps.calls.sent[0].mailOptions, { sandbox: true });
+  assert.deepEqual(deps.calls.marks, []);
 });
 
 test('revision: a failed send writes no mark', async () => {
