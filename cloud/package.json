@@ -1,0 +1,12 @@
+{
+  "name": "elease-cloud",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloud Code Back4App d'E-Lease : jobs de rappel (envoi mensuel, révision annuelle)",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "node-mailjet": "^3.1.0"
+  }
+}
