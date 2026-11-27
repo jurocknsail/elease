@@ -61,8 +61,10 @@ export class LandlordProfileRepository {
         await this.create(profile);
         return;
       }
-      this.fill(existing, profile);
-      await withTimeout(existing.save());
+      // Only what differs from the stored profile: another device's edit of another field survives.
+      if (this.fill(existing, profile, true)) {
+        await withTimeout(existing.save());
+      }
     });
   }
 
@@ -110,10 +112,17 @@ export class LandlordProfileRepository {
     return withTimeout(object.save());
   }
 
-  private fill(object: RemoteObject, profile: LandlordProfile): void {
+  /** Sets the five fields (`onlyChanged`: only those that differ from the object's); true if any was set. */
+  private fill(object: RemoteObject, profile: LandlordProfile, onlyChanged = false): boolean {
+    let written = false;
     for (const [key, value] of Object.entries(landlordProfileToParseFields(profile))) {
+      if (onlyChanged && JSON.stringify(object.get(key)) === JSON.stringify(value)) {
+        continue;
+      }
       object.set(key, value);
+      written = true;
     }
+    return written;
   }
 
   private requireUser(): RemoteObject {

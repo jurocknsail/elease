@@ -240,7 +240,9 @@ export class BackupCard {
 
   protected readonly counts = computed(() => {
     const restore = this.pending();
-    return restore ? planCounts(restore.plan) : { newHolders: 0, completedHolders: 0, leases: 0 };
+    return restore
+      ? planCounts(restore.plan)
+      : { newHolders: 0, completedHolders: 0, leases: 0, leasesToExisting: 0 };
   });
   protected readonly nothingToDo = computed(() => this.pending()?.plan.toCreate.length === 0);
   protected readonly newHoldersText = computed(() => {
@@ -248,11 +250,11 @@ export class BackupCard {
     return n === 1 ? '1 locataire sera ajouté' : `${n} locataires seront ajoutés`;
   });
   protected readonly leasesText = computed(() => {
-    const { leases, completedHolders } = this.counts();
+    const { leases, leasesToExisting } = this.counts();
     const skipped = this.pending()?.plan.skippedLeases ?? 0;
     const into =
-      completedHolders > 0
-        ? ` (dont des baux ajoutés à ${plural(completedHolders, 'locataire existant', 'locataires existants')})`
+      leasesToExisting > 0
+        ? ` (dont ${leasesToExisting} ${leasesToExisting === 1 ? 'pour un locataire déjà présent' : 'pour des locataires déjà présents'})`
         : '';
     return `${leases === 1 ? '1 bail sera ajouté' : `${leases} baux seront ajoutés`}${into}, ${skipped} déjà ${skipped === 1 ? 'présent ignoré' : 'présents ignorés'}.`;
   });

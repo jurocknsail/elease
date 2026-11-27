@@ -39,7 +39,7 @@ interface ThemeOption {
           <div role="radiogroup" aria-labelledby="appearance-title" class="grid grid-cols-3 gap-2">
             @for (option of themes; track option.mode) {
               <label
-                class="flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-strong px-2 text-sm font-medium select-none has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent dense:min-h-9"
+                class="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-strong px-2 text-sm font-medium select-none has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent dense:min-h-9"
               >
                 <input
                   type="radio"
@@ -49,7 +49,9 @@ interface ThemeOption {
                   [checked]="theme.mode() === option.mode"
                   (change)="theme.setMode(option.mode)"
                 />
-                <app-icon [name]="option.icon" class="size-5 shrink-0" />
+                <span class="hidden shrink-0 min-[420px]:inline-flex"
+                  ><app-icon [name]="option.icon" class="size-5"
+                /></span>
                 <span class="truncate">{{ option.label }}</span>
               </label>
             }

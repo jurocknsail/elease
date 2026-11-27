@@ -466,14 +466,19 @@ export interface PlanCounts {
   completedHolders: number;
   /** Leases that will be created, in both cases. */
   leases: number;
+  /** Of those, the leases added to holders that already exist. */
+  leasesToExisting: number;
 }
 
 export function planCounts(plan: RestorePlan): PlanCounts {
-  const newHolders = plan.toCreate.filter((holder) => !holder.objectId).length;
+  const added = (holders: Leaseholder[]) => holders.reduce((sum, h) => sum + h.leases.length, 0);
+  const fresh = plan.toCreate.filter((holder) => !holder.objectId);
+  const existing = plan.toCreate.filter((holder) => holder.objectId);
   return {
-    newHolders,
-    completedHolders: plan.toCreate.length - newHolders,
-    leases: plan.toCreate.reduce((sum, holder) => sum + holder.leases.length, 0),
+    newHolders: fresh.length,
+    completedHolders: existing.length,
+    leases: added(fresh) + added(existing),
+    leasesToExisting: added(existing),
   };
 }
 

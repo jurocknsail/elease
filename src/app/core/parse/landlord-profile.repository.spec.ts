@@ -140,6 +140,19 @@ describe('LandlordProfileRepository', () => {
       });
     });
 
+    it('writes only the fields that changed, and nothing when none did', async () => {
+      const { fake, repo } = setup();
+      const profile = await repo.get();
+      fake.calls.length = 0;
+
+      await repo.save({ ...profile, issueCity: 'PARIS' });
+      await repo.save({ ...profile, issueCity: 'PARIS' });
+
+      const saves = fake.callsOf('save', 'LandlordProfile');
+      expect(saves).toHaveLength(1);
+      expect(saves[0].ops?.map((op) => op.key)).toEqual(['issueCity']);
+    });
+
     it('creates the profile, with an owner ACL and a user pointer, when none exists yet', async () => {
       const { fake, repo } = setup();
 
