@@ -1,0 +1,127 @@
+name: Deploy to Cloudflare Pages
+
+# New app (Angular 22 PWA) -> Cloudflare Pages project `e-lease-app`
+# (custom domain https://e-lease-app.smarthomeserver.online).
+# The legacy Ionic app is NOT built here: see docker-build.yml (manual, tag `legacy-ionic`).
+#
+# SAFETY RULE: the production secret (`production: true` = real e-mails to tenants) is used ONLY on
+# `main`. A manual run (workflow_dispatch) on any other branch compiles with the example environment
+# (production false, sandbox true), runs the tests and the build, and does NOT deploy.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      # Git-ignored file, imported by the unit tests and by `ng build` before the file replacement.
+      - name: Create environment.ts (test environment, never production)
+        run: cp src/environments/environment.example.ts src/environments/environment.ts
+
+      # main only: the production environment comes from the secret ENVIRONMENT_PROD.
+      # Expected content (names only): production: true, parseAppId, parseJsKey, parseServerUrl,
+      # sandbox: false. No inseeApiKey (the INSEE API is public and needs no key).
+      - name: Write environment.prod.ts from the production secret (main only)
+        if: github.ref == 'refs/heads/main'
+        env:
+          ENVIRONMENT_PROD: ${{ secrets.ENVIRONMENT_PROD }}
+        run: printf '%s\n' "$ENVIRONMENT_PROD" > src/environments/environment.prod.ts
+
+      # Any other branch: the "production" build is made from the example (production false), so it
+      # can never send a real e-mail. It is only built to check that it compiles, and is not deployed.
+      - name: Write environment.prod.ts from the example (branches other than main)
+        if: github.ref != 'refs/heads/main'
+        run: cp src/environments/environment.example.ts src/environments/environment.prod.ts
+
+      # Never prints the file: only fixed messages.
+      - name: Check environment.prod.ts (without printing it)
+        env:
+          IS_MAIN: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          file=src/environments/environment.prod.ts
+          if [ "$IS_MAIN" = "true" ]; then
+            if ! grep -Eq 'production[[:space:]]*:[[:space:]]*true' "$file"; then
+              echo "::error::ENVIRONMENT_PROD must contain 'production: true'."
+              exit 1
+            fi
+            for key in parseAppId parseJsKey parseServerUrl sandbox; do
+              if ! grep -Eq "${key}[[:space:]]*:" "$file"; then
+                echo "::error::ENVIRONMENT_PROD is missing the field ${key}."
+                exit 1
+              fi
+            done
+            if grep -q 'YOUR_PARSE' "$file"; then
+              echo "::error::ENVIRONMENT_PROD still contains placeholder values."
+              exit 1
+            fi
+          else
+            if ! grep -Eq 'production[[:space:]]*:[[:space:]]*false' "$file"; then
+              echo "::error::A branch other than main must be built with production false."
+              exit 1
+            fi
+          fi
+          if grep -q 'inseeApiKey' "$file"; then
+            echo "::error::environment.prod.ts must not contain inseeApiKey (no INSEE key in the bundle)."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npx ng test --watch=false
+
+      # Dates must not depend on the runner's time zone (the owner is in Europe/Paris, the CI is in UTC).
+      - name: Unit tests (America/Los_Angeles time zone)
+        env:
+          TZ: America/Los_Angeles
+        run: npx ng test --watch=false
+
+      - name: Build
+        run: npx ng build
+
+      - name: Check the build output
+        run: |
+          for f in www/index.html www/ngsw.json www/_redirects www/_headers www/manifest.webmanifest; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing build output: $f"
+              exit 1
+            fi
+          done
+          # The service worker precaches the Inter font by pattern: a renamed font file would silently break it.
+          if ! grep -q 'inter-latin-wght-normal-' www/ngsw.json; then
+            echo "::error::www/ngsw.json no longer lists the Inter latin font (check ngsw-config.json)."
+            exit 1
+          fi
+
+      # main only. Other branches stop here (tests + build): they are never deployed.
+      - name: Deploy to Cloudflare Pages (main only)
+        if: github.ref == 'refs/heads/main'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'
+        run: npx wrangler@4 pages deploy www --project-name e-lease-app --branch "$GITHUB_REF_NAME"

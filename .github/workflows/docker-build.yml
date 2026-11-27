@@ -1,15 +1,34 @@
-name: Docker Build & Push
+name: Legacy Docker Build & Push (Ionic app, tag legacy-ionic)
+
+# LEGACY app only (Angular 17 + Ionic 7), served on https://e-lease.smarthomeserver.online from the
+# Docker image jurocknsail/elease:latest. MANUAL trigger only: a push to main never builds it.
+# The new app is built and deployed by pages-deploy.yml (Cloudflare Pages).
+#
+# The source is ALWAYS the git tag `legacy-ionic` (the last commit of the Ionic app), whatever branch
+# this workflow is started from. Dockerfile and nginx.conf are the ones of that tag.
+#
+# Secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, and the legacy environment file in
+# ENVIRONMENT_PROD_LEGACY (falls back to ENVIRONMENT_PROD). The legacy app needs `inseeApiKey` in
+# it; ENVIRONMENT_PROD of the new app must NOT contain it, so keep a separate legacy secret if you
+# rebuild this image after ENVIRONMENT_PROD was changed for the new app.
 
 on:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout legacy tag
         uses: actions/checkout@v4
+        with:
+          ref: legacy-ionic
 
+      # Node 20 stays: the Ionic 7 / Angular 17 app of the tag is built with it (the new app uses
+      # Node 24 from .node-version, which does not exist at the tag).
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -19,7 +38,7 @@ jobs:
       - name: Create environment files
         run: |
           echo "export const environment = {};" > src/environments/environment.ts
-          echo "${{ secrets.ENVIRONMENT_PROD }}" > src/environments/environment.prod.ts
+          echo "${{ secrets.ENVIRONMENT_PROD_LEGACY || secrets.ENVIRONMENT_PROD }}" > src/environments/environment.prod.ts
 
       - name: Install & Build
         run: |

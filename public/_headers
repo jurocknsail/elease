@@ -1,0 +1,38 @@
+# Cloudflare Pages custom headers (https://developers.cloudflare.com/pages/configuration/headers/).
+# All matching rules apply and are cumulative, so the patterns below never overlap: hashed files are
+# matched by their prefix, which keeps ngsw-worker.js, safety-worker.js and worker-basic.min.js (not
+# hashed) out of the immutable cache.
+#
+# No Content-Security-Policy on purpose: it cannot be tested from here and a wrong one breaks the
+# app. See docs/deploy-cloudflare-pages.md (optional hardening) for what it would have to allow.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Entry points and service worker: always revalidated, so a new version reaches installed apps.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/ngsw.json
+  Cache-Control: no-cache
+/ngsw-worker.js
+  Cache-Control: no-cache
+/safety-worker.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# Files whose name contains a content hash: cached for a year.
+/main-*.js
+  Cache-Control: public, max-age=31536000, immutable
+/chunk-*.js
+  Cache-Control: public, max-age=31536000, immutable
+/polyfills-*.js
+  Cache-Control: public, max-age=31536000, immutable
+/styles-*.css
+  Cache-Control: public, max-age=31536000, immutable
+/media/*
+  Cache-Control: public, max-age=31536000, immutable
