@@ -16,7 +16,8 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { APP_ENV } from '../../core/app-env';
-import { isSessionError } from '../../core/auth/session-error';
+import { AuthService } from '../../core/auth/auth.service';
+import { SessionErrorHandler, isSessionError } from '../../core/auth/session-error';
 import {
   BillingPeriod,
   billingPeriod,
@@ -42,6 +43,7 @@ import { ErrorState } from '../../shared/ui/error-state';
 import { Icon } from '../../shared/ui/icon';
 import { PdfViewer } from '../../shared/ui/pdf-viewer';
 import { Pill, type PillTone } from '../../shared/ui/pill';
+import { addMaybeSent, readMaybeSent, removeMaybeSent } from './maybe-sent';
 import {
   RentCallRow,
   buildRows,
@@ -576,6 +578,8 @@ export class SendPage {
   private readonly repository = inject(LeaseholderRepository);
   private readonly profiles = inject(LandlordProfileRepository);
   private readonly sender = inject(RentCallSender);
+  private readonly auth = inject(AuthService);
+  private readonly session = inject(SessionErrorHandler);
   private readonly dialog = inject(ConfirmDialog);
   private readonly render = inject(PDF_RENDERER);
   private readonly now = inject(NOW);
@@ -844,6 +848,7 @@ export class SendPage {
   );
 
   constructor() {
+    this.loadMaybeSent();
     void this.refresh();
 
     // A send started by ANOTHER instance of this page (left and opened again) is still running: nothing
@@ -973,9 +978,10 @@ export class SendPage {
    */
   private applyData(): void {
     const keys = new Set(this.rowByKey().keys());
+    this.pruneMaybeSent();
     if (!this.initialised) {
       this.initialised = true;
-      this.selected.set(initialSelection(this.data()));
+      this.selected.set(this.defaultSelection());
     } else {
       this.selected.update((current) => new Set([...current].filter((key) => keys.has(key))));
     }
@@ -997,6 +1003,55 @@ export class SendPage {
     const changed = this.changedByLoad;
     this.changedByLoad = [];
     return changed.filter((key) => keys.has(key));
+  }
+
+  // ===== leases that may have been sent (kept across reloads) ===================================
+
+  private username(): string | null {
+    return this.auth.user()?.username ?? null;
+  }
+
+  /** Reads what the browser remembers for this user and the displayed period. */
+  private loadMaybeSent(): void {
+    const user = this.username();
+    this.maybeSentIds.set(
+      user ? readMaybeSent(user, periodKey(this.period()), this.sendClock()) : new Set(),
+    );
+  }
+
+  private forgetMaybeSent(ids: readonly string[], period: BillingPeriod): void {
+    const user = this.username();
+    if (user) {
+      removeMaybeSent(user, periodKey(period), ids, this.sendClock());
+    }
+    if (periodKey(period) === periodKey(this.period())) {
+      this.maybeSentIds.update(
+        (current) => new Set([...current].filter((id) => !ids.includes(id))),
+      );
+    }
+  }
+
+  /** What is to send, minus the leases whose e-mail may already have gone out: never preselected. */
+  private defaultSelection(): Set<string> {
+    const maybe = this.maybeSentIds();
+    const selected = initialSelection(this.data());
+    this.keyed().forEach(({ row, key }) => {
+      if (row.lease.objectId && maybe.has(row.lease.objectId)) {
+        selected.delete(key);
+      }
+    });
+    return selected;
+  }
+
+  /** A lease that now reads « Envoyé » needs no flag any more. */
+  private pruneMaybeSent(): void {
+    const recorded = this.keyed()
+      .filter(({ row }) => row.status === 'sent' && !!row.lease.objectId)
+      .map(({ row }) => row.lease.objectId as string)
+      .filter((id) => this.maybeSentIds().has(id));
+    if (recorded.length > 0) {
+      this.forgetMaybeSent(recorded, this.period());
+    }
   }
 
   private firstKey(): string | null {
@@ -1194,10 +1249,11 @@ export class SendPage {
     this.epoch += 1;
     this.generationNow = this.now();
     this.callDate.set(date);
+    this.loadMaybeSent();
     this.pdfs.set(new Map());
     if (periodKey(this.period()) !== previousPeriod) {
       // Another month: other statuses. Same rule as on opening: what is still to send is selected.
-      this.selected.set(initialSelection(this.data()));
+      this.selected.set(this.defaultSelection());
       this.previewKey.set(this.firstKey());
     }
     this.requestGeneration([
@@ -1504,6 +1560,13 @@ export class SendPage {
       // in the data, so it is flagged « Peut-être envoyé » and a later re-selection is warned about.
       if (outcome.kind === 'uncertain' || outcome.kind === 'warning') {
         outcome.result.leaseIds.forEach((id) => uncertain.add(id));
+        const user = this.username();
+        if (user) {
+          addMaybeSent(user, periodKey(outcome.period), outcome.result.leaseIds, this.sendClock());
+        }
+      } else if (outcome.kind === 'sent') {
+        this.forgetMaybeSent(outcome.result.leaseIds, outcome.period);
+        outcome.result.leaseIds.forEach((id) => uncertain.delete(id));
       }
     }
     this.maybeSentIds.set(uncertain);
@@ -1597,20 +1660,22 @@ export class SendPage {
           this.sendClock(),
         );
       } catch (error) {
-        if (!isSessionError(error)) {
-          this.updateOutcome(outcome.result.email, {
-            busy: false,
-            recordError: "L'état d'envoi n'a pas pu être enregistré. Réessayez.",
-          });
+        // `markLeasesSent` never signs out by itself (a 209 after a DELIVERED e-mail must not replace the
+        // send screen). Here no e-mail is involved, so an expired session may redirect to the login.
+        const expired = isSessionError(error);
+        this.updateOutcome(outcome.result.email, {
+          busy: false,
+          recordError: expired
+            ? 'Session expirée : reconnectez-vous puis réessayez de marquer comme envoyé.'
+            : "L'état d'envoi n'a pas pu être enregistré. Réessayez.",
+        });
+        if (expired) {
+          this.session.handle(error);
         }
         return;
       }
       this.updateOutcome(outcome.result.email, { kind: 'recorded', busy: false });
-      this.maybeSentIds.update((current) => {
-        const next = new Set(current);
-        outcome.result.leaseIds.forEach((id) => next.delete(id));
-        return next;
-      });
+      this.forgetMaybeSent(outcome.result.leaseIds, outcome.period);
       await this.fetchFresh(false);
     } finally {
       this.sendGuard = false;

@@ -18,6 +18,7 @@ import {
 import { PDF_RENDERER, PdfRenderError, RenderedPdf } from '../../core/pdf/pdf-render';
 import { ConfirmDialog, ConfirmDialogOptions } from '../../shared/ui/confirm-dialog';
 import { PdfViewer } from '../../shared/ui/pdf-viewer';
+import { MAYBE_SENT_KEY } from './maybe-sent';
 import { SendPage, WIDE_LAYOUT } from './send.page';
 
 /*
@@ -291,6 +292,12 @@ function typeDate(view: View, value: string): void {
 }
 
 describe('SendPage', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
   describe('opening', () => {
     it('shows the period, the due date, the date field and one row per lease (none for a tenant without lease)', async () => {
       const view = await setup();
@@ -831,6 +838,162 @@ describe('SendPage', () => {
       const second = view.dialog.opened.at(-1)!;
       expect(second.message).toContain('Attention : 1 appel déjà envoyé ou peut-être envoyé');
       expect(second.confirmLabel).toBe('Envoyer quand même');
+    });
+  });
+
+  describe('record-only action on an expired session', () => {
+    it('stops being busy, says so and sends the user to the login screen', async () => {
+      const view = await setup({
+        before: (fake) =>
+          fake.failWhen((call) => call.op === 'cloud', parseError(100, 'Connexion perdue')),
+      });
+      await view.open();
+      sendButton(view.root).click();
+      await view.settle();
+      view.fake.failWhen(
+        (call) => call.op === 'save' && call.className === 'Lease',
+        parseError(209, 'Invalid session token'),
+      );
+      const sendsBefore = clouds(view.fake).length;
+
+      buttons(view.root, 'Marquer comme envoyé')[0].click();
+      await view.settle();
+
+      expect(clouds(view.fake)).toHaveLength(sendsBefore);
+      expect(view.router.url).toContain('/login');
+      const button = view.root.querySelector<HTMLButtonElement>('[role="status"] button');
+      if (button) {
+        expect(button.getAttribute('aria-busy')).not.toBe('true');
+      }
+    });
+  });
+
+  describe('leases that may have been sent are remembered across reloads', () => {
+    const stored = () =>
+      JSON.parse(localStorage.getItem(MAYBE_SENT_KEY) ?? '[]') as Array<{ id: string }>;
+
+    it('after an uncertain send and a new page: « Peut-être envoyé », not preselected, and re-selecting it is confirmed twice over', async () => {
+      const view = await setup({
+        before: (fake) =>
+          fake.failWhen((call) => call.op === 'cloud', parseError(100, 'Connexion perdue')),
+      });
+      await view.open();
+      sendButton(view.root).click();
+      await view.settle();
+      expect(
+        stored()
+          .map((e) => e.id)
+          .sort(),
+      ).toEqual(['l-commerce', 'l-studio']);
+
+      // The user reloads: a brand-new page reads the data again (both leases are still « À envoyer »).
+      await view.harness.navigateByUrl('/locataires');
+      await view.open();
+
+      const rows = rowsOf(view.root);
+      const studio = rows.find((row) => text(row).includes('Studio'))!;
+      expect(plain(text(studio))).toContain('Peut-être envoyé');
+      expect(rows.every((row) => row.getAttribute('aria-selected') === 'false')).toBe(true);
+      expect(reason(view.root)).toBe('Sélectionnez au moins un bail');
+
+      (studio.querySelector('span[aria-hidden="true"]') as HTMLElement).click();
+      view.harness.detectChanges();
+      await view.settle();
+      sendButton(view.root).click();
+      await view.settle();
+      const last = view.dialog.opened.at(-1)!;
+      expect(last.message).toContain('Attention : 1 appel déjà envoyé ou peut-être envoyé');
+      expect(last.confirmLabel).toBe('Envoyer quand même');
+    });
+
+    it('a delivered-but-not-recorded e-mail is remembered too', async () => {
+      const view = await setup({
+        before: (fake) =>
+          fake.failWhen(
+            (call) => call.op === 'save' && call.className === 'Lease',
+            parseError(141, 'refus'),
+          ),
+      });
+      await view.open();
+      sendButton(view.root).click();
+      await view.settle();
+
+      expect(stored().length).toBeGreaterThan(0);
+    });
+
+    it('recording the send with « Marquer comme envoyé » forgets the leases', async () => {
+      const view = await setup({
+        before: (fake) =>
+          fake.failWhen((call) => call.op === 'cloud', parseError(100, 'Connexion perdue')),
+      });
+      await view.open();
+      sendButton(view.root).click();
+      await view.settle();
+
+      buttons(view.root, 'Marquer comme envoyé')[0].click();
+      await view.settle();
+
+      expect(stored()).toEqual([]);
+    });
+
+    it('a lease that reads « Envoyé » is forgotten', async () => {
+      localStorage.setItem(
+        MAYBE_SENT_KEY,
+        JSON.stringify([{ user: 'julien', period: '2026-12', id: 'l-garage', at: SENT_AT }]),
+      );
+      const view = await setup();
+      await view.open();
+
+      expect(stored()).toEqual([]);
+    });
+
+    it('ignores the entries of another user and expired entries', async () => {
+      localStorage.setItem(
+        MAYBE_SENT_KEY,
+        JSON.stringify([
+          { user: 'autre', period: '2026-12', id: 'l-studio', at: SENT_AT },
+          { user: 'julien', period: '2026-12', id: 'l-commerce', at: SENT_AT - 25 * 3600 * 1000 },
+        ]),
+      );
+      const view = await setup();
+      await view.open();
+
+      const rows = rowsOf(view.root);
+      expect(rows.some((row) => plain(text(row)).includes('Peut-être envoyé'))).toBe(false);
+      expect(rows.filter((row) => row.getAttribute('aria-selected') === 'true')).toHaveLength(2);
+    });
+
+    it('an entry of another period is not shown', async () => {
+      localStorage.setItem(
+        MAYBE_SENT_KEY,
+        JSON.stringify([{ user: 'julien', period: '2027-01', id: 'l-studio', at: SENT_AT }]),
+      );
+      const view = await setup();
+      await view.open();
+
+      expect(rowsOf(view.root).some((row) => plain(text(row)).includes('Peut-être envoyé'))).toBe(
+        false,
+      );
+    });
+
+    it('a storage that throws does not break the page nor the send', async () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      const view = await setup({
+        before: (fake) =>
+          fake.failWhen((call) => call.op === 'cloud', parseError(100, 'Connexion perdue')),
+      });
+      await view.open();
+      expect(rowsOf(view.root)).toHaveLength(3);
+
+      sendButton(view.root).click();
+      await view.settle();
+
+      expect(text(view.root.querySelector('[role="status"]'))).toContain('Peut-être envoyé');
     });
   });
 
