@@ -32,21 +32,34 @@ import { errorMessage } from './lease-form';
         <span class="font-normal text-muted">(facultatif)</span>
       }
     </label>
-    <input
-      [id]="inputId()"
-      [formControl]="control()"
-      [type]="type()"
-      class="field-input"
-      [attr.inputmode]="inputmode()"
-      [attr.autocomplete]="autocomplete()"
-      [attr.enterkeyhint]="enterkeyhint()"
-      [attr.maxlength]="maxlength()"
-      [attr.aria-invalid]="shown().invalid"
-      [attr.aria-describedby]="describedBy()"
-      autocapitalize="none"
-      autocorrect="off"
-      spellcheck="false"
-    />
+    @if (multiline()) {
+      <textarea
+        [id]="inputId()"
+        [formControl]="control()"
+        class="field-input min-h-24 resize-y py-2"
+        [rows]="rows()"
+        [attr.autocomplete]="autocomplete()"
+        [attr.maxlength]="maxlength()"
+        [attr.aria-invalid]="shown().invalid"
+        [attr.aria-describedby]="describedBy()"
+      ></textarea>
+    } @else {
+      <input
+        [id]="inputId()"
+        [formControl]="control()"
+        [type]="type()"
+        class="field-input"
+        [attr.inputmode]="inputmode()"
+        [attr.autocomplete]="autocomplete()"
+        [attr.enterkeyhint]="enterkeyhint()"
+        [attr.maxlength]="maxlength()"
+        [attr.aria-invalid]="shown().invalid"
+        [attr.aria-describedby]="describedBy()"
+        autocapitalize="none"
+        autocorrect="off"
+        spellcheck="false"
+      />
+    }
     @if (hint(); as text) {
       <p [id]="inputId() + '-hint'" class="mt-1.5 text-xs text-muted">{{ text }}</p>
     }
@@ -64,6 +77,9 @@ export class TextField {
   readonly autocomplete = input<string>('off');
   readonly enterkeyhint = input<string | null>(null);
   readonly maxlength = input<number | null>(null);
+  /** A text area (several lines) instead of a one-line input. */
+  readonly multiline = input(false);
+  readonly rows = input(3);
   readonly optional = input(false);
   readonly hint = input<string | null>(null);
 

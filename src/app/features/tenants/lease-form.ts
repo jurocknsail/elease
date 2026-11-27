@@ -160,6 +160,7 @@ export const validators = {
 const MESSAGES: Record<string, string> = {
   required: 'Ce champ est obligatoire.',
   maxlength: `Trop long (${CONTACT_NAME_MAX} caractères au maximum).`,
+  singleLine: 'Une seule ligne : pas de retour à la ligne.',
   postalCode: 'Le code postal comporte exactement 5 chiffres.',
   streetNumber: 'Saisissez le numéro de voie (nombre entier, 1 ou plus).',
   integer: 'Saisissez un nombre entier.',
@@ -180,6 +181,10 @@ export function errorMessage(control: AbstractControl | null): string | null {
     return null;
   }
   const key = Object.keys(errors)[0];
+  const max = (errors['maxlength'] as { max?: unknown } | undefined)?.max;
+  if (key === 'maxlength' && typeof max === 'number') {
+    return `Trop long (${max} caractères au maximum).`;
+  }
   return MESSAGES[key] ?? 'Valeur invalide.';
 }
 
