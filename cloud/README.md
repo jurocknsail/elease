@@ -29,10 +29,10 @@ TZ=Pacific/Auckland node --test  # les dates ne dépendent pas du fuseau du proc
 
 ## Hypothèses non vérifiées (à contrôler avant le premier envoi)
 
-1. **Variables Mailjet** : `createMailjetSender` (dans `jobs.js`) lit `MJ_APIKEY_PUBLIC` et `MJ_APIKEY_PRIVATE` dans `process.env`. Les noms réels utilisés par `sendEmail` dans le `main.js` déployé sont inconnus : les vérifier et, si besoin, modifier ces deux noms dans `jobs.js` (une ligne chacun). Si les clés sont écrites en dur dans `main.js`, les déclarer plutôt en variables d'environnement Back4App (Server Settings → Environment Variables) ; ne jamais copier de clé dans `jobs.js` ni dans git.
-2. **Format du message Mailjet** : API v3.1 (`Messages: [{ From, To, Subject, TextPart }]`), jamais testé contre le vrai compte. L'adresse du propriétaire doit être un expéditeur validé chez Mailjet (comme pour `sendEmail`, qui envoie déjà depuis l'e-mail de l'utilisateur).
+1. **Clés Mailjet** : RÉSOLU. `main.append.js` partage le client Mailjet déjà créé par le `main.js` déployé (`global.eleaseMailjet = mailjet;`) ; `createMailjetSender` l'utilise quand `MJ_APIKEY_PUBLIC` / `MJ_APIKEY_PRIVATE` ne sont pas définies. Aucune clé n'est copiée dans `jobs.js` ni dans git. Si un jour les clés passent en variables d'environnement Back4App, ces deux variables prennent le relais sans autre changement.
+2. **Format du message Mailjet** : API v3.1 (`Messages: [{ From, To, Subject, TextPart }]`), vérifié le 2026-11-27 : envoi en sandbox puis envoi réel vers julien acceptés. L'adresse du propriétaire doit être un expéditeur validé chez Mailjet (comme pour `sendEmail`, qui envoie déjà depuis l'e-mail de l'utilisateur).
 3. **Version de Node** de Back4App inconnue : le code est en ES2019 (pas d'`?.`, `??`, `.at()`, `replaceAll`).
-4. **INSEE** : appel serveur à `https://api.insee.fr/series/BDM/V1/data/SERIES_BDM/<série>?lastNObservations=12` sans clé, via `Parse.Cloud.httpRequest` (repli sur `fetch`). Non vérifié depuis Back4App ; les fixtures de test sont synthétiques. En cas d'échec le bail est ignoré et signalé dans `inseeFailures` (jamais de proposition inventée).
+4. **INSEE** (vérifié le 2026-11-27 depuis Back4App : ILAT T2 2026 = 138,01 lu correctement) : appel serveur à `https://api.insee.fr/series/BDM/V1/data/SERIES_BDM/<série>?lastNObservations=12` sans clé, via `Parse.Cloud.httpRequest` (repli sur `fetch`). Non vérifié depuis Back4App ; les fixtures de test sont synthétiques. En cas d'échec le bail est ignoré et signalé dans `inseeFailures` (jamais de proposition inventée).
 5. **Propriétaire** : l'utilisateur avec droit d'écriture dans l'ACL du `Leaseholder` (un seul attendu). Un locataire sans propriétaire unique est ignoré (`skippedHoldersWithoutOwner`).
 6. **Lecture** : `Leaseholder` avec `include('leases')`, master key, par pages de 100.
 
@@ -102,3 +102,7 @@ CRON_TZ=Europe/Paris
 ```
 
 **Ne jamais lancer un job sans `onlyUser` pendant le développement** : sans lui, tous les propriétaires reçoivent leur mail. Seules les exécutions planifiées (`{}`) tournent sans `onlyUser`, une fois les essais terminés.
+
+## État du déploiement (2026-11-27)
+
+Cloud code déployé en `v17` sur `elease-be` (`sendEmail` inchangé ; sauvegarde du `main.js` v16 conservée hors dépôt). Essais faits uniquement avec `onlyUser:"julien"` : dry runs, sandbox, puis un envoi réel de chaque job vers l'adresse de julien (bail de test restauré ensuite). **Les jobs ne sont pas planifiés** : voir « Planification ».

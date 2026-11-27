@@ -440,6 +440,27 @@ test('the real mail sender refuses to run without Mailjet keys (no network is re
   await assert.rejects(send({ to: 'a@b.test', subject: 's', text: 't' }, {}), /MJ_APIKEY/);
 });
 
+test('the real mail sender reuses the Mailjet client shared by main.js when no keys are set', async () => {
+  const requests = [];
+  global.eleaseMailjet = {
+    post: () => ({
+      request: async (body) => {
+        requests.push(body);
+        return { body: { Messages: [{ Status: 'success' }] } };
+      },
+    }),
+  };
+  try {
+    await createMailjetSender({})({ to: 'a@b.test', subject: 's', text: 't' }, { sandbox: true });
+  } finally {
+    delete global.eleaseMailjet;
+  }
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].SandboxMode, true);
+  assert.deepEqual(requests[0].Messages[0].To, [{ Email: 'a@b.test' }]);
+  assert.deepEqual(requests[0].Messages[0].From, { Email: 'a@b.test' });
+});
+
 // ---------------------------------------------------------------- real dependencies over a fake Parse SDK
 
 function fakeParse(pages, httpText) {

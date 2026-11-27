@@ -302,10 +302,15 @@ function createMailjetSender(env) {
   return async function sendMail(message, options) {
     const publicKey = source.MJ_APIKEY_PUBLIC;
     const privateKey = source.MJ_APIKEY_PRIVATE;
-    if (!publicKey || !privateKey) {
+    let mailjet;
+    if (publicKey && privateKey) {
+      mailjet = require('node-mailjet').connect(publicKey, privateKey);
+    } else if (typeof global !== 'undefined' && global.eleaseMailjet) {
+      // Client already created by the deployed main.js (see main.append.js): the keys stay where they are.
+      mailjet = global.eleaseMailjet;
+    } else {
       throw new Error('Clés Mailjet absentes (variables MJ_APIKEY_PUBLIC / MJ_APIKEY_PRIVATE)');
     }
-    const mailjet = require('node-mailjet').connect(publicKey, privateKey);
     const body = {
       Messages: [
         {
