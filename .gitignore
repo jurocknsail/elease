@@ -17,7 +17,7 @@ log.txt
 /.versions
 /coverage
 
-# Ionic
+# Build output (and leftovers of the legacy Ionic tooling)
 /.ionic
 /www
 /platforms
