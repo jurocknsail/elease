@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import ilat from './fixtures/ilat.xml';
-import ilc from './fixtures/ilc.xml';
-import irl from './fixtures/irl.xml';
+import ilat from './fixtures/ilat';
+import ilc from './fixtures/ilc';
+import irl from './fixtures/irl';
 import {
   INSEE_TIMEOUT_MS,
   InseeService,

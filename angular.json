@@ -31,7 +31,6 @@
             ],
             "styles": ["src/styles.css"],
             "allowedCommonJsDependencies": ["parse", "pdfmake"],
-            "loader": { ".xml": "text" },
             "outputPath": {
               "base": "www",
               "browser": ""

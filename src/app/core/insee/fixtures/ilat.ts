@@ -1,4 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
+/**
+ * SYNTHETIC fixture (not recorded from the live INSEE API, which was unreachable from the
+ * build environment): BDM SDMX-ML shape as read by the legacy parser. Replace by a real recording
+ * when the API is reachable. A .ts module rather than an .xml file so the test build needs no
+ * custom loader in angular.json.
+ */
+export default `<?xml version="1.0" encoding="UTF-8"?>
 <!--
   SYNTHETIC FIXTURE, NOT RECORDED FROM THE LIVE API (the build environment could not reach api.insee.fr).
   Shape follows the INSEE BDM SDMX-ML "StructureSpecificData" answer of
@@ -33,3 +39,4 @@
     </Series>
   </message:DataSet>
 </message:StructureSpecificData>
+`;
