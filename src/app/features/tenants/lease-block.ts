@@ -5,20 +5,25 @@ import {
   Injector,
   OnInit,
   computed,
+  effect,
   inject,
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { isSessionError } from '../../core/auth/session-error';
 import { computeTVA, computeTotalPrice } from '../../core/billing/amounts';
 import { periodLabel } from '../../core/billing/period';
+import { NOW } from '../../core/clock';
 import { formatDate, formatEuro, formatPostalCode, toFieldNumber } from '../../core/format/fr';
+import { InseeService, InseeUnavailableError } from '../../core/insee/insee.service';
 import { INDEX_TYPES, IndexType, Lease } from '../../core/models/lease';
 import { leaseToParseFields } from '../../core/parse/mapping';
 import { LeaseholderRepository } from '../../core/parse/leaseholder.repository';
+import { appliedRevision, revisionState } from '../../core/revision/revision';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { Pill, PillTone } from '../../shared/ui/pill';
 import {
@@ -118,7 +123,7 @@ const RADIO =
               #edit
               type="button"
               class="btn btn-secondary"
-              [disabled]="deleting()"
+              [disabled]="deleting() || applying()"
               (click)="startEdit()"
             >
               Modifier
@@ -402,12 +407,48 @@ const RADIO =
           </div>
         </dl>
 
-        <!--
-          Slot for the annual revision (Task 11): the line « 1 091,08 € → 1 113,36 € (ILAT T2 2026) », the
-          « Révision le 01/03 » pill (add it to \`pills\`) and the « Appliquer la révision » button go here,
-          outside the details above.
-        -->
-        <div data-slot="revision" class="empty:hidden"></div>
+        <div data-slot="revision" class="empty:hidden">
+          @if (revisionView(); as view) {
+            <div
+              class="mx-4 mb-4 flex flex-col gap-2 rounded-lg border border-border bg-surface px-3 py-3 md:mx-5"
+              [attr.aria-busy]="applying()"
+            >
+              @if (view.line) {
+                <p class="text-sm">
+                  <span class="font-semibold tabular-nums">{{ view.line }}</span>
+                  <span class="text-muted"> {{ view.suffix }}</span>
+                </p>
+                <p class="text-xs text-muted">{{ view.hint }}</p>
+                <div>
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    [disabled]="blocked()"
+                    [attr.aria-busy]="applying()"
+                    (click)="applyRevision()"
+                  >
+                    {{ applying() ? 'Application…' : 'Appliquer la révision' }}
+                  </button>
+                </div>
+              } @else if (view.status === 'error') {
+                <p class="text-sm text-muted" role="status" [attr.title]="view.errorMessage">
+                  Indices INSEE indisponibles —
+                  <button
+                    type="button"
+                    class="inline-flex min-h-11 items-center rounded px-1 font-semibold text-accent underline underline-offset-2"
+                    (click)="loadIndices(view.type)"
+                  >
+                    Réessayer
+                  </button>
+                </p>
+              } @else if (view.status === 'loading') {
+                <p class="text-sm text-muted" role="status">Chargement des indices INSEE…</p>
+              } @else {
+                <p class="text-sm text-muted">{{ view.pending }}</p>
+              }
+            </div>
+          }
+        </div>
 
         @if (error(); as message) {
           <p
@@ -433,6 +474,8 @@ export class LeaseBlock implements OnInit {
   private readonly injector = inject(Injector);
   private readonly repository = inject(LeaseholderRepository);
   private readonly confirm = inject(ConfirmDialog);
+  private readonly insee = inject(InseeService);
+  private readonly now = inject(NOW);
   protected readonly state = inject(TenantsState);
   private readonly root = viewChild<ElementRef<HTMLElement>>('root');
   private readonly editButton = viewChild<ElementRef<HTMLButtonElement>>('edit');
@@ -443,6 +486,14 @@ export class LeaseBlock implements OnInit {
   protected readonly form = signal<LeaseForm | null>(null);
   protected readonly saving = signal(false);
   protected readonly deleting = signal(false);
+  protected readonly applying = signal(false);
+  /** The INSEE values loaded for one index family (the lease's), or the state of that load. */
+  private readonly indices = signal<{
+    type: IndexType;
+    status: 'loading' | 'ready' | 'error';
+    map?: Map<string, number>;
+    errorMessage?: string;
+  } | null>(null);
   protected readonly error = signal<string | null>(null);
 
   protected readonly title = computed(() => {
@@ -470,7 +521,63 @@ export class LeaseBlock implements OnInit {
     if (isLeaseIncomplete(lease)) {
       pills.push({ label: 'À compléter', tone: 'warn' });
     }
+    const revision = this.revision();
+    if (revision?.kind === 'upcoming') {
+      pills.push({
+        label: `Révision le ${formatDate(revision.anniversary.getTime()).slice(0, 5)}`,
+        tone: 'accent',
+      });
+    }
     return pills;
+  });
+
+  /** The values of the lease's own index family, once loaded. */
+  private readonly observations = computed(() => {
+    const indices = this.indices();
+    return indices?.status === 'ready' && indices.type === this.lease()?.indexType
+      ? indices.map
+      : undefined;
+  });
+
+  /** Where the annual revision of the lease stands today (null for the form of a new lease). */
+  protected readonly revision = computed(() => {
+    const lease = this.lease();
+    return lease ? revisionState(lease, this.now(), this.observations()) : null;
+  });
+
+  /** What the revision slot shows; null when there is nothing to say. */
+  protected readonly revisionView = computed(() => {
+    const lease = this.lease();
+    const revision = this.revision();
+    if (!lease || revision?.kind !== 'upcoming' || !lease.indexType) {
+      return null;
+    }
+    const type = lease.indexType;
+    const changes = appliedRevision(revision);
+    const label = `${type} ${quarterLabel(revision.targetQuarter)}`;
+    const indices = this.indices();
+    const status = indices?.type === type ? indices.status : 'loading';
+    if (revision.proposedRent !== undefined && changes) {
+      return {
+        type,
+        status,
+        line: `${formatEuro(lease.price)} \u2192 ${formatEuro(revision.proposedRent)}`,
+        suffix: `(${label})`,
+        hint: `Le loyer et l'indice de référence seront mis à jour. La prochaine date anniversaire passera au ${formatDate(changes.renewalDate)}.`,
+        pending: '',
+        errorMessage: '',
+      };
+    }
+    const when = revision.publication ? formatDate(revision.publication.getTime()) : '';
+    return {
+      type,
+      status,
+      line: '',
+      suffix: '',
+      hint: '',
+      pending: `Indice ${label} attendu vers le ${when}`,
+      errorMessage: indices?.errorMessage ?? '',
+    };
   });
 
   protected readonly euro = formatEuro;
@@ -481,15 +588,50 @@ export class LeaseBlock implements OnInit {
     return formatPostalCode(lease.postalCode);
   }
 
+  constructor() {
+    // The INSEE values are only fetched when a revision is close, once per index family.
+    effect(() => {
+      const type = this.lease()?.indexType;
+      const revision = this.revision();
+      const indices = this.indices();
+      if (type && revision?.kind === 'upcoming' && indices?.type !== type) {
+        untracked(() => void this.loadIndices(type));
+      }
+    });
+  }
+
   ngOnInit(): void {
     if (this.lease() === null) {
       this.form.set(buildLeaseForm(this.fb));
     }
   }
 
+  /** Loads (or reloads, after a failure) the INSEE values of an index family. Never throws. */
+  protected async loadIndices(type: IndexType): Promise<void> {
+    if (this.indices()?.status === 'loading' && this.indices()?.type === type) {
+      return;
+    }
+    this.indices.set({ type, status: 'loading' });
+    try {
+      const map = await this.insee.observations(type);
+      this.indices.set({ type, status: 'ready', map });
+    } catch (error) {
+      this.indices.set({
+        type,
+        status: 'error',
+        errorMessage: error instanceof InseeUnavailableError ? error.message : undefined,
+      });
+    }
+  }
+
   /** A request is running, or a time-out is still being sorted out by a reload: no second request. */
   protected blocked(): boolean {
-    return this.saving() || this.deleting() || (this.state.needsReload() && this.state.loading());
+    return (
+      this.saving() ||
+      this.deleting() ||
+      this.applying() ||
+      (this.state.needsReload() && this.state.loading())
+    );
   }
 
   protected startEdit(): void {
@@ -563,6 +705,50 @@ export class LeaseBlock implements OnInit {
       }
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  /**
+   * Applies the proposed revision after a confirmation: the rent, the reference index and the next
+   * anniversary date are written in ONE update (the repository sends only what changed). One request at
+   * a time; after a time-out the data is reloaded before another attempt. What was confirmed is checked
+   * again once the dialog closes: if the lease or the proposal moved meanwhile, nothing is written.
+   */
+  protected async applyRevision(): Promise<void> {
+    const lease = this.lease();
+    const type = lease?.indexType;
+    const changes = appliedRevision(this.revision() ?? { kind: 'none' });
+    if (!lease || !type || !changes || this.blocked()) {
+      return;
+    }
+    const confirmed = await this.confirm.open({
+      title: 'Appliquer la révision du loyer ?',
+      message: `Le loyer passera de ${formatEuro(lease.price)} à ${formatEuro(changes.price)} (${type} ${quarterLabel(changes.referenceIndexQuarter)}, indice ${toFieldNumber(changes.referenceIndexValue)}). La prochaine date anniversaire passera au ${formatDate(changes.renewalDate)}.`,
+      confirmLabel: 'Appliquer la révision',
+    });
+    if (!confirmed || this.blocked()) {
+      return;
+    }
+    const current = this.lease();
+    const latest = appliedRevision(this.revision() ?? { kind: 'none' });
+    if (
+      !current ||
+      JSON.stringify(latest) !== JSON.stringify(changes) ||
+      current.price !== lease.price
+    ) {
+      this.error.set('La proposition a changé entre-temps : vérifiez-la, puis réessayez.');
+      return;
+    }
+    this.applying.set(true);
+    this.error.set(null);
+    try {
+      await this.state.attempt(() => this.repository.updateLease({ ...current, ...changes }));
+    } catch (error) {
+      if (!isSessionError(error)) {
+        this.error.set(saveErrorMessage(error));
+      }
+    } finally {
+      this.applying.set(false);
     }
   }
 

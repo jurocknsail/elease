@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { InseeService } from '../../core/insee/insee.service';
 import { LeaseholderRepository } from '../../core/parse/leaseholder.repository';
 import { ParseClient } from '../../core/parse/parse-client';
 import {
@@ -103,6 +104,8 @@ async function setup(options: SetupOptions = {}) {
     providers: [
       { provide: ParseClient, useValue: fake },
       { provide: ConfirmDialog, useValue: dialog },
+      // Never the real INSEE API from a spec, whatever the day the suite runs on.
+      { provide: InseeService, useValue: { observations: () => new Promise(() => undefined) } },
       provideRouter([
         {
           path: 'locataires',
