@@ -10,8 +10,8 @@ indices). It is an installable PWA (desktop, Android, iPhone) on **Angular 22 (z
 components, signals) + Tailwind CSS 4 + Angular CDK**. The backend is Parse Server on Back4App; the
 reminder e-mails come from Cloud Jobs in `cloud/`. UI language: French.
 
-The previous Ionic 7 / Angular 17 app is kept at the git tag `legacy-ionic` and still runs on
-`e-lease.smarthomeserver.online` until it is retired.
+The previous Ionic 7 / Angular 17 app was removed from this branch; its code stays in git at the tag
+`legacy-ionic` only.
 
 ## Commands
 
@@ -72,9 +72,8 @@ src/app/
   features/    one folder per screen: login, shell, rent-calls, tenants, settings
   shared/ui/   pill, pdf-viewer, confirm-dialog, empty-state ...
 cloud/         Back4App Cloud Code jobs (sendMonthlyReminder, sendRevisionReminder), see cloud/README.md
-public/        manifest, icons, _redirects, _headers (copied to www/)
+public/        manifest, icons (favicon, PWA), logos (brand pack), social (og-image), _redirects, _headers
 docs/          superpowers/{specs,plans}/ (design and plan), deploy-cloudflare-pages.md
-android/, ios/, capacitor.config.ts   DORMANT native shells (see below)
 ```
 
 ### Parse SDK
@@ -87,11 +86,6 @@ throws « EventEmitter is not a constructor »), calls `Parse.Object.disableSing
 failed save must not leak into the next one) and sets `REQUEST_ATTEMPT_LIMIT=1`. Every call goes through
 `withTimeout` (20 s, `BackendTimeoutError`, « Réessayer » in the UI). Error 209 (invalid session) goes to
 the login screen. New objects get an owner-only ACL (per-user data isolation).
-
-### Dormant native shells
-
-`android/`, `ios/` and `capacitor.config.ts` are kept but **dormant**: every `@capacitor/*` dependency was
-removed, and nothing builds them. Native builds would need Capacitor re-added first. The PWA is the product.
 
 ## Business rules (short)
 
@@ -125,7 +119,7 @@ removed, and nothing builds them. Native builds would need Capacitor re-added fi
   may shrink them. Inputs at least 16 px (no iOS zoom). Pills never wrap (`white-space: nowrap`).
   Safe areas with `env(safe-area-inset-*)`. No action reachable by hover only.
 - Components: standalone, signals, new control flow, class suffix `Page` for routed screens (selector prefix
-  `app-`). Strict TypeScript. Style A: white / soft grey, indigo accent, Inter, light and dark themes.
+  `app-`). Strict TypeScript. Brand palette from the logo pack: blue accent `#2563eb`, ink `#1e293b`, soft grey `#f8fafc`, Inter, light and dark themes.
 - Tests live next to the code (`*.spec.ts`). Keep them deterministic (injected clock, no network); dates
   must not depend on the machine time zone (CI also runs the suite under `America/Los_Angeles`).
 
@@ -138,9 +132,6 @@ removed, and nothing builds them. Native builds would need Capacitor re-added fi
   `CLOUDFLARE_ACCOUNT_ID`. Branches other than `main` are only tested and built, with a non-production
   environment, and never deployed. SPA fallback and headers: `public/_redirects`, `public/_headers`.
   Step-by-step for the owner: `docs/deploy-cloudflare-pages.md`.
-- **Legacy app**: `.github/workflows/docker-build.yml`, manual only, always builds the tag `legacy-ionic`
-  into the Docker image `jurocknsail/elease:latest` (`Dockerfile`, `nginx.conf`), served on
-  `e-lease.smarthomeserver.online` through a cloudflared tunnel. Do not touch it; retire it later.
 - Merging `ui-refactor` into `main`, publishing and attaching the domain are the owner's decisions.
 
 ## Where things are written down

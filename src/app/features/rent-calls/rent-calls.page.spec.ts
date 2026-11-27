@@ -150,10 +150,17 @@ function euroCents(shown: string): number {
   return found ? Math.round(Number(found[0].replace(/\s/g, '').replace(',', '.')) * 100) : NaN;
 }
 
+/** The lease rows: each tenant is a group (`ul[aria-label] > li`), its leases are listed under it. */
 const rowsOf = (root: HTMLElement) => [
-  ...root.querySelectorAll<HTMLElement>('ul[aria-label] > li'),
+  ...root.querySelectorAll<HTMLElement>('ul[aria-label] > li > ul > li'),
 ];
-const cells = (row: HTMLElement) => [...row.children].map((c) => text(c));
+/** [lease, tenant, status, amount]: the tenant is the heading of the group the lease sits in. */
+const cells = (row: HTMLElement) => [
+  text(row.querySelector('a > span:first-child')),
+  text(row.parentElement?.parentElement?.querySelector('h3 span.truncate')),
+  text(row.querySelector('app-pill')),
+  text(row.lastElementChild),
+];
 const isBusy = (root: HTMLElement) => root.querySelector('[aria-busy="true"]') !== null;
 
 function kpi(root: HTMLElement, label: string): string | undefined {
@@ -215,7 +222,7 @@ describe('RentCallsPage', () => {
       const rows = rowsOf(view.root).map(cells);
       expect(rows.map((r) => plain(r.join(' | ')))).toEqual([
         // Sorted by tenant name, then lease name.
-        'Garage | Dupont | Envoyé | 80 €',
+        'Garage | Dupont | Envoyé le 25 nov. | 80 €',
         'Studio | Dupont | À envoyer | 600 €',
         'Commerce | Martin | À envoyer | 1 653,80 €',
       ]);
@@ -246,7 +253,7 @@ describe('RentCallsPage', () => {
       await view.open();
 
       expect(rowsOf(view.root).map((r) => cells(r)[0] + ':' + cells(r)[2])).toEqual([
-        'Ancien envoi:Envoyé',
+        'Ancien envoi:Envoyé le 25 nov.',
         'Trop ancien:À envoyer',
       ]);
     });
@@ -258,7 +265,7 @@ describe('RentCallsPage', () => {
       await view.open();
 
       expect(kpi(view.root, 'À envoyer')).toBe('2');
-      expect(kpi(view.root, 'Envoyés')).toBe('1');
+      expect(kpi(view.root, 'Envoyés')).toBe('1 / 3');
       const total = [...view.root.querySelectorAll('dt')].find(
         (dt) => text(dt) === 'Total du mois',
       )?.parentElement;
@@ -288,7 +295,7 @@ describe('RentCallsPage', () => {
       });
       await view.open();
 
-      const shown = rowsOf(view.root).map((row) => text(row.children[3]));
+      const shown = rowsOf(view.root).map((row) => cells(row)[3]);
       expect(shown.map(plain)).toEqual(['1 309,30 €', '1 309,30 €', '1 309,30 €']);
       const total = [...view.root.querySelectorAll('dt')].find(
         (dt) => text(dt) === 'Total du mois',

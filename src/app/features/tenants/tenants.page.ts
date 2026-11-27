@@ -20,12 +20,15 @@ import {
 import { filter, firstValueFrom, map } from 'rxjs';
 import { describeBackendError } from '../../core/parse/backend-error';
 import { Leaseholder } from '../../core/models/leaseholder';
+import { formatEuro, formatLeaseAddress } from '../../core/format/fr';
+import { Icon } from '../../shared/ui/icon';
+import { Avatar } from '../../shared/ui/avatar';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ErrorState } from '../../shared/ui/error-state';
 import { NewTenantDialog, NewTenantDialogData } from './new-tenant-dialog';
 import { TenantsState, leaseCountLabel } from './tenants-state';
 
-const SKELETON = 'animate-pulse rounded bg-border';
+const SKELETON = 'animate-pulse rounded-md bg-border/70';
 
 /** Lower case, accents and diacritics removed: « Élodie » is found by « elodie ». */
 export function searchKey(value: string): string {
@@ -61,7 +64,7 @@ export function filterHolders(holders: readonly Leaseholder[], query: string): L
  */
 @Component({
   selector: 'app-tenants',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, EmptyState, ErrorState],
+  imports: [Avatar, RouterOutlet, RouterLink, RouterLinkActive, EmptyState, ErrorState, Icon],
   providers: [TenantsState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block lg:h-full' },
@@ -70,7 +73,7 @@ export function filterHolders(holders: readonly Leaseholder[], query: string): L
       @if (state.failure(); as failed) {
         <h1 class="sr-only">Locataires</h1>
         <app-error-state
-          class="rounded-xl border border-dashed border-border-strong"
+          class="rounded-2xl border border-dashed border-border-strong bg-card/50"
           [error]="failed.cause"
           [retrying]="state.loading()"
           (retry)="state.refresh()"
@@ -83,9 +86,9 @@ export function filterHolders(holders: readonly Leaseholder[], query: string): L
         <section aria-label="Liste des locataires" [class]="listClass()">
           <div class="flex flex-col gap-3 lg:shrink-0">
             <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-              <h1 class="shrink-0 text-2xl font-semibold tracking-tight">Locataires</h1>
-              <button type="button" class="btn btn-primary shrink-0" (click)="openNew()">
-                + Nouveau locataire
+              <h1 class="shrink-0 text-2xl font-semibold tracking-tight md:text-[1.75rem]">Locataires</h1>
+              <button type="button" class="btn btn-primary shrink-0" (click)="openNew()"><app-icon name="plus" class="size-4" />
+                Nouveau locataire
               </button>
             </div>
 
@@ -105,7 +108,7 @@ export function filterHolders(holders: readonly Leaseholder[], query: string): L
                     [disabled]="state.loading()"
                     [attr.aria-busy]="state.loading()"
                     (click)="state.refresh()"
-                  >
+                  ><app-icon name="refresh" class="size-4" />
                     Réessayer
                   </button>
                 }
@@ -130,35 +133,73 @@ export function filterHolders(holders: readonly Leaseholder[], query: string): L
           </div>
 
           <div
-            class="overflow-hidden rounded-xl border border-border bg-bg lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
+            class="overflow-hidden card lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
           >
             @switch (view()) {
               @case ('content') {
                 <p class="sr-only" aria-live="polite">{{ resultSentence() }}</p>
                 @if (shown().length > 0) {
-                  <ul class="divide-y divide-border">
+                  <ul class="flex flex-col divide-y divide-border" aria-label="Locataires et leurs baux">
                     @for (holder of shown(); track holder.objectId) {
-                      <li>
+                      <li class="group/holder relative p-2 has-[[data-holder-row][aria-current=page]]:bg-accent-soft/40">
                         <a
                           [routerLink]="['/locataires', holder.objectId]"
                           routerLinkActive
                           ariaCurrentWhenActive="page"
-                          class="flex min-h-14 flex-col justify-center gap-0.5 px-4 py-2.5 hover:bg-surface aria-[current=page]:bg-accent-soft"
+                          data-holder-row
+                          class="flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-surface aria-[current=page]:bg-card aria-[current=page]:shadow-sm aria-[current=page]:ring-1 aria-[current=page]:ring-accent/30"
                         >
-                          <span class="flex items-baseline justify-between gap-3">
+                          <app-avatar [name]="holder.name" />
+                          <span class="min-w-0 flex-1">
                             <span
-                              class="min-w-0 truncate text-sm font-semibold"
+                              class="block truncate text-sm font-semibold"
                               [attr.title]="holder.name"
                               >{{ holder.name || 'Locataire sans nom' }}</span
                             >
-                            <span class="shrink-0 text-xs whitespace-nowrap text-muted">{{
-                              leaseCount(holder)
+                            <span class="block truncate text-xs text-muted" [attr.title]="holder.email">{{
+                              holder.email || "Pas d'adresse e-mail"
                             }}</span>
                           </span>
-                          <span class="truncate text-xs text-muted" [attr.title]="holder.email">{{
-                            holder.email || "Pas d'adresse e-mail"
-                          }}</span>
+                          <span
+                            class="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-muted ring-1 ring-border"
+                            >{{ leaseCount(holder) }}</span
+                          >
                         </a>
+
+                        <ul
+                          class="mt-0.5 ml-3 flex flex-col gap-0.5"
+                          [attr.aria-label]="'Baux de ' + (holder.name || 'ce locataire')"
+                        >
+                          @for (lease of holder.leases; track lease.objectId) {
+                            <li>
+                              <a
+                                [routerLink]="['/locataires', holder.objectId]"
+                                [fragment]="'bail-' + lease.objectId"
+                                routerLinkActive
+                                ariaCurrentWhenActive="location"
+                                [routerLinkActiveOptions]="leaseActiveOptions"
+                                class="group/lease flex min-h-10 items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface aria-[current=location]:bg-accent-soft"
+                              >
+                                <span class="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-muted ring-1 ring-border group-aria-[current=location]/lease:bg-accent group-aria-[current=location]/lease:text-on-accent group-aria-[current=location]/lease:ring-0">
+                                  <app-icon name="home" class="size-3.5" />
+                                </span>
+                                <span class="min-w-0 flex-1">
+                                  <span class="block truncate text-[13px] font-medium group-aria-[current=location]/lease:font-semibold group-aria-[current=location]/lease:text-accent">{{
+                                    lease.name || 'Bail sans nom'
+                                  }}</span>
+                                  <span class="block truncate text-xs text-muted">{{
+                                    leaseAddress(lease)
+                                  }}</span>
+                                </span>
+                                <span class="shrink-0 text-xs font-semibold whitespace-nowrap tabular-nums">{{
+                                  formatEuro(lease.price)
+                                }}</span>
+                              </a>
+                            </li>
+                          } @empty {
+                            <li class="px-2 py-1.5 text-xs text-muted italic">Aucun bail</li>
+                          }
+                        </ul>
                       </li>
                     }
                   </ul>
@@ -187,8 +228,8 @@ export function filterHolders(holders: readonly Leaseholder[], query: string): L
                   message="Ajoutez votre premier locataire pour lui associer un bail."
                   icon="users"
                 >
-                  <button type="button" class="btn btn-primary" (click)="openNew()">
-                    + Nouveau locataire
+                  <button type="button" class="btn btn-primary" (click)="openNew()"><app-icon name="plus" class="size-4" />
+                    Nouveau locataire
                   </button>
                 </app-empty-state>
               }
@@ -200,7 +241,7 @@ export function filterHolders(holders: readonly Leaseholder[], query: string): L
           <router-outlet />
           @if (!hasDetail()) {
             <app-empty-state
-              class="rounded-xl border border-dashed border-border-strong"
+              class="rounded-2xl border border-dashed border-border-strong bg-card/50"
               heading="Sélectionnez un locataire"
               message="Choisissez un locataire dans la liste pour voir et modifier son contact et ses baux."
               icon="users"
@@ -279,6 +320,28 @@ export class TenantsPage {
         }
       });
   }
+
+  protected initials(holder: Leaseholder): string {
+    const letters = holder.name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word.charAt(0).toLocaleUpperCase('fr'))
+      .join('');
+    return letters || '?';
+  }
+
+  protected leaseAddress = formatLeaseAddress;
+
+  protected readonly formatEuro = formatEuro;
+  /** A lease is active when the address names it (`#bail-<id>`), not just the tenant. */
+  protected readonly leaseActiveOptions = {
+    paths: 'exact',
+    queryParams: 'ignored',
+    fragment: 'exact',
+    matrixParams: 'ignored',
+  } as const;
 
   protected leaseCount(holder: Leaseholder): string {
     return leaseCountLabel(holder.leases.length);

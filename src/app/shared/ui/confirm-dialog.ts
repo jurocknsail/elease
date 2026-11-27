@@ -25,7 +25,7 @@ interface ConfirmDialogData extends ConfirmDialogOptions {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class:
-      'block w-full max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-border bg-bg p-5 text-text shadow-xl sm:p-6',
+      'block w-full max-h-[calc(100dvh-2rem)] overflow-y-auto card p-5 text-text shadow-xl sm:p-6',
   },
   template: `
     <h2 [id]="data.id + '-title'" class="text-lg font-semibold">{{ data.title }}</h2>

@@ -2,7 +2,6 @@ import { billingPeriod, BillingPeriod } from '../billing/period';
 import { Lease } from '../models/lease';
 import { Leaseholder } from '../models/leaseholder';
 import { rentCallFileName, uniqueAttachmentNames } from './file-name';
-import { legacyPdfName } from './legacy-definition.fixture';
 
 function holder(name: string): Leaseholder {
   return { name, email: 'locataire@example.test', phone: '', leases: [] };
@@ -78,27 +77,6 @@ describe('rentCallFileName', () => {
     expect(fileName(`${'a'.repeat(59)} bbb`, 'c')).toBe(`${'a'.repeat(59)}-c-01_2027.pdf`);
   });
 
-  describe('against the legacy generatePdfName', () => {
-    const now = new Date(2026, 10, 26, 9, 30);
-
-    it('is identical for plain names, and differs only by the documented fixes', () => {
-      for (const [h, l, callDate] of [
-        ['Agi Martin', 'Garage 13', new Date(2026, 11, 25)],
-        ['  Marie Curie ', ' Cave ', new Date(2027, 5, 25)],
-      ] as const) {
-        expect(rentCallFileName(holder(h), lease(l), billingPeriod(callDate))).toBe(
-          legacyPdfName(holder(h), lease(l), now, callDate),
-        );
-      }
-      // Legacy: accents kept, only the first space replaced.
-      expect(
-        legacyPdfName(holder('Hélène Côté'), lease('Garage n° 13'), now, new Date(2026, 11, 25)),
-      ).toBe('hélène_côté-garage_n° 13-01_2027.pdf');
-      expect(rentCallFileName(holder('Hélène Côté'), lease('Garage n° 13'), JAN_2027)).toBe(
-        'helene_cote-garage_n°_13-01_2027.pdf',
-      );
-    });
-  });
 });
 
 describe('uniqueAttachmentNames', () => {

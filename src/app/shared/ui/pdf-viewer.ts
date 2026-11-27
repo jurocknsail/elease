@@ -78,7 +78,7 @@ type ViewerState = 'empty' | 'loading' | 'ready' | 'error';
       aria-label="Aperçu du PDF"
       tabindex="0"
       [attr.aria-busy]="state() === 'loading'"
-      class="relative min-h-0 flex-1 overflow-auto rounded-xl border border-border bg-surface"
+      class="relative min-h-0 flex-1 overflow-auto card"
     >
       @switch (state()) {
         @case ('loading') {

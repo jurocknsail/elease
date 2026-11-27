@@ -26,11 +26,11 @@ import { ThemeToggle } from '../../shared/ui/theme-toggle';
  * active state hangs on `aria-current`, set by `routerLinkActive`.
  */
 const SIDEBAR_LINK =
-  'relative flex min-h-11 dense:min-h-9 items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-transparent hover:bg-bg hover:text-text aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent aria-[current=page]:before:bg-accent';
+  'group relative flex min-h-11 dense:min-h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted transition-colors before:absolute before:inset-y-2.5 before:-left-3 before:w-[3px] before:rounded-r-full before:bg-transparent hover:bg-white/5 hover:text-text aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-text aria-[current=page]:before:bg-accent [&[aria-current=page]_app-icon]:text-accent';
 
 /** Bottom-bar tab (< 768 px): at least 56 px tall. */
 const TAB_LINK =
-  'relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-xs font-medium text-muted before:absolute before:inset-x-6 before:top-0 before:h-[3px] before:rounded-b-full before:bg-transparent aria-[current=page]:font-semibold aria-[current=page]:text-accent aria-[current=page]:before:bg-accent';
+  'relative flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium text-muted transition-colors aria-[current=page]:font-semibold aria-[current=page]:text-accent [&_app-icon]:rounded-full [&_app-icon]:px-4 [&_app-icon]:py-0.5 [&_app-icon]:box-content [&_app-icon]:transition-colors [&[aria-current=page]_app-icon]:bg-accent-soft';
 
 /** Whether the deepest active route asks for the full width (`data: { fullWidth: true }`). */
 function wantsFullWidth(route: ActivatedRouteSnapshot): boolean {
@@ -74,23 +74,27 @@ interface NavItem {
     </a>
 
     <div
-      class="flex h-dvh flex-col bg-bg pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] md:flex-row"
+      class="flex h-dvh flex-col bg-canvas pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] md:flex-row"
     >
-      <aside class="hidden w-60 shrink-0 flex-col border-r border-border bg-surface md:flex">
+      <aside class="sidebar-scope hidden w-64 shrink-0 flex-col md:flex">
         <a
           routerLink="/appels"
-          class="mx-3 mt-4 mb-2 flex min-h-11 items-center gap-3 rounded-lg px-3 dense:min-h-9"
+          class="mx-3 mt-5 mb-4 flex min-h-11 items-center gap-3 rounded-xl px-3 dense:min-h-9"
           aria-label="E-Lease, Appels de loyer"
         >
           <img
-            src="icons/icon-192.png"
+            src="logos/e-lease-symbol.png"
             alt=""
             width="32"
             height="32"
-            class="size-8 rounded-lg shadow-sm"
+            class="size-9 rounded-xl bg-white p-1 shadow-lg shadow-black/30"
           />
-          <span class="text-base font-semibold tracking-tight">E-Lease</span>
+          <span class="flex flex-col leading-tight">
+            <span class="text-base font-bold tracking-tight">E-Lease</span>
+            <span class="text-[11px] font-medium text-muted">Gestion locative</span>
+          </span>
         </a>
+        <p class="px-6 pb-2 text-[11px] font-semibold tracking-wider text-muted uppercase">Menu</p>
 
         <nav aria-label="Navigation principale" class="flex flex-1 flex-col px-3 pb-3">
           <ul class="flex flex-col gap-1">
@@ -109,7 +113,7 @@ interface NavItem {
             }
           </ul>
 
-          <ul class="mt-auto flex flex-col gap-1 border-t border-border pt-3">
+          <ul class="mt-auto flex flex-col gap-1 pt-3">
             <li>
               <a
                 [routerLink]="settings.path"
@@ -124,12 +128,19 @@ interface NavItem {
           </ul>
         </nav>
 
-        <div class="flex flex-col gap-2 border-t border-border px-3 py-3">
+        <div class="m-3 flex flex-col gap-1 rounded-2xl border border-border bg-white/[0.03] p-2">
           @if (auth.user(); as user) {
-            <p class="truncate px-3 text-xs text-muted" [attr.title]="user.username">
-              Connecté en tant que
-              <span class="font-semibold text-text">{{ user.username }}</span>
-            </p>
+            <div class="flex items-center gap-3 px-2 py-1.5" [attr.title]="user.username">
+              <span
+                aria-hidden="true"
+                class="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-sm font-bold text-white uppercase"
+                >{{ user.username.charAt(0) }}</span
+              >
+              <p class="min-w-0 text-xs leading-tight text-muted">
+                Connecté en tant que
+                <span class="block truncate text-sm font-semibold text-text">{{ user.username }}</span>
+              </p>
+            </div>
           }
           <app-theme-toggle variant="ghost" />
         </div>
@@ -148,7 +159,7 @@ interface NavItem {
 
       <nav
         aria-label="Navigation principale"
-        class="shrink-0 border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] md:hidden"
+        class="shrink-0 border-t border-border bg-card/85 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_-8px_rgb(15_23_42/0.12)] backdrop-blur-lg md:hidden"
       >
         <ul class="grid grid-cols-3">
           @for (item of tabs; track item.path) {
@@ -181,8 +192,8 @@ export class Shell {
   private readonly fullWidth = signal(false);
   protected readonly contentClass = computed(() =>
     this.fullWidth()
-      ? 'h-full w-full px-4 py-4 md:px-6 md:py-5'
-      : 'mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8',
+      ? 'h-full w-full px-4 pt-4 pb-3 md:px-6 md:pt-5 md:pb-4'
+      : 'mx-auto w-full max-w-6xl px-4 py-6 md:px-10 md:py-10',
   );
 
   constructor() {

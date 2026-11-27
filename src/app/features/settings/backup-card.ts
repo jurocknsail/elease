@@ -51,14 +51,17 @@ type Busy = 'export' | 'check' | 'restore' | null;
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
-    <section class="rounded-xl border border-border bg-bg" aria-labelledby="backup-title">
-      <header class="border-b border-border px-4 py-3 md:px-5">
-        <h2 id="backup-title" class="text-sm font-semibold">Sauvegarde</h2>
+    <section class="card" aria-labelledby="backup-title">
+      <header class="flex items-start gap-3 border-b border-border px-4 py-4 md:px-5">
+          <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><app-icon name="upload" class="size-[18px]" /></span>
+          <div class="min-w-0">
+        <h2 id="backup-title" class="text-[15px] font-semibold">Sauvegarde</h2>
         <p class="mt-0.5 text-sm text-muted">
           Un fichier avec vos locataires et leurs baux, à conserver en lieu sûr. La restauration
           ajoute ce qui manque, sans rien modifier ni supprimer.
         </p>
-      </header>
+      </div>
+        </header>
 
       <div class="flex flex-col gap-4 px-4 py-4 md:px-5">
         <div class="flex flex-col gap-2 sm:flex-row">
@@ -68,7 +71,7 @@ type Busy = 'export' | 'check' | 'restore' | null;
             [disabled]="busy() !== null"
             [attr.aria-busy]="busy() === 'export'"
             (click)="exportData()"
-          >
+          ><app-icon name="download" class="size-4" />
             {{ busy() === 'export' ? 'Préparation…' : 'Exporter les données' }}
           </button>
           <button
@@ -77,7 +80,7 @@ type Busy = 'export' | 'check' | 'restore' | null;
             [disabled]="busy() !== null"
             [attr.aria-busy]="busy() === 'check'"
             (click)="openChooser()"
-          >
+          ><app-icon name="upload" class="size-4" />
             {{ busy() === 'check' ? 'Lecture du fichier…' : 'Restaurer depuis un fichier' }}
           </button>
           <input
@@ -101,7 +104,7 @@ type Busy = 'export' | 'check' | 'restore' | null;
         @if (problem(); as message) {
           <p
             role="alert"
-            class="rounded-lg border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
+            class="rounded-xl border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
           >
             {{ message }}
           </p>
@@ -113,7 +116,7 @@ type Busy = 'export' | 'check' | 'restore' | null;
             role="region"
             aria-label="Aperçu de la restauration"
           >
-            <p class="text-sm font-semibold">{{ preview.fileName }}</p>
+            <p class="text-[15px] font-semibold">{{ preview.fileName }}</p>
             <ul class="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm">
               <li>
                 {{ newHoldersText() }}, {{ preview.plan.skipped }}
@@ -124,7 +127,7 @@ type Busy = 'export' | 'check' | 'restore' | null;
             @for (warning of preview.warnings; track warning) {
               <p
                 role="alert"
-                class="mt-3 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn"
+                class="mt-3 rounded-xl border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn"
               >
                 {{ warning }}
               </p>
@@ -150,7 +153,7 @@ type Busy = 'export' | 'check' | 'restore' | null;
                   [disabled]="busy() !== null"
                   [attr.aria-busy]="busy() === 'restore'"
                   (click)="restore()"
-                >
+                ><app-icon name="refresh" class="size-4" />
                   {{ busy() === 'restore' ? 'Restauration…' : 'Restaurer' }}
                 </button>
               }

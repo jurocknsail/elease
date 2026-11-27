@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/icon';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -78,7 +79,7 @@ export function lastSendLabel(lease: Lease): string {
 }
 
 const RADIO =
-  'flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border-strong bg-bg px-3 text-sm dense:min-h-10 has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold';
+  'flex min-h-11 flex-1 cursor-pointer items-center gap-2.5 rounded-xl border border-border-strong bg-card px-3.5 text-sm shadow-sm transition-colors dense:min-h-10 hover:border-text/50 has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold has-checked:ring-2 has-checked:ring-accent/20 sm:flex-none';
 
 /**
  * One lease: read-only (address, rent, charges, total, anniversary date, index, last send), with
@@ -95,13 +96,13 @@ const RADIO =
  */
 @Component({
   selector: 'app-lease-block',
-  imports: [ReactiveFormsModule, TextField, Pill],
+  imports: [Icon, ReactiveFormsModule, TextField, Pill],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
     <section
       #root
-      class="rounded-xl border border-border bg-bg"
+      class="card"
       [attr.aria-labelledby]="uid + '-title'"
     >
       <header
@@ -125,7 +126,7 @@ const RADIO =
               class="btn btn-secondary"
               [disabled]="deleting() || applying()"
               (click)="startEdit()"
-            >
+            ><app-icon name="pencil" class="size-4" />
               Modifier
             </button>
             <button
@@ -134,7 +135,7 @@ const RADIO =
               [disabled]="blocked()"
               [attr.aria-busy]="deleting()"
               (click)="remove()"
-            >
+            ><app-icon name="trash" class="size-4" />
               {{ deleting() ? 'Suppression…' : 'Supprimer' }}
             </button>
           </div>
@@ -144,11 +145,12 @@ const RADIO =
       @if (form(); as f) {
         <form
           [formGroup]="f"
-          class="flex flex-col gap-5 px-4 py-4 md:px-5"
+          class="flex flex-col gap-4 px-4 py-4 md:px-5"
           (ngSubmit)="save()"
           (keydown.escape)="cancel()"
         >
-          <div class="grid grid-cols-1 gap-4 @md:grid-cols-6">
+          <div class="form-panel grid grid-cols-1 gap-4 @md:grid-cols-6">
+            <p class="form-section-title @md:col-span-6">Bail et adresse</p>
             <app-text-field
               class="@md:col-span-6"
               [inputId]="uid + '-name'"
@@ -158,7 +160,7 @@ const RADIO =
             />
 
             <fieldset class="@md:col-span-6">
-              <legend class="mb-1.5 text-sm font-medium">Type de bail</legend>
+              <legend class="form-label">Type de bail</legend>
               <div class="flex flex-wrap gap-2">
                 <label class="${RADIO}">
                   <input
@@ -246,8 +248,8 @@ const RADIO =
             />
           </div>
 
-          <fieldset class="flex flex-col gap-3">
-            <legend class="mb-1 text-sm font-medium">Charges additionnelles</legend>
+          <fieldset class="form-panel flex flex-col gap-3">
+            <legend class="form-section-title float-left mb-1 w-full">Loyer et charges additionnelles</legend>
             @for (row of f.controls.additionalCharges.controls; track row; let i = $index) {
               <div
                 class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3 @md:grid-cols-[minmax(0,1fr)_9rem_auto]"
@@ -268,19 +270,20 @@ const RADIO =
                   class="btn btn-secondary col-start-2 row-start-2 mt-[1.625rem] @md:col-start-3 @md:row-start-1"
                   [attr.aria-label]="'Retirer la charge additionnelle ' + (i + 1)"
                   (click)="removeCharge(i)"
-                >
+                ><app-icon name="trash" class="size-4" />
                   Retirer
                 </button>
               </div>
             }
             <div>
-              <button type="button" class="btn btn-secondary" (click)="addCharge()">
-                + Ajouter une charge
+              <button type="button" class="btn btn-secondary" (click)="addCharge()"><app-icon name="plus" class="size-4" />
+                Ajouter une charge
               </button>
             </div>
           </fieldset>
 
-          <div class="grid grid-cols-1 gap-4 @md:grid-cols-6">
+          <div class="form-panel grid grid-cols-1 gap-4 @md:grid-cols-6">
+            <p class="form-section-title @md:col-span-6">Révision annuelle</p>
             <app-text-field
               class="@md:col-span-3"
               [inputId]="uid + '-renewalDate'"
@@ -291,7 +294,7 @@ const RADIO =
               hint="Jour de la révision annuelle du loyer."
             />
             <div class="@md:col-span-3">
-              <label [for]="uid + '-indexType'" class="mb-1.5 block text-sm font-medium">
+              <label [for]="uid + '-indexType'" class="form-label">
                 Famille d'indice
               </label>
               <select [id]="uid + '-indexType'" formControlName="indexType" class="field-input">
@@ -321,12 +324,12 @@ const RADIO =
           @if (error(); as message) {
             <p
               role="alert"
-              class="rounded-lg border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
+              class="rounded-xl border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
             >
               {{ message }}
             </p>
           }
-          <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div class="form-actions">
             <button
               type="button"
               class="btn btn-secondary"
@@ -340,7 +343,7 @@ const RADIO =
               class="btn btn-primary"
               [disabled]="blocked()"
               [attr.aria-busy]="saving()"
-            >
+            ><app-icon name="check" class="size-4" />
               {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
             </button>
           </div>
@@ -426,7 +429,7 @@ const RADIO =
                     [disabled]="blocked()"
                     [attr.aria-busy]="applying()"
                     (click)="applyRevision()"
-                  >
+                  ><app-icon name="trending-up" class="size-4" />
                     {{ applying() ? 'Application…' : 'Appliquer la révision' }}
                   </button>
                 </div>
@@ -453,7 +456,7 @@ const RADIO =
         @if (error(); as message) {
           <p
             role="alert"
-            class="mx-4 mb-4 rounded-lg border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger md:mx-5"
+            class="mx-4 mb-4 rounded-xl border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger md:mx-5"
           >
             {{ message }}
           </p>

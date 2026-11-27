@@ -81,7 +81,14 @@ export const MAX_PARALLEL_RENDERS = 2;
 /** Query parameter of the full-screen preview (narrow screens): the browser's Back button closes it. */
 const VIEWER_PARAM = 'apercu';
 
-const SKELETON = 'animate-pulse rounded bg-border';
+const SKELETON = 'animate-pulse rounded-md bg-border/70';
+
+/** « Envoyé le 25 nov. », from the lease's last send date (0: unknown). */
+function sentOn(at: number | undefined): string {
+  return at
+    ? `Envoyé le ${new Date(at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
+    : 'Envoyé';
+}
 
 const STALE_SELECTION_MESSAGE =
   'Certains baux ont déjà été envoyés entre-temps : vérifiez la sélection.';
@@ -109,6 +116,8 @@ interface RowView {
   holder: string;
   amount: string;
   sent: boolean;
+  /** « Envoyé le 25 nov. » (or « Envoyé » without a recorded date). */
+  sentLabel: string;
   /** Sent, as far as the user can tell: the e-mail may have gone out but is not recorded. */
   maybeSent: boolean;
   selected: boolean;
@@ -165,7 +174,7 @@ function holdersLabel(names: readonly string[]): string {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <h1 class="text-xl font-semibold tracking-tight md:text-2xl">
+              <h1 class="text-2xl font-semibold tracking-tight md:text-[1.75rem]">
                 Appels de loyer — {{ monthLabel() }}
               </h1>
               @if (testMode) {
@@ -222,7 +231,7 @@ function holdersLabel(names: readonly string[]): string {
                 [disabled]="loading()"
                 [attr.aria-busy]="loading()"
                 (click)="refresh()"
-              >
+              ><app-icon name="refresh" class="size-4" />
                 Réessayer
               </button>
             }
@@ -249,7 +258,7 @@ function holdersLabel(names: readonly string[]): string {
               role="status"
               aria-live="polite"
               aria-labelledby="send-results-title"
-              class="mb-4 rounded-xl border border-border bg-bg focus:outline-none"
+              class="mb-4 card focus:outline-none"
             >
               <div class="border-b border-border px-4 py-3">
                 <h2 id="send-results-title" class="text-sm font-semibold">
@@ -288,14 +297,14 @@ function holdersLabel(names: readonly string[]): string {
                     @switch (outcome.kind) {
                       @case ('warning') {
                         <p
-                          class="mt-2 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm font-medium text-text"
+                          class="mt-2 rounded-xl border border-warn/40 bg-warn-soft px-3 py-2 text-sm font-medium text-text"
                         >
                           {{ outcome.result.warning }}
                         </p>
                       }
                       @case ('uncertain') {
                         <p
-                          class="mt-2 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-text"
+                          class="mt-2 rounded-xl border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-text"
                         >
                           {{ outcome.result.error }}
                         </p>
@@ -306,7 +315,7 @@ function holdersLabel(names: readonly string[]): string {
                             [disabled]="outcome.busy || sending()"
                             [attr.aria-busy]="outcome.busy"
                             (click)="markSent(outcome)"
-                          >
+                          ><app-icon name="check" class="size-4" />
                             Marquer comme envoyé
                           </button>
                           <p class="text-xs text-muted">
@@ -327,7 +336,7 @@ function holdersLabel(names: readonly string[]): string {
                             [disabled]="outcome.busy || sending() || !canRetry()"
                             [attr.aria-busy]="outcome.busy"
                             (click)="retry(outcome)"
-                          >
+                          ><app-icon name="refresh" class="size-4" />
                             Réessayer
                           </button>
                         </div>
@@ -342,7 +351,7 @@ function holdersLabel(names: readonly string[]): string {
                       }
                       @case ('blocked') {
                         <p
-                          class="mt-2 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-text"
+                          class="mt-2 rounded-xl border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-text"
                         >
                           Ce bail a été envoyé entre-temps : rien n'a été renvoyé. Vérifiez les
                           statuts.
@@ -379,7 +388,7 @@ function holdersLabel(names: readonly string[]): string {
             @case ('error') {
               @if (loadFailure(); as failed) {
                 <app-error-state
-                  class="rounded-xl border border-dashed border-border-strong"
+                  class="rounded-2xl border border-dashed border-border-strong bg-card/50"
                   [error]="failed.cause"
                   [retrying]="loading()"
                   (retry)="refresh()"
@@ -388,12 +397,12 @@ function holdersLabel(names: readonly string[]): string {
             }
             @case ('empty') {
               <app-empty-state
-                class="rounded-xl border border-dashed border-border-strong"
+                class="rounded-2xl border border-dashed border-border-strong bg-card/50"
                 heading="Aucun bail à envoyer"
                 message="Ajoutez un locataire et son bail pour préparer vos appels de loyer."
                 icon="users"
               >
-                <a routerLink="/locataires" class="btn btn-primary">Aller aux locataires</a>
+                <a routerLink="/locataires" class="btn btn-primary"><app-icon name="users" class="size-4" />Aller aux locataires</a>
               </app-empty-state>
             }
             @case ('content') {
@@ -405,7 +414,7 @@ function holdersLabel(names: readonly string[]): string {
                 [attr.aria-label]="'Baux à envoyer pour ' + monthLabel()"
                 [attr.aria-activedescendant]="activeId()"
                 [attr.aria-busy]="generating()"
-                class="group divide-y divide-border rounded-xl border border-border bg-bg focus-visible:outline-none"
+                class="group divide-y divide-border card focus-visible:outline-none"
                 (keydown)="onListKeydown($event)"
               >
                 @for (row of views(); track row.key) {
@@ -427,7 +436,7 @@ function holdersLabel(names: readonly string[]): string {
                         }
                       </span>
                     </span>
-                    <span class="min-w-0 flex-1">
+                    <span class="min-w-0 flex-1" [class.opacity-60]="(row.sent || row.maybeSent) && !row.selected">
                       <span class="flex items-baseline justify-between gap-3">
                         <span class="truncate text-sm font-medium" [attr.title]="row.lease">{{
                           row.lease
@@ -441,7 +450,7 @@ function holdersLabel(names: readonly string[]): string {
                           row.holder
                         }}</span>
                         <app-pill [tone]="row.sent ? 'ok' : row.maybeSent ? 'neutral' : 'warn'">{{
-                          row.sent ? 'Envoyé' : row.maybeSent ? 'Peut-être envoyé' : 'À envoyer'
+                          row.sent ? row.sentLabel : row.maybeSent ? 'Peut-être envoyé' : 'À envoyer'
                         }}</app-pill>
                       </span>
                       @if (row.selected || row.active) {
@@ -485,7 +494,7 @@ function holdersLabel(names: readonly string[]): string {
                     type="checkbox"
                     class="size-5 accent-[var(--color-accent)]"
                     [checked]="current.selected"
-                    (change)="toggle(current.key)"
+                    (change)="toggle(current.key, $event.target)"
                   />
                   Inclure dans l'envoi
                 </label>
@@ -514,7 +523,7 @@ function holdersLabel(names: readonly string[]): string {
                 <div
                   role="status"
                   aria-busy="true"
-                  class="flex flex-1 items-center justify-center rounded-xl border border-border bg-surface p-6 text-sm text-muted"
+                  class="flex flex-1 items-center justify-center card p-6 text-sm text-muted"
                 >
                   Génération du PDF…
                 </div>
@@ -522,18 +531,18 @@ function holdersLabel(names: readonly string[]): string {
               @case ('failed') {
                 <div
                   role="alert"
-                  class="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface p-6 text-center"
+                  class="flex flex-1 flex-col items-center justify-center gap-3 card p-6 text-center"
                 >
                   <p class="text-sm font-semibold">Échec de la génération</p>
                   <p class="max-w-sm text-sm text-muted">{{ previewError() }}</p>
-                  <button type="button" class="btn btn-primary" (click)="retryPreview()">
+                  <button type="button" class="btn btn-primary" (click)="retryPreview()"><app-icon name="refresh" class="size-4" />
                     Réessayer
                   </button>
                 </div>
               }
               @case ('stale') {
                 <div
-                  class="flex flex-1 items-center justify-center rounded-xl border border-border bg-surface p-6 text-center text-sm text-muted"
+                  class="flex flex-1 items-center justify-center card p-6 text-center text-sm text-muted"
                 >
                   Aperçu indisponible : les données n'ont pas pu être actualisées.
                 </div>
@@ -563,13 +572,11 @@ function holdersLabel(names: readonly string[]): string {
             [attr.aria-busy]="sending()"
             aria-describedby="send-reason"
             (click)="send()"
-          >
+          ><app-icon name="send" class="size-4" />
             {{ sendLabel() }}
           </button>
         </div>
-        <p id="send-reason" class="mt-1 min-h-4 text-xs text-muted" aria-live="polite">
-          {{ blockReason() ?? progressText() }}
-        </p>
+        <p id="send-reason" class="mt-1 text-xs text-muted empty:hidden" aria-live="polite">{{ blockReason() ?? progressText() }}</p>
       </footer>
     </div>
   `,
@@ -677,6 +684,7 @@ export class SendPage {
       holder: row.holder.name,
       amount: formatEuro(row.amount),
       sent: row.status === 'sent',
+      sentLabel: sentOn(row.lease.lastSendDate),
       maybeSent: row.status === 'todo' && !!row.lease.objectId && maybe.has(row.lease.objectId),
       selected: selected.has(key),
       active: key === active,
@@ -824,7 +832,7 @@ export class SendPage {
   // ---- layout classes (literal strings: Tailwind scans the sources) ----------------------------
   protected readonly rootClass = computed(() =>
     this.overlayOpen()
-      ? 'fixed inset-0 z-40 flex flex-col bg-bg pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]'
+      ? 'fixed inset-0 z-40 flex flex-col bg-canvas pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]'
       : 'flex h-full min-h-0 flex-col gap-4',
   );
   protected readonly bodyClass = computed(() =>
@@ -843,8 +851,8 @@ export class SendPage {
   });
   protected readonly footerClass = computed(() =>
     this.overlayOpen()
-      ? 'shrink-0 border-t border-border bg-bg pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]'
-      : 'shrink-0 border-t border-border bg-bg pt-3',
+      ? 'shrink-0 border-t border-border bg-card px-1 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+      : 'shrink-0 card px-4 py-3',
   );
 
   constructor() {
@@ -1273,9 +1281,15 @@ export class SendPage {
   }
 
   protected boxClass(row: RowView): string {
-    return row.selected
-      ? 'flex size-5 items-center justify-center rounded border border-accent bg-accent text-on-accent'
-      : 'flex size-5 items-center justify-center rounded border border-border-strong bg-bg';
+    const base = 'flex size-5 items-center justify-center rounded-md border transition-colors';
+    if (row.selected) {
+      return row.sent || row.maybeSent
+        ? `${base} border-danger bg-danger text-on-accent`
+        : `${base} border-accent bg-accent text-on-accent`;
+    }
+    return row.sent
+      ? `${base} border-dashed border-border-strong bg-surface`
+      : `${base} border-border-strong bg-card`;
   }
 
   /** A click on a row: preview it (on a narrow screen, full-screen). */
@@ -1296,11 +1310,32 @@ export class SendPage {
     this.listRef()?.nativeElement.focus({ preventScroll: true });
   }
 
-  protected toggle(key: string): void {
+  /**
+   * Selecting a lease already sent (or perhaps sent) for this period asks first: sending it again is
+   * possible, but only on purpose. `source` is the check box that was clicked, put back on a refusal.
+   */
+  protected async toggle(key: string, source?: EventTarget | null): Promise<void> {
     const next = new Set(this.selected());
     if (next.has(key)) {
       next.delete(key);
     } else {
+      const view = this.views().find((v) => v.key === key);
+      if (view && (view.sent || view.maybeSent)) {
+        const ok = await this.dialog.open({
+          title: view.sent ? 'Appel déjà envoyé' : 'Appel peut-être déjà envoyé',
+          message: view.sent
+            ? `L'appel de loyer « ${view.lease} » (${view.holder}) a déjà été envoyé pour ${this.monthLabel()} (${view.sentLabel.toLowerCase()}). Le sélectionner l'enverra une seconde fois au locataire.`
+            : `L'envoi de « ${view.lease} » (${view.holder}) n'a pas pu être confirmé : le locataire l'a peut-être déjà reçu. Le sélectionner risque de l'envoyer une seconde fois.`,
+          confirmLabel: 'Renvoyer quand même',
+          danger: true,
+        });
+        if (!ok) {
+          if (source instanceof HTMLInputElement) {
+            source.checked = false;
+          }
+          return;
+        }
+      }
       next.add(key);
     }
     this.selected.set(next);

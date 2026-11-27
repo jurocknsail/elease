@@ -21,16 +21,20 @@
  */
 @theme static {
   --color-bg: #ffffff;
-  --color-surface: #f6f7f9;
+  --color-surface: #f8fafc;
+  /* Page background behind the cards, and the card itself. */
+  --color-canvas: #f3f5f9;
+  --color-card: #ffffff;
+  --color-sidebar: #0f172a;
   /* Dividers and card outlines (decorative). */
-  --color-border: #e2e5ea;
-  /* Outline of inputs, checkboxes and outlined buttons: 3.75:1 on bg, 3.50:1 on surface. */
-  --color-border-strong: #7d8494;
-  --color-text: #14171f;
-  --color-muted: #5b6270;
-  --color-accent: #4f46e5;
-  --color-accent-soft: #eef0ff;
-  /* Text and icons on an accent (or danger) background: white on #4f46e5 is 6.29:1. */
+  --color-border: #e2e8f0;
+  /* Outline of inputs, checkboxes and outlined buttons: 3.63:1 on bg, 3.47:1 on surface. */
+  --color-border-strong: #7c8799;
+  --color-text: #1e293b;
+  --color-muted: #5b6676;
+  --color-accent: #2563eb;
+  --color-accent-soft: #eaf1ff;
+  /* Text and icons on an accent (or danger) background: white on #2563eb is 5.17:1. */
   --color-on-accent: #ffffff;
   --color-ok: #0f7a4a;
   --color-ok-soft: #e6f6ee;
@@ -47,15 +51,18 @@
 [data-theme='dark'] {
   color-scheme: dark;
   --color-bg: #0f1115;
-  --color-surface: #181b22;
-  --color-border: #2a2f3a;
+  --color-surface: #161b26;
+  --color-canvas: #0b0d12;
+  --color-card: #141924;
+  --color-sidebar: #0b0d12;
+  --color-border: #283042;
   /* 4.26:1 on bg, 3.88:1 on surface. */
   --color-border-strong: #707888;
   --color-text: #eceff4;
   --color-muted: #a3abba;
-  --color-accent: #818cf8;
-  --color-accent-soft: #23264a;
-  /* White on the dark accent #818cf8 would be only 2.98:1: dark text gives 6.33:1. */
+  --color-accent: #60a5fa;
+  --color-accent-soft: #1e2a44;
+  /* White on the dark accent #60a5fa would be only 2.6:1: dark text gives 7.43:1. */
   --color-on-accent: #0f1115;
   --color-ok: #4ade80;
   --color-ok-soft: #12301f;
@@ -70,7 +77,8 @@ html {
 }
 
 body {
-  @apply bg-bg text-text font-sans antialiased;
+  @apply bg-canvas text-text font-sans antialiased;
+  font-feature-settings: 'cv11', 'ss01';
   margin: 0;
   min-height: 100dvh;
 }
@@ -80,6 +88,15 @@ input,
 select,
 textarea {
   font-size: 16px;
+}
+
+/* iOS only zooms on touch: with a mouse, fields use the same 14 px as the rest of the interface. */
+@media (pointer: fine) {
+  input,
+  select,
+  textarea {
+    font-size: 14px;
+  }
 }
 
 /* No 300 ms double-tap-zoom delay on anything tappable; no grey flash on tap. */
@@ -113,7 +130,35 @@ summary,
 
 /* Dialog overlay (Angular CDK): a dimmer that works on both themes, and a panel in the app's style. */
 .cdk-overlay-dark-backdrop {
-  background: rgb(8 10 14 / 0.55);
+  background: rgb(8 10 14 / 0.5);
+  backdrop-filter: blur(3px);
+}
+
+.cdk-overlay-pane > * {
+  animation: pop-in 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+/* Every routed screen fades in. */
+router-outlet + * {
+  display: block;
+  animation: page-in 220ms ease-out;
+}
+
+h1 {
+  letter-spacing: -0.02em;
+}
+
+/* Thin, discreet scrollbars on a computer. */
+@media (pointer: fine) {
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--color-muted) 35%, transparent) transparent; }
 }
 
 /*
@@ -121,12 +166,30 @@ summary,
  * screen can use them without a component.
  */
 @layer components {
+  /* A raised white panel on the canvas. */
+  .card {
+    @apply rounded-2xl border border-border bg-card;
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.04),
+      0 4px 16px -6px rgb(15 23 42 / 0.08);
+  }
+
+  [data-theme='dark'] .card {
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset;
+  }
+
   .btn {
-    @apply inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold whitespace-nowrap select-none;
+    @apply inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold whitespace-nowrap select-none;
     transition:
-      background-color 120ms,
-      border-color 120ms,
-      filter 120ms;
+      background-color 150ms,
+      border-color 150ms,
+      box-shadow 150ms,
+      transform 80ms,
+      filter 150ms;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
   }
 
   .btn:disabled,
@@ -136,18 +199,26 @@ summary,
 
   .btn-primary {
     @apply bg-accent text-on-accent;
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.12), transparent);
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.12),
+      0 4px 12px -4px color-mix(in srgb, var(--color-accent) 55%, transparent);
   }
 
   .btn-primary:hover:not(:disabled) {
-    filter: brightness(0.92);
+    filter: brightness(0.94);
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.12),
+      0 8px 20px -6px color-mix(in srgb, var(--color-accent) 60%, transparent);
   }
 
   .btn-secondary {
-    @apply border border-border-strong bg-bg text-text;
+    @apply border border-border-strong bg-card text-text;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    @apply bg-surface;
+    @apply border-text/50 bg-surface;
   }
 
   .btn-danger {
@@ -169,7 +240,19 @@ summary,
   }
 
   .field-input {
-    @apply min-h-11 w-full rounded-lg border border-border-strong bg-bg px-3 text-text placeholder:text-muted;
+    @apply min-h-11 w-full rounded-xl border border-border-strong bg-card px-3.5 text-text placeholder:text-muted;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+
+  .field-input:hover:not(:disabled) {
+    @apply border-text/50;
+  }
+
+  .field-input:focus {
+    @apply border-accent;
+    outline: none;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 18%, transparent);
   }
 
   .field-input[aria-invalid='true'] {
@@ -191,7 +274,61 @@ summary,
     }
 
     .field-input {
-      @apply min-h-10;
+      @apply min-h-9 px-3;
     }
+  }
+}
+
+/*
+ * The sidebar is a dark panel in both themes: its children keep using the usual tokens, re-pointed
+ * here to light-on-dark values (muted text 6.9:1, active text 7:1 on #0f172a).
+ */
+.sidebar-scope {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-card: #1e293b;
+  --color-text: #f1f5f9;
+  --color-muted: #a3b1c6;
+  --color-border: rgb(255 255 255 / 0.08);
+  --color-border-strong: #64748b;
+  --color-accent: #93c5fd;
+  --color-accent-soft: rgb(96 165 250 / 0.16);
+  --color-on-accent: #0f172a;
+  color-scheme: dark;
+  background:
+    radial-gradient(120% 60% at 0% 0%, rgb(59 130 246 / 0.18), transparent 60%),
+    var(--color-sidebar);
+  color: var(--color-text);
+}
+
+/* Forms in edit mode. */
+@layer components {
+  .form-label {
+    @apply mb-1.5 flex items-center text-[13px] font-medium text-text;
+  }
+
+  /* A group of related fields, on a slightly sunken panel. */
+  .form-panel {
+    @apply rounded-xl border border-border p-4;
+    background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  }
+
+  .form-section-title {
+    @apply text-[11px] font-semibold tracking-wider text-muted uppercase;
+  }
+
+  /* Save / cancel: a bar along the card's bottom edge, kept in view while a long form scrolls. */
+  .form-actions {
+    @apply sticky bottom-0 z-10 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-2xl border-t border-border px-4 py-3 sm:flex-row sm:justify-end md:-mx-5 md:px-5;
+    background: color-mix(in srgb, var(--color-card) 88%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  /* A card being edited stands out from the cards around it. */
+  .card:has(form) {
+    @apply border-accent/50;
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--color-accent) 12%, transparent),
+      0 12px 32px -12px rgb(15 23 42 / 0.18);
   }
 }

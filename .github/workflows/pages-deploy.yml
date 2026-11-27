@@ -2,7 +2,6 @@ name: Deploy to Cloudflare Pages
 
 # New app (Angular 22 PWA) -> Cloudflare Pages project `e-lease-app`
 # (custom domain https://e-lease-app.smarthomeserver.online).
-# The legacy Ionic app is NOT built here: see docker-build.yml (manual, tag `legacy-ionic`).
 #
 # SAFETY RULE: the production secret (`production: true` = real e-mails to tenants) is used ONLY on
 # `main`. A manual run (workflow_dispatch) on any other branch compiles with the example environment

@@ -154,3 +154,13 @@ export function parseFrenchNumber(input: string): number | null {
 export function toFieldNumber(value: number): string {
   return String(value).replace('.', ',');
 }
+
+/** « 12 rue des Lilas, La Ciotat » (the street number is left out when there is none). */
+export function formatLeaseAddress(lease: {
+  streetNumber: number;
+  streetName: string;
+  city: string;
+}): string {
+  const street = [lease.streetNumber || '', lease.streetName].filter(Boolean).join(' ');
+  return [street, lease.city].filter(Boolean).join(', ');
+}

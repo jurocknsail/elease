@@ -23,23 +23,29 @@ interface ThemeOption {
   imports: [Icon, ProfileCard, BackupCard],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="mx-auto flex w-full max-w-[720px] flex-col gap-6">
-      <h1 class="text-2xl font-semibold tracking-tight md:text-[1.75rem]">Réglages</h1>
+    <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight md:text-[1.75rem]">Réglages</h1>
+        <p class="mt-1 text-sm text-muted">Votre profil de bailleur, l'apparence, vos sauvegardes et votre compte.</p>
+      </div>
 
       <app-profile-card />
 
-      <section class="rounded-xl border border-border bg-bg" aria-labelledby="appearance-title">
-        <header class="border-b border-border px-4 py-3 md:px-5">
-          <h2 id="appearance-title" class="text-sm font-semibold">Apparence</h2>
+      <section class="card" aria-labelledby="appearance-title">
+        <header class="flex items-start gap-3 border-b border-border px-4 py-4 md:px-5">
+          <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><app-icon name="sun" class="size-[18px]" /></span>
+          <div class="min-w-0">
+          <h2 id="appearance-title" class="text-[15px] font-semibold">Apparence</h2>
           <p class="mt-0.5 text-sm text-muted">
             « Système » suit le réglage clair ou sombre de votre appareil.
           </p>
+        </div>
         </header>
         <div class="px-4 py-4 md:px-5">
           <div role="radiogroup" aria-labelledby="appearance-title" class="grid grid-cols-3 gap-2">
             @for (option of themes; track option.mode) {
               <label
-                class="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-strong px-2 text-sm font-medium select-none has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent dense:min-h-9"
+                class="relative flex min-h-20 min-w-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-border-strong bg-card px-2 text-sm font-medium shadow-sm transition-colors hover:border-text/50 has-[:checked]:ring-2 has-[:checked]:ring-accent/20 select-none has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent dense:min-h-16"
               >
                 <input
                   type="radio"
@@ -49,7 +55,7 @@ interface ThemeOption {
                   [checked]="theme.mode() === option.mode"
                   (change)="theme.setMode(option.mode)"
                 />
-                <span class="hidden shrink-0 min-[420px]:inline-flex"
+                <span class="inline-flex shrink-0"
                   ><app-icon [name]="option.icon" class="size-5"
                 /></span>
                 <span class="truncate">{{ option.label }}</span>
@@ -62,13 +68,16 @@ interface ThemeOption {
       <app-backup-card />
 
       @if (!install.isStandalone()) {
-        <section class="rounded-xl border border-border bg-bg" aria-labelledby="install-title">
-          <header class="border-b border-border px-4 py-3 md:px-5">
-            <h2 id="install-title" class="text-sm font-semibold">Application</h2>
+        <section class="card" aria-labelledby="install-title">
+          <header class="flex items-start gap-3 border-b border-border px-4 py-4 md:px-5">
+          <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><app-icon name="download" class="size-[18px]" /></span>
+          <div class="min-w-0">
+            <h2 id="install-title" class="text-[15px] font-semibold">Application</h2>
             <p class="mt-0.5 text-sm text-muted">
               Installez E-Lease pour l'ouvrir comme une application, dans sa propre fenêtre.
             </p>
-          </header>
+          </div>
+        </header>
           <div class="flex flex-col gap-3 px-4 py-4 text-sm md:px-5">
             @if (install.canPrompt()) {
               <div>
@@ -76,7 +85,7 @@ interface ThemeOption {
                   type="button"
                   class="btn btn-primary w-full sm:w-auto"
                   (click)="installApp()"
-                >
+                ><app-icon name="download" class="size-4" />
                   Installer l'application
                 </button>
               </div>
@@ -115,9 +124,12 @@ interface ThemeOption {
         </section>
       }
 
-      <section class="rounded-xl border border-border bg-bg" aria-labelledby="account-title">
-        <header class="border-b border-border px-4 py-3 md:px-5">
-          <h2 id="account-title" class="text-sm font-semibold">Compte</h2>
+      <section class="card" aria-labelledby="account-title">
+        <header class="flex items-start gap-3 border-b border-border px-4 py-4 md:px-5">
+          <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><app-icon name="log-in" class="size-[18px]" /></span>
+          <div class="min-w-0">
+          <h2 id="account-title" class="text-[15px] font-semibold">Compte</h2>
+        </div>
         </header>
         <div class="flex flex-col gap-4 px-4 py-4 md:px-5">
           @if (auth.user(); as user) {

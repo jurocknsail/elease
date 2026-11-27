@@ -2,14 +2,12 @@ import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { DEFAULT_LANDLORD_PROFILE, LandlordProfile } from '../models/landlord-profile';
 import { Lease } from '../models/lease';
 import { Leaseholder } from '../models/leaseholder';
-import { LEGACY_EMAIL_SIGNATURE, legacyDefinition } from './legacy-definition.fixture';
 import { buildRentCallDefinition } from './rent-call-definition';
 
 /*
- * The new definition must be identical, key by key, to the legacy one (the fixture is a frozen copy
- * of main:src/app/tab-send/tab-send.page.ts lines 201-306) for the default landlord profile. The only
- * deliberate difference is the postal code, printed with 5 digits (1000 -> 01000), tested apart.
- * Dates are built with local-time constructors so the suite passes in every time zone.
+ * Golden master: the text of the rent-call PDF is fixed by the business rules (CLAUDE.md), so the
+ * literal below must never change by accident. Dates are built with local-time constructors so the
+ * suite passes in every time zone.
  */
 
 /** Indentation the legacy source embedded in its template literals (header and body: 18; legal text: 20). */
@@ -101,31 +99,6 @@ const MISSING_OPTIONALS = {
   optionalAddressInfo: null,
 } as unknown as Lease;
 
-const FIXTURES: Array<[string, Leaseholder, Lease]> = [
-  ['professional lease, charges and an additional charge', holder(), PRO_WITH_CHARGES],
-  ['habitation lease, charge null, lot 0', holder(), HABITATION_NO_CHARGE],
-  ['no renewalDate, lot, charge nor additional charge', holder(), INCOMPLETE],
-  ['float-ugly additional charges', holder(), FLOAT_UGLY],
-  ['accents and apostrophes', holder("Élodie d'Aubigné-Œil"), ACCENTED],
-  ['charge 0, professional', holder(), ZERO_CHARGE],
-  ['missing additionalCharges / null optionalAddressInfo', holder(), MISSING_OPTIONALS],
-];
-
-/** [label, now, callDate]: the year rollover, a leap-year February, a call date that is not the 25th. */
-const DATES: Array<[string, Date, Date]> = [
-  [
-    '25 Dec 2026 -> 01/2027 (year rollover)',
-    new Date(2026, 11, 20, 23, 59, 59),
-    new Date(2026, 11, 25),
-  ],
-  [
-    '25 Jan 2028 -> 02/2028 (leap year, 29 days)',
-    new Date(2028, 0, 3, 12, 0),
-    new Date(2028, 0, 25),
-  ],
-  ['3 Feb 2027 -> 03/2027 (not the 25th)', new Date(2027, 1, 3, 18, 45), new Date(2027, 1, 3)],
-];
-
 const NOW = new Date(2026, 10, 26, 9, 30);
 const DEC_25_2026 = new Date(2026, 11, 25);
 
@@ -140,18 +113,6 @@ function build(
     callDate: options.callDate ?? DEC_25_2026,
     now: options.now ?? NOW,
   });
-}
-
-function legacy(
-  l: Lease,
-  options: { holder?: Leaseholder; callDate?: Date; now?: Date } = {},
-): TDocumentDefinitions {
-  return legacyDefinition(
-    options.holder ?? holder(),
-    l,
-    options.now ?? NOW,
-    options.callDate ?? DEC_25_2026,
-  );
 }
 
 /** Every string of the definition, in document order. */
@@ -195,20 +156,8 @@ const FAR_AWAY = lease({
 });
 
 describe('buildRentCallDefinition', () => {
-  describe('identical to the legacy definition with the default landlord profile', () => {
-    for (const [fixtureName, h, l] of FIXTURES) {
-      it(fixtureName, () => {
-        for (const [dateName, now, callDate] of DATES) {
-          const built = build(l, { holder: h, callDate, now });
-          const old = legacy(l, { holder: h, callDate, now });
-          // JSON equality: same keys, same order, same strings (whitespace included).
-          expect(JSON.stringify(built), dateName).toBe(JSON.stringify(old));
-        }
-      });
-    }
-
-    it('guards the fixture itself: the legacy output of a simple lease is the golden master below', () => {
-      // Written out by hand from the legacy output (main:src/app/tab-send/tab-send.page.ts).
+  describe('golden master, default landlord profile', () => {
+    it('matches the golden master below for a simple lease', () => {
       const golden = {
         info: {
           title: '26_11_2026_Agi Martin_Studio',
@@ -285,7 +234,6 @@ describe('buildRentCallDefinition', () => {
           { alignment: 'justify', text: `\n${INDENT_18}` },
         ],
       };
-      expect(JSON.stringify(legacy(HABITATION_NO_CHARGE))).toBe(JSON.stringify(golden));
       expect(JSON.stringify(build(HABITATION_NO_CHARGE))).toBe(JSON.stringify(golden));
     });
 
@@ -304,8 +252,8 @@ describe('buildRentCallDefinition', () => {
     });
   });
 
-  it('DEFAULT_LANDLORD_PROFILE holds the landlord values of the legacy definition', () => {
-    const legacyDef = JSON.parse(JSON.stringify(legacy(HABITATION_NO_CHARGE))) as {
+  it('DEFAULT_LANDLORD_PROFILE holds the landlord values of the PDF', () => {
+    const legacyDef = JSON.parse(JSON.stringify(build(HABITATION_NO_CHARGE))) as {
       info: { author: string };
       content: Array<{ text: unknown }>;
     };
@@ -322,7 +270,7 @@ describe('buildRentCallDefinition', () => {
     expect(conditions[1].text.split('\n').map((line) => line.trim())[3]).toBe(
       DEFAULT_LANDLORD_PROFILE.legalNotice,
     );
-    expect(DEFAULT_LANDLORD_PROFILE.emailSignature).toBe(LEGACY_EMAIL_SIGNATURE);
+    expect(DEFAULT_LANDLORD_PROFILE.emailSignature).toBe('Pierre MARGERIT');
   });
 
   describe('landlord data comes only from the profile', () => {
@@ -359,11 +307,11 @@ describe('buildRentCallDefinition', () => {
       ]) {
         expect(customJson()).not.toContain(legacyValue);
       }
-      // ...while the legacy definition of the same lease does contain them (the scan is meaningful).
-      const legacyJson = JSON.stringify(legacy(FAR_AWAY));
-      expect(legacyJson).toContain('SCI LA CHARINE');
-      expect(legacyJson).toContain('LA CIOTAT');
-      expect(legacyJson).toContain('507 834 117');
+      // ...while the default profile of the same lease does contain them (the scan is meaningful).
+      const defaultJson = JSON.stringify(build(FAR_AWAY));
+      expect(defaultJson).toContain('SCI LA CHARINE');
+      expect(defaultJson).toContain('LA CIOTAT');
+      expect(defaultJson).toContain('507 834 117');
     });
 
     it('skips blank address lines and trims the profile texts', () => {
@@ -402,7 +350,7 @@ describe('buildRentCallDefinition', () => {
     });
   });
 
-  describe('contents that stay literally as in the legacy', () => {
+  describe('contents that stay exactly as printed before', () => {
     it('labels and amounts of a professional lease (VAT on the rent only)', () => {
       const texts = allTexts(build(PRO_WITH_CHARGES));
       expect(texts).toContain('Loyer HT\nT.V.A. 20%\nAvance sur charges\n');
@@ -486,18 +434,13 @@ describe('buildRentCallDefinition', () => {
     });
   });
 
-  describe('postal codes (the one deliberate difference with the legacy)', () => {
+  describe('postal codes are printed with 5 digits', () => {
     const bourg = lease({ postalCode: 1000, city: 'Bourg-en-Bresse', name: 'Studio' });
 
     it('prints 1000 as 01000 in the tenant address and in the "local sis" line', () => {
-      const legacyJson = JSON.stringify(legacy(bourg));
-      expect(legacyJson.split('1000 BOURG-EN-BRESSE').length - 1).toBe(2);
-      expect(legacyJson).not.toContain('01000');
-
       const built = JSON.stringify(build(bourg));
       expect(built.split('01000 BOURG-EN-BRESSE').length - 1).toBe(2);
-      // Nothing else differs from the legacy.
-      expect(built).toBe(legacyJson.replaceAll('1000 BOURG-EN-BRESSE', '01000 BOURG-EN-BRESSE'));
+      expect(built).not.toMatch(/(?<!0)1000 BOURG/);
     });
 
     it('pads short postal codes to 5 digits, leaves full ones and the free-text landlord address alone', () => {

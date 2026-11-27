@@ -1,5 +1,6 @@
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import { isSessionError } from '../../core/auth/session-error';
@@ -13,7 +14,7 @@ import { ContactBlock } from './contact-block';
 import { LeaseBlock } from './lease-block';
 import { TenantsState, leaseCountLabel, saveErrorMessage } from './tenants-state';
 
-const SKELETON = 'animate-pulse rounded bg-border';
+const SKELETON = 'animate-pulse rounded-md bg-border/70';
 
 /**
  * The page of one tenant (`/locataires/:id`, inside the list page): the Contact block and one block per
@@ -55,14 +56,14 @@ const SKELETON = 'animate-pulse rounded bg-border';
               [disabled]="deleting()"
               [attr.aria-busy]="deleting()"
               (click)="removeHolder(holder)"
-            >
+            ><app-icon name="trash" class="size-4" />
               {{ deleting() ? 'Suppression…' : 'Supprimer le locataire' }}
             </button>
           </div>
           @if (deleteError(); as message) {
             <p
               role="alert"
-              class="rounded-lg border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
+              class="rounded-xl border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
             >
               {{ message }}
             </p>
@@ -79,8 +80,8 @@ const SKELETON = 'animate-pulse rounded bg-border';
               class="btn btn-secondary"
               [disabled]="adding()"
               (click)="adding.set(true)"
-            >
-              + Ajouter un bail
+            ><app-icon name="plus" class="size-4" />
+              Ajouter un bail
             </button>
           </div>
 
@@ -90,14 +91,16 @@ const SKELETON = 'animate-pulse rounded bg-border';
 
           @for (lease of holder.leases; track lease.objectId) {
             @if (holder.objectId) {
-              <app-lease-block [holderId]="holder.objectId" [lease]="lease" />
+              <div [id]="'bail-' + lease.objectId" class="scroll-mt-4">
+                <app-lease-block [holderId]="holder.objectId" [lease]="lease" />
+              </div>
             }
           } @empty {
             @if (!adding()) {
               <p
                 class="rounded-xl border border-dashed border-border-strong px-4 py-8 text-center text-sm text-muted"
               >
-                Aucun bail. Ajoutez le premier avec « + Ajouter un bail ».
+                Aucun bail. Ajoutez le premier avec « Ajouter un bail ».
               </p>
             }
           }
@@ -106,16 +109,16 @@ const SKELETON = 'animate-pulse rounded bg-border';
     } @empty {
       @if (state.loaded()) {
         <app-empty-state
-          class="rounded-xl border border-dashed border-border-strong"
+          class="rounded-2xl border border-dashed border-border-strong bg-card/50"
           heading="Locataire introuvable"
           message="Ce locataire n'existe pas ou n'existe plus. Il a peut-être été supprimé."
           icon="users"
         >
-          <a routerLink="/locataires" class="btn btn-primary">Retour aux locataires</a>
+          <a routerLink="/locataires" class="btn btn-primary"><app-icon name="arrow-left" class="size-4" />Retour aux locataires</a>
         </app-empty-state>
       } @else if (state.failure(); as failed) {
         <app-error-state
-          class="rounded-xl border border-dashed border-border-strong"
+          class="rounded-2xl border border-dashed border-border-strong bg-card/50"
           [error]="failed.cause"
           [retrying]="state.loading()"
           (retry)="state.refresh()"
@@ -160,6 +163,15 @@ export class TenantDetail {
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmDialog);
   private readonly route = inject(ActivatedRoute);
+
+  constructor() {
+    // `/locataires/:id#bail-<id>` comes from a lease of the list: bring that lease into view.
+    this.route.fragment.pipe(takeUntilDestroyed()).subscribe((fragment) => {
+      if (fragment) {
+        setTimeout(() => document.getElementById(fragment)?.scrollIntoView({ block: 'start' }));
+      }
+    });
+  }
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((params) => params.get('id'))), {
     initialValue: this.route.snapshot.paramMap.get('id'),

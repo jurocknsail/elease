@@ -1,3 +1,4 @@
+import { Icon } from './icon';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { describeBackendError, isConnectionError } from '../../core/parse/backend-error';
 import { EmptyState } from './empty-state';
@@ -11,7 +12,7 @@ import { IconName } from './icon';
  */
 @Component({
   selector: 'app-error-state',
-  imports: [EmptyState],
+  imports: [Icon, EmptyState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block', role: 'alert' },
   template: `
@@ -23,7 +24,7 @@ import { IconName } from './icon';
           [disabled]="retrying()"
           [attr.aria-busy]="retrying()"
           (click)="retry.emit()"
-        >
+        ><app-icon name="refresh" class="size-4" />
           Réessayer
         </button>
       }

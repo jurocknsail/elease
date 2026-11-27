@@ -510,7 +510,7 @@ describe('SendPage', () => {
       await view.settle();
 
       expect(view.dialog.opened[0].message).toContain(
-        'Attention : 1 appel déjà envoyé ou peut-être envoyé pour cette période.',
+        'a déjà été envoyé pour décembre 2026',
       );
     });
   });

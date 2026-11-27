@@ -7,11 +7,10 @@ import type { Lease } from '../models/lease';
 import type { Leaseholder } from '../models/leaseholder';
 
 /*
- * The text of the rent-call PDF is strictly the legacy one (main:src/app/tab-send/tab-send.page.ts,
- * lines 201-306): same labels, same arithmetic, same whitespace. Only the landlord data (header,
+ * The text of the rent-call PDF keeps the wording, labels, arithmetic and whitespace fixed by the
+ * business rules (the spec pins it with a golden master). Only the landlord data (header,
  * "Établie par la ...", issue city, PDF author, legal notice) comes from the landlord profile, and
- * postal codes are printed with 5 digits. `legacy-definition.fixture.ts` freezes the legacy
- * construction and the spec compares both with `JSON.stringify`.
+ * postal codes are printed with 5 digits.
  *
  * The legacy PDF text carries the indentation of its source template literals (continuation lines
  * start with 18 spaces, or 20 in the conditions). It is part of the document, so it is kept.

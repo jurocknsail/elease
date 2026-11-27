@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/icon';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -31,25 +32,26 @@ export function loginErrorMessage(error: unknown): string {
 
 @Component({
   selector: 'app-login',
+  imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
     <main
-      class="flex min-h-dvh items-center justify-center bg-surface px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]"
+      class="relative flex min-h-dvh items-center justify-center overflow-hidden bg-canvas bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_srgb,var(--color-accent)_16%,transparent),transparent)] px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]"
     >
       <div class="w-full max-w-sm">
         <div class="mb-6 flex flex-col items-center gap-3">
           <img
-            src="icons/icon-192.png"
+            src="logos/e-lease-symbol.png"
             alt=""
             width="56"
             height="56"
-            class="size-14 rounded-2xl shadow-sm"
+            class="size-16 rounded-2xl bg-white p-1.5 shadow-xl shadow-accent/20 ring-1 ring-border"
           />
-          <p class="text-lg font-semibold tracking-tight">E-Lease</p>
+          <p class="text-xl font-bold tracking-tight">E-Lease</p><p class="-mt-2 text-sm text-muted">Vos appels de loyer, sans effort.</p>
         </div>
 
-        <div class="rounded-2xl border border-border bg-bg p-6 shadow-sm sm:p-8">
+        <div class="card p-6 shadow-xl sm:p-8">
           <h1 class="text-xl font-semibold tracking-tight">Connexion</h1>
           <p class="mt-1 text-sm text-muted">
             Connectez-vous pour gérer vos locataires et vos appels de loyer.
@@ -108,7 +110,7 @@ export function loginErrorMessage(error: unknown): string {
             @if (errorMessage(); as message) {
               <p
                 role="alert"
-                class="rounded-lg border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
+                class="rounded-xl border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
               >
                 {{ message }}
               </p>
@@ -116,10 +118,10 @@ export function loginErrorMessage(error: unknown): string {
 
             <button
               type="submit"
-              class="btn btn-primary mt-1 w-full"
+              class="btn btn-primary mt-2 w-full min-h-12 dense:min-h-11"
               [disabled]="pending()"
               [attr.aria-busy]="pending()"
-            >
+            ><app-icon name="log-in" class="size-4" />
               {{ pending() ? 'Connexion…' : 'Se connecter' }}
             </button>
           </form>

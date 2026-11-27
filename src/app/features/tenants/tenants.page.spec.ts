@@ -198,18 +198,18 @@ describe('Locataires', () => {
       const view = await setup();
       await view.open('/locataires');
 
-      const rows = [...view.root.querySelectorAll('ul a')].map((a) => text(a));
+      const rows = [...view.root.querySelectorAll('a[data-holder-row]')].map((a) => text(a));
       expect(rows.length).toBe(2);
-      expect(rows[0]).toMatch(/^Dupont.*2 baux.*dupont@example\.test$/);
-      expect(rows[1]).toMatch(/^Élodie Sans-Bail.*Aucun bail.*elodie@example\.test$/);
+      expect(rows[0]).toMatch(/Dupont.*dupont@example\.test.*2 baux$/);
+      expect(rows[1]).toMatch(/Élodie Sans-Bail.*elodie@example\.test.*Aucun bail$/);
 
       const search = view.root.querySelector<HTMLInputElement>('input[type="search"]')!;
       await typeInto(view, search, 'ELODIE');
-      expect([...view.root.querySelectorAll('ul a')].map((a) => text(a).split(' ')[0])).toEqual([
-        'Élodie',
+      expect([...view.root.querySelectorAll('a[data-holder-row]')].map((a) => text(a))).toEqual([
+        expect.stringContaining('Élodie'),
       ]);
       await typeInto(view, search, 'dupont@');
-      expect(view.root.querySelectorAll('ul a').length).toBe(1);
+      expect(view.root.querySelectorAll('a[data-holder-row]').length).toBe(1);
       await typeInto(view, search, 'zzz');
       expect(text(view.root)).toContain('Aucun locataire ne correspond');
     });
@@ -248,7 +248,7 @@ describe('Locataires', () => {
         'Contact',
         'Baux',
       ]);
-      expect(text(view.root)).toContain('+ Ajouter un bail');
+      expect(text(view.root)).toContain('Ajouter un bail');
     });
 
     it('shows the leases read-only: pills, amounts, never-sent and period of the last send', async () => {
@@ -429,7 +429,7 @@ describe('Locataires', () => {
     it('adds a lease with only the required fields, the optional ones left empty', async () => {
       const view = await setup();
       await view.open('/locataires/h-elodie');
-      await click(view, button(view.root, '+ Ajouter un bail'));
+      await click(view, button(view.root, 'Ajouter un bail'));
       const form = block(view.root, 'Nouveau bail');
 
       await typeInto(view, field(form, 'Nom du bail'), 'Cave');

@@ -13,9 +13,11 @@ import { Icon, IconName } from './icon';
   template: `
     <div class="mx-auto flex max-w-md flex-col items-center gap-3 px-6 py-12 text-center">
       @if (icon(); as name) {
-        <app-icon [name]="name" class="size-10 text-muted" />
+        <span class="mb-1 grid size-16 place-items-center rounded-2xl bg-accent-soft ring-8 ring-accent-soft/40">
+          <app-icon [name]="name" class="size-8 text-accent" />
+        </span>
       }
-      <h2 class="text-base font-semibold text-text">{{ heading() }}</h2>
+      <h2 class="text-lg font-semibold tracking-tight text-text">{{ heading() }}</h2>
       @if (message(); as text) {
         <p class="text-sm text-muted">{{ text }}</p>
       }

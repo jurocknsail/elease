@@ -49,17 +49,10 @@ cd cloud && node --test   # tests des jobs Back4App
 - **Rappels par e-mail** (rappel mensuel du 25, rappel de révision) : jobs Back4App, voir
   [`cloud/README.md`](cloud/README.md).
 
-## Coques natives (dormantes)
-
-Les dossiers `android/` et `ios/` et `capacitor.config.ts` sont conservés mais ne sont plus construits :
-toutes les dépendances `@capacitor/*` ont été retirées. Un build natif demanderait de les réinstaller.
-L'application se distribue comme PWA.
-
 ## Ancienne version
 
-L'ancienne application (Angular 17 + Ionic 7) est conservée au tag git `legacy-ionic`. Elle reste
-servie sur `e-lease.smarthomeserver.online` par l'image Docker `jurocknsail/elease`, construite
-manuellement par le workflow `.github/workflows/docker-build.yml` (toujours à partir de ce tag).
+L'ancienne application (Angular 17 + Ionic 7) a été retirée de cette branche. Son code reste dans
+l'historique git, au tag `legacy-ionic`.
 
 ## Pour les développeurs
 

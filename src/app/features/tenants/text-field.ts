@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/icon';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -22,14 +23,14 @@ import { errorMessage } from './lease-form';
  */
 @Component({
   selector: 'app-text-field',
-  imports: [ReactiveFormsModule],
+  imports: [Icon, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
   template: `
-    <label [for]="inputId()" class="mb-1.5 block text-sm font-medium">
+    <label [for]="inputId()" class="form-label">
       {{ label() }}
       @if (optional()) {
-        <span class="font-normal text-muted">(facultatif)</span>
+        <span class="ml-1 rounded-full bg-surface px-1.5 py-px text-[10px] font-medium tracking-wide text-muted uppercase ring-1 ring-border">facultatif</span>
       }
     </label>
     @if (multiline()) {
@@ -64,7 +65,7 @@ import { errorMessage } from './lease-form';
       <p [id]="inputId() + '-hint'" class="mt-1.5 text-xs text-muted">{{ text }}</p>
     }
     @if (shown().message; as text) {
-      <p [id]="inputId() + '-error'" class="mt-1.5 text-sm text-danger">{{ text }}</p>
+      <p [id]="inputId() + '-error'" class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-danger"><app-icon name="alert" class="size-3.5" />{{ text }}</p>
     }
   `,
 })

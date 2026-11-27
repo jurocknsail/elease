@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/icon';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -25,12 +26,12 @@ let nextId = 0;
  */
 @Component({
   selector: 'app-contact-block',
-  imports: [ReactiveFormsModule, TextField],
+  imports: [Icon, ReactiveFormsModule, TextField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
     <section
-      class="rounded-xl border border-border bg-bg"
+      class="card"
       [attr.aria-labelledby]="uid + '-title'"
       #root
     >
@@ -39,7 +40,7 @@ let nextId = 0;
       >
         <h3 [id]="uid + '-title'" class="text-sm font-semibold">Contact</h3>
         @if (!form()) {
-          <button #edit type="button" class="btn btn-secondary" (click)="startEdit()">
+          <button #edit type="button" class="btn btn-secondary" (click)="startEdit()"><app-icon name="pencil" class="size-4" />
             Modifier
           </button>
         }
@@ -49,7 +50,7 @@ let nextId = 0;
         @if (form(); as f) {
           <form
             [formGroup]="f"
-            class="flex flex-col gap-4"
+            class="grid grid-cols-1 gap-4 @md:grid-cols-2"
             (ngSubmit)="save()"
             (keydown.escape)="cancel()"
           >
@@ -78,12 +79,12 @@ let nextId = 0;
             @if (error(); as message) {
               <p
                 role="alert"
-                class="rounded-lg border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
+                class="@md:col-span-2 rounded-xl border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
               >
                 {{ message }}
               </p>
             }
-            <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <div class="form-actions @md:col-span-2">
               <button
                 type="button"
                 class="btn btn-secondary"
@@ -97,7 +98,7 @@ let nextId = 0;
                 class="btn btn-primary"
                 [disabled]="blocked()"
                 [attr.aria-busy]="saving()"
-              >
+              ><app-icon name="check" class="size-4" />
                 {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
               </button>
             </div>

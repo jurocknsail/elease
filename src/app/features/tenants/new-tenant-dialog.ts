@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/icon';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import {
   ChangeDetectionStrategy,
@@ -27,11 +28,11 @@ export interface NewTenantDialogData {
  */
 @Component({
   selector: 'app-new-tenant-dialog',
-  imports: [ReactiveFormsModule, TextField],
+  imports: [Icon, ReactiveFormsModule, TextField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class:
-      'block w-full max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-border bg-bg p-5 text-text shadow-xl sm:p-6',
+      'block w-full max-h-[calc(100dvh-2rem)] overflow-y-auto card p-5 text-text shadow-xl sm:p-6',
   },
   template: `
     <h2 id="new-tenant-title" class="text-lg font-semibold">Nouveau locataire</h2>
@@ -59,7 +60,7 @@ export interface NewTenantDialogData {
       @if (error(); as message) {
         <p
           role="alert"
-          class="rounded-lg border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
+          class="rounded-xl border border-danger/40 bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
         >
           {{ message }}
         </p>
@@ -73,7 +74,7 @@ export interface NewTenantDialogData {
           class="btn btn-primary"
           [disabled]="blocked()"
           [attr.aria-busy]="saving()"
-        >
+        ><app-icon name="plus" class="size-4" />
           {{ saving() ? 'Création…' : 'Créer le locataire' }}
         </button>
       </div>
