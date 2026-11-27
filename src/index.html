@@ -6,7 +6,7 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#f3f5f9" />
     <script>
       // Applies the theme before the stylesheet and Angular load, to avoid a flash of the wrong theme.
       // Mirrors ThemeService (src/app/core/theme/theme.service.ts): same storage key, same fallback to
@@ -32,7 +32,7 @@
         root.style.colorScheme = theme;
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) {
-          meta.setAttribute('content', dark ? '#0f1115' : '#ffffff');
+          meta.setAttribute('content', dark ? '#0b0d12' : '#f3f5f9');
         }
       })();
     </script>

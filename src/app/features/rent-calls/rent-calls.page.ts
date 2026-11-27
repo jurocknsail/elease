@@ -236,7 +236,7 @@ function capitalise(value: string): string {
                 <ul class="flex flex-col pb-1.5">
                   @for (lease of group.leases; track lease.key) {
                     <li
-                      class="mx-2 grid grid-cols-[auto_minmax(0,1fr)_auto_6rem] items-center gap-x-3 rounded-lg py-1 pr-3 pl-11 sm:grid-cols-[auto_minmax(0,1fr)_9rem_6rem] transition-colors hover:bg-surface lg:gap-x-4 lg:pr-4 lg:pl-12"
+                      class="mx-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-lg py-1 pr-3 pl-4 sm:grid-cols-[auto_minmax(0,1fr)_9rem_6rem] sm:pl-11 transition-colors hover:bg-surface lg:gap-x-4 lg:pr-4 lg:pl-12"
                     >
                       @if (lease.sent) {
                         <span aria-hidden="true" class="grid size-6 place-items-center rounded-full bg-ok-soft text-ok">
@@ -260,8 +260,8 @@ function capitalise(value: string): string {
                           lease.address
                         }}</span>
                       </a>
-                      <app-pill class="justify-self-end" [tone]="lease.sent ? 'ok' : 'warn'">{{ lease.when }}</app-pill>
-                      <span class="text-right text-sm font-medium tabular-nums">{{
+                      <app-pill class="col-start-2 row-start-2 justify-self-start sm:col-auto sm:row-auto sm:justify-self-end" [tone]="lease.sent ? 'ok' : 'warn'">{{ lease.when }}</app-pill>
+                      <span class="col-start-3 row-start-1 text-right text-sm font-medium tabular-nums sm:col-auto sm:row-auto">{{
                         lease.amount
                       }}</span>
                     </li>

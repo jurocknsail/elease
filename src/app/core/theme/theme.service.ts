@@ -9,8 +9,8 @@ const DARK_QUERY = '(prefers-color-scheme: dark)';
 
 /** Browser/status bar colour per effective theme: the `--color-bg` token of each theme in src/styles.css. */
 export const THEME_COLORS: Readonly<Record<EffectiveTheme, string>> = {
-  light: '#ffffff',
-  dark: '#0f1115',
+  light: '#f3f5f9',
+  dark: '#0b0d12',
 };
 
 @Injectable({ providedIn: 'root' })

@@ -104,13 +104,13 @@ describe('ThemeService', () => {
   it('keeps meta[name=theme-color] in sync with the effective theme', () => {
     const meta = document.createElement('meta');
     meta.name = 'theme-color';
-    meta.content = '#ffffff';
+    meta.content = '#f3f5f9';
     document.head.append(meta);
 
     const service = TestBed.inject(ThemeService);
     service.setMode('dark');
-    expect(meta.content).toBe('#0f1115');
+    expect(meta.content).toBe('#0b0d12');
     service.setMode('light');
-    expect(meta.content).toBe('#ffffff');
+    expect(meta.content).toBe('#f3f5f9');
   });
 });

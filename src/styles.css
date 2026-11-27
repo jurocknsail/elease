@@ -20,7 +20,7 @@
  * themes. `--color-border` is a divider only (1.2:1 to 1.4:1): never use it to outline a control.
  */
 @theme static {
-  --color-bg: #ffffff;
+  --color-bg: #f3f5f9;
   --color-surface: #f8fafc;
   /* Page background behind the cards, and the card itself. */
   --color-canvas: #f3f5f9;
@@ -50,7 +50,7 @@
 
 [data-theme='dark'] {
   color-scheme: dark;
-  --color-bg: #0f1115;
+  --color-bg: #0b0d12;
   --color-surface: #161b26;
   --color-canvas: #0b0d12;
   --color-card: #141924;
@@ -73,6 +73,7 @@
 }
 
 html {
+  @apply bg-canvas;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -179,7 +180,7 @@ h1 {
   }
 
   .btn {
-    @apply inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold whitespace-nowrap select-none;
+    @apply inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold whitespace-nowrap select-none;
     transition:
       background-color 150ms,
       border-color 150ms,
