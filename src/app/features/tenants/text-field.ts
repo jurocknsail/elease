@@ -26,14 +26,14 @@ import { errorMessage } from './lease-form';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
   template: `
-    <label [for]="id()" class="mb-1.5 block text-sm font-medium">
+    <label [for]="inputId()" class="mb-1.5 block text-sm font-medium">
       {{ label() }}
       @if (optional()) {
         <span class="font-normal text-muted">(facultatif)</span>
       }
     </label>
     <input
-      [id]="id()"
+      [id]="inputId()"
       [formControl]="control()"
       [type]="type()"
       class="field-input"
@@ -48,15 +48,15 @@ import { errorMessage } from './lease-form';
       spellcheck="false"
     />
     @if (hint(); as text) {
-      <p [id]="id() + '-hint'" class="mt-1.5 text-xs text-muted">{{ text }}</p>
+      <p [id]="inputId() + '-hint'" class="mt-1.5 text-xs text-muted">{{ text }}</p>
     }
     @if (shown().message; as text) {
-      <p [id]="id() + '-error'" class="mt-1.5 text-sm text-danger">{{ text }}</p>
+      <p [id]="inputId() + '-error'" class="mt-1.5 text-sm text-danger">{{ text }}</p>
     }
   `,
 })
 export class TextField {
-  readonly id = input.required<string>();
+  readonly inputId = input.required<string>();
   readonly label = input.required<string>();
   readonly control = input.required<FormControl<string>>();
   readonly type = input<'text' | 'email' | 'tel' | 'date' | 'search'>('text');
@@ -79,8 +79,8 @@ export class TextField {
 
   protected readonly describedBy = computed(() => {
     const ids = [
-      this.hint() ? this.id() + '-hint' : null,
-      this.shown().message ? this.id() + '-error' : null,
+      this.hint() ? this.inputId() + '-hint' : null,
+      this.shown().message ? this.inputId() + '-error' : null,
     ].filter((id): id is string => id !== null);
     return ids.length > 0 ? ids.join(' ') : null;
   });

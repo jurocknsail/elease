@@ -54,13 +54,13 @@ let nextId = 0;
             (keydown.escape)="cancel()"
           >
             <app-text-field
-              [id]="uid + '-name'"
+              [inputId]="uid + '-name'"
               label="Nom"
               [control]="f.controls.name"
               autocomplete="off"
             />
             <app-text-field
-              [id]="uid + '-email'"
+              [inputId]="uid + '-email'"
               label="Adresse e-mail"
               type="email"
               inputmode="email"
@@ -68,7 +68,7 @@ let nextId = 0;
               hint="L'adresse à laquelle les appels de loyer sont envoyés. Une seule adresse."
             />
             <app-text-field
-              [id]="uid + '-phone'"
+              [inputId]="uid + '-phone'"
               label="Téléphone"
               type="tel"
               inputmode="tel"
@@ -103,7 +103,9 @@ let nextId = 0;
             </div>
           </form>
         } @else {
-          <dl class="grid grid-cols-1 gap-x-8 gap-y-3 @md:grid-cols-3">
+          <dl
+            class="grid grid-cols-1 gap-x-8 gap-y-3 @md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)_minmax(0,1fr)]"
+          >
             <div class="min-w-0">
               <dt class="text-xs font-medium text-muted">Nom</dt>
               <dd class="mt-0.5 truncate text-sm" [attr.title]="holder().name">

@@ -146,7 +146,7 @@ const RADIO =
           <div class="grid grid-cols-1 gap-4 @md:grid-cols-6">
             <app-text-field
               class="@md:col-span-6"
-              [id]="uid + '-name'"
+              [inputId]="uid + '-name'"
               label="Nom du bail"
               [control]="f.controls.name"
               hint="Par exemple : Appartement T3, Local commercial, Garage n° 13."
@@ -181,28 +181,28 @@ const RADIO =
 
             <app-text-field
               class="@md:col-span-2"
-              [id]="uid + '-streetNumber'"
+              [inputId]="uid + '-streetNumber'"
               label="Numéro"
               inputmode="numeric"
               [control]="f.controls.streetNumber"
             />
             <app-text-field
               class="@md:col-span-4"
-              [id]="uid + '-streetName'"
+              [inputId]="uid + '-streetName'"
               label="Voie"
               autocomplete="off"
               [control]="f.controls.streetName"
             />
             <app-text-field
               class="@md:col-span-4"
-              [id]="uid + '-optionalAddressInfo'"
+              [inputId]="uid + '-optionalAddressInfo'"
               label="Complément d'adresse"
               [optional]="true"
               [control]="f.controls.optionalAddressInfo"
             />
             <app-text-field
               class="@md:col-span-2"
-              [id]="uid + '-lot'"
+              [inputId]="uid + '-lot'"
               label="Lot"
               inputmode="numeric"
               [optional]="true"
@@ -210,7 +210,7 @@ const RADIO =
             />
             <app-text-field
               class="@md:col-span-2"
-              [id]="uid + '-postalCode'"
+              [inputId]="uid + '-postalCode'"
               label="Code postal"
               inputmode="numeric"
               autocomplete="off"
@@ -218,14 +218,14 @@ const RADIO =
             />
             <app-text-field
               class="@md:col-span-4"
-              [id]="uid + '-city'"
+              [inputId]="uid + '-city'"
               label="Ville"
               [control]="f.controls.city"
             />
 
             <app-text-field
               class="@md:col-span-3"
-              [id]="uid + '-price'"
+              [inputId]="uid + '-price'"
               label="Loyer hors charges (€)"
               inputmode="decimal"
               [control]="f.controls.price"
@@ -233,7 +233,7 @@ const RADIO =
             />
             <app-text-field
               class="@md:col-span-3"
-              [id]="uid + '-charge'"
+              [inputId]="uid + '-charge'"
               label="Avance sur charges (€)"
               inputmode="decimal"
               [optional]="true"
@@ -248,12 +248,12 @@ const RADIO =
                 class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3 @md:grid-cols-[minmax(0,1fr)_9rem_auto]"
               >
                 <app-text-field
-                  [id]="uid + '-charge-' + i + '-title'"
+                  [inputId]="uid + '-charge-' + i + '-title'"
                   label="Intitulé"
                   [control]="row.controls.title"
                 />
                 <app-text-field
-                  [id]="uid + '-charge-' + i + '-amount'"
+                  [inputId]="uid + '-charge-' + i + '-amount'"
                   label="Montant (€)"
                   inputmode="decimal"
                   [control]="row.controls.amount"
@@ -278,7 +278,7 @@ const RADIO =
           <div class="grid grid-cols-1 gap-4 @md:grid-cols-6">
             <app-text-field
               class="@md:col-span-3"
-              [id]="uid + '-renewalDate'"
+              [inputId]="uid + '-renewalDate'"
               label="Date anniversaire"
               type="date"
               [optional]="true"
@@ -297,7 +297,7 @@ const RADIO =
             </div>
             <app-text-field
               class="@md:col-span-3"
-              [id]="uid + '-referenceIndexQuarter'"
+              [inputId]="uid + '-referenceIndexQuarter'"
               label="Trimestre de l'indice de référence"
               [optional]="true"
               [control]="f.controls.referenceIndexQuarter"
@@ -305,7 +305,7 @@ const RADIO =
             />
             <app-text-field
               class="@md:col-span-3"
-              [id]="uid + '-referenceIndexValue'"
+              [inputId]="uid + '-referenceIndexValue'"
               label="Valeur de l'indice de référence"
               inputmode="decimal"
               [optional]="true"

@@ -39,9 +39,9 @@ export interface NewTenantDialogData {
       Vous ajouterez ses baux depuis sa fiche, une fois le locataire créé.
     </p>
     <form #formEl [formGroup]="form" class="mt-5 flex flex-col gap-4" (ngSubmit)="create()">
-      <app-text-field id="new-tenant-name" label="Nom" [control]="form.controls.name" />
+      <app-text-field inputId="new-tenant-name" label="Nom" [control]="form.controls.name" />
       <app-text-field
-        id="new-tenant-email"
+        inputId="new-tenant-email"
         label="Adresse e-mail"
         type="email"
         inputmode="email"
@@ -49,7 +49,7 @@ export interface NewTenantDialogData {
         hint="L'adresse à laquelle les appels de loyer sont envoyés. Une seule adresse."
       />
       <app-text-field
-        id="new-tenant-phone"
+        inputId="new-tenant-phone"
         label="Téléphone"
         type="tel"
         inputmode="tel"

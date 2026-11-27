@@ -82,8 +82,8 @@ export function filterHolders(holders: readonly Leaseholder[], query: string): L
       >
         <section aria-label="Liste des locataires" [class]="listClass()">
           <div class="flex flex-col gap-3 lg:shrink-0">
-            <div class="flex items-center justify-between gap-3">
-              <h1 class="min-w-0 truncate text-2xl font-semibold tracking-tight">Locataires</h1>
+            <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <h1 class="shrink-0 text-2xl font-semibold tracking-tight">Locataires</h1>
               <button type="button" class="btn btn-primary shrink-0" (click)="openNew()">
                 + Nouveau locataire
               </button>
