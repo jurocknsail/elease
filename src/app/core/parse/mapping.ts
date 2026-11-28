@@ -6,7 +6,8 @@ import type { RemoteObject } from './parse-client';
 /*
  * Pure mapping between the Back4App JSON (as `toJSON()` returns it, with the Parse envelope) and the
  * app models. The stored layout is the legacy one: nothing is renamed, retyped or restructured.
- * `isSelected` and `indexing` stay in the database but are neither read nor written.
+ * `isSelected` is read (the selection of the last send) but written only by `rememberSelection`;
+ * `indexing` stays in the database and is neither read nor written.
  */
 
 type Json = Record<string, unknown>;
@@ -68,6 +69,7 @@ export function leaseFromParse(json: Json): Lease {
     ...(referenceIndexQuarter !== undefined ? { referenceIndexQuarter } : {}),
     ...(referenceIndexValue !== undefined ? { referenceIndexValue } : {}),
     ...(revisionReminderSentFor !== undefined ? { revisionReminderSentFor } : {}),
+    ...(typeof json['isSelected'] === 'boolean' ? { isSelected: json['isSelected'] } : {}),
   };
 }
 

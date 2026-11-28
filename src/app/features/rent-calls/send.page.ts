@@ -231,7 +231,8 @@ function holdersLabel(names: readonly string[]): string {
                 [disabled]="loading()"
                 [attr.aria-busy]="loading()"
                 (click)="refresh()"
-              ><app-icon name="refresh" class="size-4" />
+              >
+                <app-icon name="refresh" class="size-4" />
                 Réessayer
               </button>
             }
@@ -315,7 +316,8 @@ function holdersLabel(names: readonly string[]): string {
                             [disabled]="outcome.busy || sending()"
                             [attr.aria-busy]="outcome.busy"
                             (click)="markSent(outcome)"
-                          ><app-icon name="check" class="size-4" />
+                          >
+                            <app-icon name="check" class="size-4" />
                             Marquer comme envoyé
                           </button>
                           <p class="text-xs text-muted">
@@ -336,7 +338,8 @@ function holdersLabel(names: readonly string[]): string {
                             [disabled]="outcome.busy || sending() || !canRetry()"
                             [attr.aria-busy]="outcome.busy"
                             (click)="retry(outcome)"
-                          ><app-icon name="refresh" class="size-4" />
+                          >
+                            <app-icon name="refresh" class="size-4" />
                             Réessayer
                           </button>
                         </div>
@@ -402,7 +405,9 @@ function holdersLabel(names: readonly string[]): string {
                 message="Ajoutez un locataire et son bail pour préparer vos appels de loyer."
                 icon="users"
               >
-                <a routerLink="/locataires" class="btn btn-primary"><app-icon name="users" class="size-4" />Aller aux locataires</a>
+                <a routerLink="/locataires" class="btn btn-primary"
+                  ><app-icon name="users" class="size-4" />Aller aux locataires</a
+                >
               </app-empty-state>
             }
             @case ('content') {
@@ -436,7 +441,10 @@ function holdersLabel(names: readonly string[]): string {
                         }
                       </span>
                     </span>
-                    <span class="min-w-0 flex-1" [class.opacity-60]="(row.sent || row.maybeSent) && !row.selected">
+                    <span
+                      class="min-w-0 flex-1"
+                      [class.opacity-60]="(row.sent || row.maybeSent) && !row.selected"
+                    >
                       <span class="flex items-baseline justify-between gap-3">
                         <span class="truncate text-sm font-medium" [attr.title]="row.lease">{{
                           row.lease
@@ -450,7 +458,11 @@ function holdersLabel(names: readonly string[]): string {
                           row.holder
                         }}</span>
                         <app-pill [tone]="row.sent ? 'ok' : row.maybeSent ? 'neutral' : 'warn'">{{
-                          row.sent ? row.sentLabel : row.maybeSent ? 'Peut-être envoyé' : 'À envoyer'
+                          row.sent
+                            ? row.sentLabel
+                            : row.maybeSent
+                              ? 'Peut-être envoyé'
+                              : 'À envoyer'
                         }}</app-pill>
                       </span>
                       @if (row.selected || row.active) {
@@ -535,7 +547,8 @@ function holdersLabel(names: readonly string[]): string {
                 >
                   <p class="text-sm font-semibold">Échec de la génération</p>
                   <p class="max-w-sm text-sm text-muted">{{ previewError() }}</p>
-                  <button type="button" class="btn btn-primary" (click)="retryPreview()"><app-icon name="refresh" class="size-4" />
+                  <button type="button" class="btn btn-primary" (click)="retryPreview()">
+                    <app-icon name="refresh" class="size-4" />
                     Réessayer
                   </button>
                 </div>
@@ -572,11 +585,14 @@ function holdersLabel(names: readonly string[]): string {
             [attr.aria-busy]="sending()"
             aria-describedby="send-reason"
             (click)="send()"
-          ><app-icon name="send" class="size-4" />
+          >
+            <app-icon name="send" class="size-4" />
             {{ sendLabel() }}
           </button>
         </div>
-        <p id="send-reason" class="mt-1 text-xs text-muted empty:hidden" aria-live="polite">{{ blockReason() ?? progressText() }}</p>
+        <p id="send-reason" class="mt-1 text-xs text-muted empty:hidden" aria-live="polite">
+          {{ blockReason() ?? progressText() }}
+        </p>
       </footer>
     </div>
   `,
@@ -1536,6 +1552,12 @@ export class SendPage {
     const groups = groupByEmail(items);
     const results = await this.sender.send(groups, period, profile);
     await this.afterSend(results, groups, period, todoIds);
+    // Remember what was ticked for this send: the default selection of the next one (legacy field
+    // `isSelected`, shared with the legacy app). After the send, so that it never delays or stops it.
+    const ids = chosen.flatMap(({ row }) => (row.lease.objectId ? [row.lease.objectId] : []));
+    this.repository.rememberSelection(ids).catch((error: unknown) => {
+      console.warn('[send] sélection non mémorisée', error);
+    });
   }
 
   /** Shows what happened to each e-mail, then reads the statuses again. */

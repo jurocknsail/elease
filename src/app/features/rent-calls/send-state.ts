@@ -83,7 +83,8 @@ export function showReminderBanner(today: Date, rows: RentCallRow[]): boolean {
 export function initialSelection(rows: readonly RentCallRow[]): Set<string> {
   const selected = new Set<string>();
   rows.forEach((row, index) => {
-    if (row.status === 'todo') {
+    // Still to send, and ticked at the last send (a lease never sent has no value: ticked).
+    if (row.status === 'todo' && row.lease.isSelected !== false) {
       selected.add(rowKey(row, index));
     }
   });

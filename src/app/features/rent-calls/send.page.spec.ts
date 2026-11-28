@@ -277,6 +277,24 @@ const sendButton = (root: HTMLElement) => root.querySelector<HTMLButtonElement>(
 const reason = (root: HTMLElement) => text(root.querySelector('#send-reason'));
 const buttons = (root: HTMLElement, label: string) =>
   [...root.querySelectorAll<HTMLButtonElement>('button')].filter((b) => text(b) === label);
+
+/** Saves of the send bookkeeping, without the memory of the selection (`isSelected`). */
+function bookkeepingSaves(fake: FakeParseClient) {
+  return fake
+    .callsOf('save', 'Lease')
+    .filter((call) => !(call.ops ?? []).every((op) => op.key === 'isSelected'));
+}
+
+/** Saves that only remember the selection of a send. */
+function selectionSaves(fake: FakeParseClient) {
+  return fake
+    .callsOf('save', 'Lease')
+    .filter(
+      (call) =>
+        (call.ops ?? []).length > 0 && (call.ops ?? []).every((op) => op.key === 'isSelected'),
+    );
+}
+
 const clouds = (fake: FakeParseClient): FakeCall[] => fake.callsOf('cloud');
 const attachmentsOf = (call: FakeCall) =>
   (call.params?.['attachments'] as Array<{ Filename: string; Base64Content: string }>) ?? [];
@@ -509,9 +527,7 @@ describe('SendPage', () => {
       sendButton(view.root).click();
       await view.settle();
 
-      expect(view.dialog.opened[0].message).toContain(
-        'a déjà été envoyé pour décembre 2026',
-      );
+      expect(view.dialog.opened[0].message).toContain('a déjà été envoyé pour décembre 2026');
     });
   });
 
@@ -796,7 +812,7 @@ describe('SendPage', () => {
       await view.settle();
 
       expect(view.dialog.opened.length).toBe(opened);
-      expect(view.fake.callsOf('save', 'Lease')).toHaveLength(0);
+      expect(bookkeepingSaves(view.fake)).toHaveLength(0);
     });
   });
 
@@ -1072,7 +1088,7 @@ describe('SendPage', () => {
       expect(rows.every((row) => row.getAttribute('aria-selected') === 'false')).toBe(true);
       expect(reason(view.root)).toBe('Sélectionnez au moins un bail');
       // The send was recorded: only the three bookkeeping fields, for the right period.
-      const saves = view.fake.callsOf('save', 'Lease');
+      const saves = bookkeepingSaves(view.fake);
       expect(saves).toHaveLength(2);
       expect(saves[0].ops?.map((op) => (op as { key: string }).key).sort()).toEqual([
         'lastSendDate',
@@ -1138,7 +1154,7 @@ describe('SendPage', () => {
       expect(rowsOf(view.root).every((row) => row.getAttribute('aria-selected') === 'false')).toBe(
         true,
       );
-      expect(view.fake.callsOf('save', 'Lease')).toHaveLength(0);
+      expect(bookkeepingSaves(view.fake)).toHaveLength(0);
 
       buttons(results, 'Marquer comme envoyé')[0].click();
       await view.settle();
@@ -1146,7 +1162,7 @@ describe('SendPage', () => {
       // The confirmation came first, then ONLY the bookkeeping was written: no new cloud call.
       expect(view.dialog.opened.at(-1)?.title).toBe('Marquer comme envoyé ?');
       expect(clouds(view.fake)).toHaveLength(1);
-      const saves = view.fake.callsOf('save', 'Lease');
+      const saves = bookkeepingSaves(view.fake);
       expect(saves).toHaveLength(2);
       expect(JSON.stringify(saves[0].ops)).toContain('2026-12');
       expect(JSON.stringify(saves[0].ops)).toContain(String(SENT_AT));

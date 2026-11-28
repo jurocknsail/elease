@@ -41,4 +41,10 @@ export interface Lease {
   referenceIndexValue?: number;
   /** Anniversary ('YYYY-MM-DD', optionally suffixed ':pending') the revision reminder was sent for. */
   revisionReminderSentFor?: string;
+  /**
+   * Whether the lease was ticked at the last send (legacy field, shared with the legacy app). Absent
+   * on a lease never sent: it is then ticked by default. Written only by a send
+   * (`rememberSelection`), never by an edit.
+   */
+  isSelected?: boolean;
 }

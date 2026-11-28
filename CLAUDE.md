@@ -108,7 +108,9 @@ the login screen. New objects get an owner-only ACL (per-user data isolation).
   nothing is applied automatically. A lease without anniversary or reference index is « À compléter ».
 - **Data**: existing Back4App fields keep their names and types; new ones are additive
   (`lastSentPeriod`, `lastSentPeriodAt`, `indexType`, `referenceIndexQuarter`, `referenceIndexValue`,
-  `revisionReminderSentFor`, class `LandlordProfile`). `isSelected` and `indexing` are no longer written.
+  `revisionReminderSentFor`, class `LandlordProfile`). `indexing` is no longer read nor written. `isSelected`
+  (legacy, shared with the legacy app) is the selection of the last send: read as the default ticks of
+  the send screen (with « À envoyer »), written only after a send (`rememberSelection`), never by an edit.
 - **History** (statistics): classes `RentCallLog` and `RentChange`, append-only, written ONLY by the Cloud
   Code trigger `afterSave('Lease')` (`cloud/history.js`), read-only for the app (`HistoryRepository`).
   They also capture what the legacy app does. Never write them from the client.

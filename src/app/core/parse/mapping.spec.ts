@@ -70,7 +70,7 @@ function baseLease(overrides: Partial<Lease> = {}): Lease {
 }
 
 describe('leaseFromParse', () => {
-  it('maps a real-shaped lease: absent charge and renewalDate stay absent, lot 0 stays 0, isSelected, indexing and the Parse envelope are ignored', () => {
+  it('maps a real-shaped lease: absent charge and renewalDate stay absent, lot 0 stays 0, isSelected read, indexing and the Parse envelope are ignored', () => {
     const lease = leaseFromParse(realShapedLease());
 
     expect(lease.objectId).toBe('lease-1');
@@ -83,8 +83,8 @@ describe('leaseFromParse', () => {
     expect(lease.postalCode).toBe(13600);
     expect(lease.lastSendDate).toBe(1761393600000);
     const keys = Object.keys(lease);
+    expect(lease.isSelected).toBe(true);
     for (const key of [
-      'isSelected',
       'indexing',
       'ACL',
       'createdAt',

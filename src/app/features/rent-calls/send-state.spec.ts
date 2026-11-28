@@ -250,6 +250,21 @@ describe('initialSelection', () => {
     expect(initialSelection([]).size).toBe(0);
   });
 
+  it('keeps unticked a lease that was not ticked at the last send (isSelected false)', () => {
+    const rows = buildRows(
+      [
+        holder('Dupont', [
+          lease({ name: 'Studio', isSelected: true }),
+          lease({ name: 'Garage', isSelected: false }),
+          lease({ name: 'Cave' }),
+        ]),
+      ],
+      DEC_2026,
+    );
+
+    expect(initialSelection(rows)).toEqual(new Set(['l-Studio', 'l-Cave']));
+  });
+
   it('uses the key of rowKey, also for a lease without objectId', () => {
     const rows = buildRows(
       [holder('Dupont', [lease({ name: 'Studio', objectId: undefined })])],

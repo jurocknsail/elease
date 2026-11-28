@@ -307,6 +307,39 @@ export class LeaseholderRepository {
     }
   }
 
+  /**
+   * Remembers which leases were ticked for a send (legacy field `isSelected`, also read by the legacy
+   * app): true for `selectedIds`, false for every other lease. Only the leases whose value changes are
+   * written, each on its own (best effort: a failure leaves the others saved and is rethrown).
+   */
+  async rememberSelection(selectedIds: readonly string[]): Promise<void> {
+    const selected = new Set(selectedIds);
+    const changes = this.state()
+      .flatMap((holder) => holder.leases)
+      .filter((lease): lease is Lease & { objectId: string } => typeof lease.objectId === 'string')
+      .map((lease) => ({ lease, want: selected.has(lease.objectId) }))
+      .filter(({ lease, want }) => lease.isSelected !== want);
+    return this.guarded(
+      async () => {
+        const results = await Promise.allSettled(
+          changes.map(async ({ lease, want }) => {
+            const object = this.client.objectRef(LEASE_CLASS, lease.objectId);
+            object.set('isSelected', want);
+            await withTimeout(object.save());
+            this.replaceLease({ ...lease, isSelected: want });
+          }),
+        );
+        const failure = results.find(
+          (result): result is PromiseRejectedResult => result.status === 'rejected',
+        );
+        if (failure) {
+          throw failure.reason;
+        }
+      },
+      { handleSessionError: false },
+    );
+  }
+
   private replaceLease(updated: Lease): void {
     this.state.update((list) =>
       list.map((holder) =>

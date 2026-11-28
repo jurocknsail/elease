@@ -150,8 +150,8 @@ describe('LeaseholderRepository', () => {
         renewalDate: null,
       });
       expect(holders[2].leases).toEqual([]);
-      // Mapped objects carry no trace of the ignored legacy fields.
-      expect(Object.keys(holders[0].leases[0])).not.toContain('isSelected');
+      // isSelected (the selection of the last send) is read; indexing stays ignored.
+      expect(holders[0].leases[0].isSelected).toBe(true);
       expect(Object.keys(holders[0].leases[0])).not.toContain('indexing');
 
       const finds = fake.callsOf('find', 'Leaseholder');
@@ -530,6 +530,32 @@ describe('LeaseholderRepository', () => {
       await repo.deleteLeaseholder('h1');
       expect(fake.record('Leaseholder', 'h1')).toBeUndefined();
       expect(fake.record('Lease', 'b')).toBeUndefined();
+    });
+  });
+
+  describe('rememberSelection', () => {
+    it('writes isSelected only where it changes: true for the ticked leases, false for the others', async () => {
+      const { fake, repo } = await loaded();
+
+      // Every seeded lease is stored with isSelected true: only the unticked ones are written.
+      await repo.rememberSelection(['a']);
+
+      const saves = fake.callsOf('save', 'Lease');
+      expect(saves.map((s) => s.id).sort()).toEqual(['b', 'c']);
+      expect(
+        saves.every(
+          (s) =>
+            JSON.stringify(saveOps(s)) ===
+            JSON.stringify([{ kind: 'set', key: 'isSelected', value: false }]),
+        ),
+      ).toBe(true);
+      expect(fake.record('Lease', 'b')?.attrs['isSelected']).toBe(false);
+      const leases = repo.leaseholders().flatMap((h) => h.leases);
+      expect(leases.find((l) => l.objectId === 'a')?.isSelected).toBe(true);
+      expect(leases.find((l) => l.objectId === 'b')?.isSelected).toBe(false);
+
+      await repo.rememberSelection(['a']);
+      expect(fake.callsOf('save', 'Lease')).toHaveLength(2);
     });
   });
 
