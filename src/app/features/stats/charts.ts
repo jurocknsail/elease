@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { formatEuro } from '../../core/format/fr';
 import { MonthBar } from '../../core/stats/stats';
 
-/** A smooth path through points (Catmull-Rom turned into cubic Béziers), never overshooting below 0. */
+/** A smooth path through points (Catmull-Rom turned into cubic Béziers), without overshoot. */
 function smoothPath(points: readonly [number, number][]): string {
   if (points.length === 0) {
     return '';
@@ -13,10 +13,15 @@ function smoothPath(points: readonly [number, number][]): string {
     const [x1, y1] = points[i];
     const [x2, y2] = points[i + 1];
     const [x3, y3] = points[i + 2] ?? points[i + 1];
+    // Control points kept between the two ends: the curve never overshoots (a cumulative line that
+    // jumps from 0 would otherwise dip below the axis).
+    const low = Math.min(y1, y2);
+    const high = Math.max(y1, y2);
+    const clamp = (y: number) => Math.min(high, Math.max(low, y));
     const c1x = x1 + (x2 - x0) / 6;
-    const c1y = y1 + (y2 - y0) / 6;
+    const c1y = clamp(y1 + (y2 - y0) / 6);
     const c2x = x2 - (x3 - x1) / 6;
-    const c2y = y2 - (y3 - y1) / 6;
+    const c2y = clamp(y2 - (y3 - y1) / 6);
     d += ` C${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${x2} ${y2}`;
   }
   return d;

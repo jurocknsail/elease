@@ -238,15 +238,19 @@ export function filterHolders(holders: readonly Leaseholder[], query: string): L
         </section>
 
         <section #detail [class]="detailClass()" aria-label="Fiche du locataire">
-          <router-outlet />
           @if (!hasDetail()) {
-            <app-empty-state
-              class="rounded-2xl border border-dashed border-border-strong bg-card/50"
-              heading="Sélectionnez un locataire"
-              message="Choisissez un locataire dans la liste pour voir et modifier son contact et ses baux."
-              icon="users"
-            />
+            <div
+              class="flex! items-center justify-center rounded-2xl border border-dashed border-border-strong bg-card/50 lg:h-full"
+            >
+              <app-empty-state
+                heading="Sélectionnez un locataire"
+                message="Choisissez un locataire dans la liste pour voir et modifier son contact et ses baux."
+                icon="users"
+              />
+            </div>
           }
+          <!-- flex! (important): the global rule router-outlet + * (display: block) must not undo the centring. -->
+          <router-outlet />
         </section>
       </div>
     }

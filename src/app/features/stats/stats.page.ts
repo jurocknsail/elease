@@ -250,7 +250,7 @@ function capitalise(text: string): string {
           </section>
         }
 
-        <div class="grid grid-cols-1 items-start gap-4" [class.@4xl:grid-cols-2]="!showLeaseList()">
+        <div class="grid grid-cols-1 gap-4" [class.@4xl:grid-cols-2]="!showLeaseList()">
           <section class="card px-4 py-4 md:px-5" aria-labelledby="stats-sends">
             <h2 id="stats-sends" class="mb-1 text-sm font-semibold">Envois</h2>
             @if (timings().length) {
