@@ -51,3 +51,16 @@ export function periodLastDay(p: BillingPeriod): number {
 export function dueDate(p: BillingPeriod): Date {
   return new Date(p.year, p.month - 1, 1);
 }
+
+const MONTH_NAME = new Intl.DateTimeFormat('fr-FR', { month: 'long', timeZone: 'UTC' });
+
+/**
+ * The two parts of a rent-call title: the month the calls go out (the month BEFORE the billed one) and
+ * the billed period. « Appels de novembre » / « pour décembre 2026 »; elided before a vowel
+ * (« Appels d'avril », « d'août », « d'octobre »).
+ */
+export function callTitle(p: BillingPeriod): { calls: string; billed: string } {
+  const callMonth = MONTH_NAME.format(new Date(Date.UTC(p.year, p.month - 2, 1))).toLowerCase();
+  const de = /^[aeiouyàâéèêîôû]/.test(callMonth) ? 'd’' : 'de ';
+  return { calls: `Appels ${de}${callMonth}`, billed: `pour ${periodLabel(p)}` };
+}

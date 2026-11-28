@@ -19,6 +19,7 @@ import { APP_ENV } from '../../core/app-env';
 import { AuthService } from '../../core/auth/auth.service';
 import { SessionErrorHandler, isSessionError } from '../../core/auth/session-error';
 import {
+  callTitle,
   BillingPeriod,
   billingPeriod,
   defaultCallDate,
@@ -175,7 +176,8 @@ function holdersLabel(names: readonly string[]): string {
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
               <h1 class="text-2xl font-semibold tracking-tight md:text-[1.75rem]">
-                Appels de loyer — {{ monthLabel() }}
+                {{ title().calls }}
+                <span class="font-normal text-muted">{{ title().billed }}</span>
               </h1>
               @if (testMode) {
                 <app-pill tone="accent">Mode test</app-pill>
@@ -629,6 +631,7 @@ export class SendPage {
   protected readonly dateValid = computed(() => parseDateInput(this.dateText()) !== null);
   private readonly period = computed(() => billingPeriod(this.callDate()));
   protected readonly monthLabel = computed(() => periodLabel(this.period()));
+  protected readonly title = computed(() => callTitle(this.period()));
   protected readonly dueLabel = computed(() => dueDateLabel(this.period()));
 
   // ---- data (S1) -------------------------------------------------------------------------------

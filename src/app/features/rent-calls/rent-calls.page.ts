@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { isSessionError } from '../../core/auth/session-error';
-import { billingPeriod, defaultCallDate, periodLabel } from '../../core/billing/period';
+import { billingPeriod, callTitle, defaultCallDate, periodLabel } from '../../core/billing/period';
 import { NOW } from '../../core/clock';
 import { formatEuro, formatLeaseAddress } from '../../core/format/fr';
 import { Leaseholder } from '../../core/models/leaseholder';
@@ -80,10 +80,6 @@ function sendMoment(sent: boolean, at: number | undefined): string {
   return `Envoyé le ${new Date(at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
 }
 
-function capitalise(value: string): string {
-  return value.charAt(0).toLocaleUpperCase('fr') + value.slice(1);
-}
-
 /**
  * Home screen: the rent calls of the month to come (« Janvier 2027 »), with what is left to send, what
  * is sent, the month's total and one row per lease. The month is the billing month of the default call
@@ -103,7 +99,10 @@ function capitalise(value: string): string {
   template: `
     <header class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div class="min-w-0">
-        <h1 class="text-2xl font-semibold tracking-tight md:text-[1.75rem]">{{ title() }}</h1>
+        <h1 class="text-2xl font-semibold tracking-tight md:text-[1.75rem]">
+          {{ title().calls }}
+          <span class="font-normal text-muted">{{ title().billed }}</span>
+        </h1>
         <div class="mt-1 min-h-5 text-sm text-muted">
           @switch (view()) {
             @case ('content') {
@@ -125,7 +124,9 @@ function capitalise(value: string): string {
 
       @switch (view()) {
         @case ('content') {
-          <a routerLink="/appels/envoi" [class]="actionClass()"><app-icon name="send" class="size-4" />Préparer les envois</a>
+          <a routerLink="/appels/envoi" [class]="actionClass()"
+            ><app-icon name="send" class="size-4" />Préparer les envois</a
+          >
         }
         @case ('skeleton') {
           <span
@@ -156,7 +157,8 @@ function capitalise(value: string): string {
                 [disabled]="loading()"
                 [attr.aria-busy]="loading()"
                 (click)="refresh()"
-              ><app-icon name="refresh" class="size-4" />
+              >
+                <app-icon name="refresh" class="size-4" />
                 Réessayer
               </button>
             }
@@ -192,7 +194,10 @@ function capitalise(value: string): string {
                 <app-icon name="check-circle" class="size-4 text-ok" />Envoyés
               </dt>
               <dd class="mt-1 text-2xl font-semibold tabular-nums xl:text-3xl">
-                {{ totals().sent }}<span class="text-base font-medium text-muted"> / {{ totals().sent + totals().todo }}</span>
+                {{ totals().sent
+                }}<span class="text-base font-medium text-muted">
+                  / {{ totals().sent + totals().todo }}</span
+                >
                 <span
                   class="mt-2 block h-1.5 overflow-hidden rounded-full bg-border"
                   role="progressbar"
@@ -201,13 +206,14 @@ function capitalise(value: string): string {
                   aria-valuemin="0"
                   aria-valuemax="100"
                 >
-                  <span class="block h-full rounded-full bg-ok transition-[width] duration-500" [style.width.%]="progress()"></span>
+                  <span
+                    class="block h-full rounded-full bg-ok transition-[width] duration-500"
+                    [style.width.%]="progress()"
+                  ></span>
                 </span>
               </dd>
             </div>
-            <div
-              class="col-span-2 card px-4 py-3 lg:col-span-1 md:px-5 md:py-4"
-            >
+            <div class="col-span-2 card px-4 py-3 lg:col-span-1 md:px-5 md:py-4">
               <dt class="text-xs font-medium text-muted md:text-sm">Total du mois</dt>
               <dd class="mt-1 text-2xl font-semibold tabular-nums xl:text-3xl">
                 {{ totalLabel() }}
@@ -218,20 +224,31 @@ function capitalise(value: string): string {
         </section>
 
         <section class="mt-6 overflow-hidden card">
-          <h2 class="flex items-center gap-2 border-b border-border px-4 py-3.5 text-[15px] font-semibold lg:px-5">
+          <h2
+            class="flex items-center gap-2 border-b border-border px-4 py-3.5 text-[15px] font-semibold lg:px-5"
+          >
             <app-icon name="users" class="size-[18px] text-accent" />
             Détail par bail
           </h2>
-          <ul [attr.aria-label]="'Locataires et baux de ' + monthLabel()" class="divide-y divide-border">
+          <ul
+            [attr.aria-label]="'Locataires et baux de ' + monthLabel()"
+            class="divide-y divide-border"
+          >
             @for (group of groups(); track group.key) {
               <li>
-                <div class="mx-2 grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-x-3 pt-2.5 pr-3 pb-0.5 pl-2 lg:gap-x-4 lg:pr-4">
-                  <h3 class="flex min-w-0 items-center gap-3 text-sm font-semibold" [attr.title]="group.holder">
+                <div
+                  class="mx-2 grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-x-3 pt-2.5 pr-3 pb-0.5 pl-2 lg:gap-x-4 lg:pr-4"
+                >
+                  <h3
+                    class="flex min-w-0 items-center gap-3 text-sm font-semibold"
+                    [attr.title]="group.holder"
+                  >
                     <app-avatar [name]="group.holder" />
                     <span class="truncate">{{ group.holder }}</span>
                   </h3>
-                  <span class="text-right text-sm font-semibold tabular-nums">{{ group.total }}</span>
-
+                  <span class="text-right text-sm font-semibold tabular-nums">{{
+                    group.total
+                  }}</span>
                 </div>
                 <ul class="flex flex-col pb-1.5">
                   @for (lease of group.leases; track lease.key) {
@@ -239,11 +256,17 @@ function capitalise(value: string): string {
                       class="mx-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-lg py-1 pr-3 pl-4 sm:grid-cols-[auto_minmax(0,1fr)_9rem_6rem] sm:pl-11 transition-colors hover:bg-surface lg:gap-x-4 lg:pr-4 lg:pl-12"
                     >
                       @if (lease.sent) {
-                        <span aria-hidden="true" class="grid size-6 place-items-center rounded-full bg-ok-soft text-ok">
+                        <span
+                          aria-hidden="true"
+                          class="grid size-6 place-items-center rounded-full bg-ok-soft text-ok"
+                        >
                           <app-icon name="check" class="size-3.5" />
                         </span>
                       } @else {
-                        <span aria-hidden="true" class="size-6 rounded-full border-2 border-dashed border-warn"></span>
+                        <span
+                          aria-hidden="true"
+                          class="size-6 rounded-full border-2 border-dashed border-warn"
+                        ></span>
                       }
                       <a
                         [routerLink]="['/locataires', group.holderId]"
@@ -253,17 +276,26 @@ function capitalise(value: string): string {
                         [routerLinkActiveOptions]="leaseActiveOptions"
                         class="-mx-2 min-w-0 rounded-md px-2 py-0.5 aria-[current=location]:bg-accent-soft aria-[current=location]:text-accent"
                       >
-                        <span class="block truncate text-sm font-medium" [attr.title]="lease.lease">{{
-                          lease.lease
-                        }}</span>
-                        <span class="block truncate text-xs text-muted" [attr.title]="lease.address">{{
-                          lease.address
-                        }}</span>
+                        <span
+                          class="block truncate text-sm font-medium"
+                          [attr.title]="lease.lease"
+                          >{{ lease.lease }}</span
+                        >
+                        <span
+                          class="block truncate text-xs text-muted"
+                          [attr.title]="lease.address"
+                          >{{ lease.address }}</span
+                        >
                       </a>
-                      <app-pill class="col-start-2 row-start-2 justify-self-start sm:col-auto sm:row-auto sm:justify-self-end" [tone]="lease.sent ? 'ok' : 'warn'">{{ lease.when }}</app-pill>
-                      <span class="col-start-3 row-start-1 text-right text-sm font-medium tabular-nums sm:col-auto sm:row-auto">{{
-                        lease.amount
-                      }}</span>
+                      <app-pill
+                        class="col-start-2 row-start-2 justify-self-start sm:col-auto sm:row-auto sm:justify-self-end"
+                        [tone]="lease.sent ? 'ok' : 'warn'"
+                        >{{ lease.when }}</app-pill
+                      >
+                      <span
+                        class="col-start-3 row-start-1 text-right text-sm font-medium tabular-nums sm:col-auto sm:row-auto"
+                        >{{ lease.amount }}</span
+                      >
                     </li>
                   }
                 </ul>
@@ -347,7 +379,9 @@ function capitalise(value: string): string {
           message="Ajoutez un locataire et son bail pour préparer vos appels de loyer."
           icon="users"
         >
-          <a routerLink="/locataires" class="btn btn-primary"><app-icon name="users" class="size-4" />Aller aux locataires</a>
+          <a routerLink="/locataires" class="btn btn-primary"
+            ><app-icon name="users" class="size-4" />Aller aux locataires</a
+          >
         </app-empty-state>
       }
     }
@@ -366,7 +400,7 @@ export class RentCallsPage {
   private readonly period = computed(() => billingPeriod(defaultCallDate(this.today())));
   /** « janvier 2027 », for sentences. */
   protected readonly monthLabel = computed(() => periodLabel(this.period()));
-  protected readonly title = computed(() => capitalise(this.monthLabel()));
+  protected readonly title = computed(() => callTitle(this.period()));
 
   private readonly data = computed(() => buildRows(this.repository.leaseholders(), this.period()));
   protected readonly rows = computed(() => this.data().map(toView));

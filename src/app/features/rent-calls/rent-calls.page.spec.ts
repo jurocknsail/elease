@@ -183,20 +183,20 @@ describe('RentCallsPage', () => {
   });
 
   describe('title', () => {
-    it('is the billing month, capitalised: « Décembre 2026 » on 25 November 2026', async () => {
+    it('reads « Appels de novembre pour décembre 2026 » on 25 November 2026', async () => {
       const view = await setup({ now: new Date(2026, 10, 25) });
       await view.open();
 
       const headings = [...view.root.querySelectorAll('h1')];
       expect(headings).toHaveLength(1);
-      expect(text(headings[0])).toBe('Décembre 2026');
+      expect(text(headings[0])).toBe('Appels de novembre pour décembre 2026');
     });
 
     it('uses the month after the call date: on 3 January the calls of 25 January bill February', async () => {
       const view = await setup({ now: new Date(2027, 0, 3) });
       await view.open();
 
-      expect(text(view.root.querySelector('h1'))).toBe('Février 2027');
+      expect(text(view.root.querySelector('h1'))).toBe('Appels de janvier pour février 2027');
     });
   });
 

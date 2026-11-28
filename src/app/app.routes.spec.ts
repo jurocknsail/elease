@@ -43,13 +43,15 @@ describe('routes', () => {
 
     expect(router.url).toBe('/appels');
     expect(
-      (harness.fixture.nativeElement as HTMLElement).querySelector('app-shell main h1')
-        ?.textContent,
-    ).toBe('Décembre 2026');
+      (harness.fixture.nativeElement as HTMLElement)
+        .querySelector('app-shell main h1')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('Appels de novembre pour décembre 2026');
   });
 
   it.each([
-    ['/appels/envoi', 'Appels de loyer — décembre 2026'],
+    ['/appels/envoi', 'Appels de novembre pour décembre 2026'],
     ['/reglages', 'Réglages'],
   ])('serves %s inside the shell, lazily', async (url, title) => {
     const { router } = setup(true);

@@ -1,4 +1,5 @@
 import {
+  callTitle,
   billingPeriod,
   defaultCallDate,
   dueDate,
@@ -97,5 +98,21 @@ describe('dueDate', () => {
     expect(date.getMonth()).toBe(0);
     expect(date.getDate()).toBe(1);
     expect(date.getHours()).toBe(0);
+  });
+});
+
+describe('callTitle', () => {
+  it('names the month the calls go out and the billed period', () => {
+    expect(callTitle({ year: 2026, month: 12 })).toEqual({
+      calls: 'Appels de novembre',
+      billed: 'pour décembre 2026',
+    });
+    expect(callTitle({ year: 2027, month: 1 }).calls).toBe('Appels de décembre');
+  });
+
+  it('elides before a vowel: avril, août, octobre', () => {
+    expect(callTitle({ year: 2027, month: 5 }).calls).toBe('Appels d’avril');
+    expect(callTitle({ year: 2027, month: 9 }).calls).toBe('Appels d’août');
+    expect(callTitle({ year: 2027, month: 11 }).calls).toBe('Appels d’octobre');
   });
 });

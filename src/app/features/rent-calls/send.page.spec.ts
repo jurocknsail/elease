@@ -321,7 +321,7 @@ describe('SendPage', () => {
       const view = await setup();
       await view.open();
 
-      expect(text(view.root.querySelector('h1'))).toBe('Appels de loyer — décembre 2026');
+      expect(text(view.root.querySelector('h1'))).toBe('Appels de novembre pour décembre 2026');
       expect(text(view.root)).toContain('Échéance : 1er décembre 2026');
       const input = view.root.querySelector<HTMLInputElement>('#send-date')!;
       expect(input.type).toBe('date');
@@ -428,7 +428,7 @@ describe('SendPage', () => {
       view.harness.detectChanges();
       await view.settle();
 
-      expect(text(view.root.querySelector('h1'))).toBe('Appels de loyer — janvier 2027');
+      expect(text(view.root.querySelector('h1'))).toBe('Appels de décembre pour janvier 2027');
       expect(text(view.root)).toContain('Échéance : 1er janvier 2027');
       // Garage was sent for December, not for January: it is now to send, and selected.
       expect(rowsOf(view.root).map((row) => row.getAttribute('aria-selected'))).toEqual([
@@ -477,7 +477,7 @@ describe('SendPage', () => {
       expect(sendButton(view.root).disabled).toBe(true);
       expect(reason(view.root)).toBe("Saisissez une date d'appel valide");
       expect(view.root.querySelector('#send-date')?.getAttribute('aria-invalid')).toBe('true');
-      expect(text(view.root.querySelector('h1'))).toBe('Appels de loyer — décembre 2026');
+      expect(text(view.root.querySelector('h1'))).toBe('Appels de novembre pour décembre 2026');
 
       typeDate(view, '2026-11-25');
       view.harness.detectChanges();
