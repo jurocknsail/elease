@@ -39,19 +39,35 @@ export function loginErrorMessage(error: unknown): string {
     <main
       class="relative flex min-h-dvh items-center justify-center overflow-hidden bg-canvas bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_srgb,var(--color-accent)_16%,transparent),transparent)] px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]"
     >
-      <div class="w-full max-w-sm">
+      <!-- Animated backdrop: a faint grid and two slowly drifting glows (static when motion is reduced). -->
+      <div class="login-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
+      <div class="login-blob login-blob-a" aria-hidden="true"></div>
+      <div class="login-blob login-blob-b" aria-hidden="true"></div>
+
+      <div class="relative w-full max-w-sm">
         <div class="mb-6 flex flex-col items-center gap-3">
-          <img
-            src="logos/e-lease-symbol.png"
-            alt=""
-            width="56"
-            height="56"
-            class="size-16 rounded-2xl bg-white p-1.5 shadow-xl shadow-accent/20 ring-1 ring-border"
-          />
-          <p class="text-xl font-bold tracking-tight">E-Lease</p><p class="-mt-2 text-sm text-muted">Vos appels de loyer, sans effort.</p>
+          <div class="login-rise relative" style="--delay: 0ms">
+            <span class="login-glow" aria-hidden="true"></span>
+            <img
+              src="logos/e-lease-symbol.png"
+              alt=""
+              width="56"
+              height="56"
+              class="login-float relative size-16 rounded-2xl bg-white p-1.5 shadow-xl shadow-accent/20 ring-1 ring-border"
+            />
+          </div>
+          <div class="login-rise flex flex-col items-center gap-1" style="--delay: 90ms">
+            <p class="text-xl font-bold tracking-tight">E-Lease</p>
+            <p class="text-sm text-muted">Vos appels de loyer, sans effort.</p>
+          </div>
         </div>
 
-        <div class="card p-6 shadow-xl sm:p-8">
+        <div
+          class="login-rise card p-6 shadow-xl sm:p-8"
+          style="--delay: 180ms"
+          [class.login-shake]="shake()"
+          (animationend)="shake.set(false)"
+        >
           <h1 class="text-xl font-semibold tracking-tight">Connexion</h1>
           <p class="mt-1 text-sm text-muted">
             Connectez-vous pour gérer vos locataires et vos appels de loyer.
@@ -140,6 +156,8 @@ export class LoginPage {
 
   protected readonly pending = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  /** The card shakes once when the sign-in is refused (reset at the end of the animation). */
+  protected readonly shake = signal(false);
   protected readonly missing = signal({ username: false, password: false });
 
   constructor() {
@@ -176,6 +194,7 @@ export class LoginPage {
       await this.auth.login(username, password);
     } catch (error) {
       this.errorMessage.set(loginErrorMessage(error));
+      this.shake.set(true);
       if (loginErrorMessage(error) === WRONG_CREDENTIALS) {
         const field = this.passwordInput().nativeElement;
         field.value = '';

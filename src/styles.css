@@ -386,3 +386,146 @@ h1 {
       0 12px 32px -12px rgb(15 23 42 / 0.18);
   }
 }
+
+/* ---- Login screen motion. Everything is still when the device asks for reduced motion. ---- */
+.login-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-text) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-text) 6%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(60% 55% at 50% 40%, black, transparent 75%);
+  animation: login-grid-pan 30s linear infinite;
+}
+
+.login-blob {
+  position: absolute;
+  width: 34rem;
+  height: 34rem;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.login-blob-a {
+  top: -14rem;
+  left: -10rem;
+  background: var(--color-accent);
+  animation: login-drift-a 18s ease-in-out infinite alternate;
+}
+
+.login-blob-b {
+  right: -12rem;
+  bottom: -16rem;
+  background: #7c3aed;
+  opacity: 0.22;
+  animation: login-drift-b 22s ease-in-out infinite alternate;
+}
+
+[data-theme='dark'] .login-blob {
+  opacity: 0.25;
+}
+
+.login-rise {
+  animation: login-rise 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+.login-float {
+  animation: login-float 5s ease-in-out 700ms infinite;
+}
+
+.login-glow {
+  position: absolute;
+  inset: -10px;
+  border-radius: 1.4rem;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-accent) 45%, transparent), transparent 70%);
+  filter: blur(8px);
+  animation: login-glow 5s ease-in-out 700ms infinite;
+}
+
+.login-shake {
+  animation: login-shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes login-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes login-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes login-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes login-drift-a {
+  to {
+    transform: translate(8rem, 5rem) scale(1.15);
+  }
+}
+
+@keyframes login-drift-b {
+  to {
+    transform: translate(-7rem, -6rem) scale(1.1);
+  }
+}
+
+@keyframes login-grid-pan {
+  to {
+    background-position: 44px 44px;
+  }
+}
+
+@keyframes login-shake {
+  10%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  80% {
+    transform: translateX(4px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-7px);
+  }
+  40%,
+  60% {
+    transform: translateX(7px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-grid,
+  .login-blob,
+  .login-rise,
+  .login-float,
+  .login-glow,
+  .login-shake {
+    animation: none;
+  }
+}
