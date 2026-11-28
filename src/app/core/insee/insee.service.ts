@@ -5,7 +5,7 @@ import { INSEE_SERIES } from '../revision/revision';
 
 const BASE_URL = 'https://api.insee.fr/series/BDM/V1/data/SERIES_BDM';
 /** How many quarters are asked for: far more than the one or two the revision needs. */
-const LAST_OBSERVATIONS = 12;
+const LAST_OBSERVATIONS = 24;
 export const INSEE_TIMEOUT_MS = 15_000;
 
 /** An INSEE period, 'YYYY-Qn'. */

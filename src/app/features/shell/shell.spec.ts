@@ -56,17 +56,18 @@ describe('Shell', () => {
   });
 
   describe('navigation', () => {
-    it('has the logo « E-Lease » and the three links « Appels de loyer », « Locataires », « Réglages » in the sidebar and the bottom bar', async () => {
+    it('has the logo « E-Lease » and the four links « Appels de loyer », « Locataires », « Statistiques », « Réglages » in the sidebar and the bottom bar', async () => {
       const { root } = await setup();
       const aside = root.querySelector('aside') as HTMLElement;
 
       expect(aside.textContent).toContain('E-Lease');
       expect(aside.querySelector('img')?.getAttribute('alt')).toBe('');
       for (const nav of [navs(root).sidebar, navs(root).tabs]) {
-        expect(labels(nav)).toEqual(['Appels de loyer', 'Locataires', 'Réglages']);
+        expect(labels(nav)).toEqual(['Appels de loyer', 'Locataires', 'Statistiques', 'Réglages']);
         expect([...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual([
           '/appels',
           '/locataires',
+          '/statistiques',
           '/reglages',
         ]);
       }

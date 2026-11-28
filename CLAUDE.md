@@ -69,7 +69,7 @@ src/app/
     email/     email-guard.ts, rent-call-email.ts, rent-call-sender.ts
     insee/     insee.service.ts   revision/  revision.ts (pure)
     auth/ theme/ pwa/ format/ (fr.ts)
-  features/    one folder per screen: login, shell, rent-calls, tenants, settings
+  features/    one folder per screen: login, shell, rent-calls, tenants, stats, settings
   shared/ui/   pill, pdf-viewer, confirm-dialog, empty-state ...
 cloud/         Back4App Cloud Code jobs (sendMonthlyReminder, sendRevisionReminder), see cloud/README.md
 public/        manifest, icons (favicon, PWA), logos (brand pack), social (og-image), _redirects, _headers
@@ -109,6 +109,11 @@ the login screen. New objects get an owner-only ACL (per-user data isolation).
 - **Data**: existing Back4App fields keep their names and types; new ones are additive
   (`lastSentPeriod`, `lastSentPeriodAt`, `indexType`, `referenceIndexQuarter`, `referenceIndexValue`,
   `revisionReminderSentFor`, class `LandlordProfile`). `isSelected` and `indexing` are no longer written.
+- **History** (statistics): classes `RentCallLog` and `RentChange`, append-only, written ONLY by the Cloud
+  Code trigger `afterSave('Lease')` (`cloud/history.js`), read-only for the app (`HistoryRepository`).
+  They also capture what the legacy app does. Never write them from the client.
+- **Next action hint**: `core/stats/next-action.ts` (pure), shown by the shell above every non-full-width
+  screen; closing it lasts until the app is reopened or the user signs in again.
 
 ## Conventions
 

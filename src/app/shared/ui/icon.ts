@@ -67,6 +67,13 @@ const ICONS = {
   'trending-up': ['m22 7-8.5 8.5-5-5L2 17', 'M16 7h6v6'],
   'log-in': ['M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4', 'm10 17 5-5-5-5', 'M15 12H3'],
   x: ['M18 6 6 18', 'm6 6 12 12'],
+  chart: ['M3 3v18h18', 'M7 16v-4', 'M12 16V8', 'M17 16V5'],
+  calendar: [
+    'M8 2v4',
+    'M16 2v4',
+    'M3 10h18',
+    'M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+  ],
 } as const;
 
 export type IconName = keyof typeof ICONS;

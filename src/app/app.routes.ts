@@ -66,6 +66,11 @@ export const routes: Routes = [
         ],
       },
       {
+        path: 'statistiques',
+        title: 'Statistiques',
+        loadComponent: () => import('./features/stats/stats.page').then((m) => m.StatsPage),
+      },
+      {
         path: 'reglages',
         title: 'Réglages',
         loadComponent: () =>

@@ -5,6 +5,19 @@ Deux jobs, qui n'écrivent **jamais** aux locataires (expéditeur = destinataire
 - `sendMonthlyReminder` : **tous les jours à partir du 25 jusqu'à la fin du mois** (Europe/Paris), tant qu'un bail n'est pas envoyé pour la période suivante (même règle que l'app : `lastSentPeriod` / `lastSendDate`) ; aucun mail dès que tout est envoyé. « N appels de loyer à envoyer pour <mois suivant> ».
 - `sendRevisionReminder` : quotidien, rappel de révision de loyer à J-45 de la date anniversaire (proposition de loyer, ou « indice pas encore publié » puis renvoi à la publication).
 
+## Historique des baux (statistiques)
+
+`history.js` enregistre un déclencheur `afterSave` sur `Lease` : à chaque sauvegarde d'un bail (nouvelle app **ou ancienne app**), il ajoute des lignes dans deux classes nouvelles, en ajout seul, lisibles uniquement par le propriétaire du bail et jamais modifiables par un client (`beforeSave` / `beforeDelete` refusent sans master key) :
+
+- `RentCallLog` : un appel de loyer envoyé (`lastSendDate` a changé) : `leaseId`, `leaseName`, `period`, `sentAt`, `source` (`app` / `legacy` / `baseline`), montants du jour (`price`, `charge`, `tva`, `extras`, `total`).
+- `RentChange` : un changement du montant appelé (création, modification, révision) : anciens et nouveaux loyer, total et indice de référence.
+
+Rien n'est modifié dans `Lease` ni `Leaseholder` : compatible avec l'ancienne app. Un échec est journalisé et ne bloque jamais la sauvegarde du bail.
+
+Job manuel `backfillLeaseHistory` (`onlyUser`, `dryRun`) : donne à chaque bail sans historique un point de départ (`baseline` : montants actuels et dernier envoi). Idempotent. Après déploiement : d'abord `{"onlyUser":"julien","dryRun":true}`, puis `{"onlyUser":"julien"}`, puis `{}` une seule fois pour tous les propriétaires.
+
+**Avant de déployer** : vérifier que le `main.js` déployé ne définit pas déjà `afterSave('Lease')`, `beforeSave('RentCallLog')`… (Parse n'accepte qu'un déclencheur par classe et par type).
+
 ## Fichiers
 
 | Fichier | Rôle |
@@ -12,7 +25,8 @@ Deux jobs, qui n'écrivent **jamais** aux locataires (expéditeur = destinataire
 | `jobs.js` | enregistre les deux jobs (`Parse.Cloud.job`), corps testables `runMonthlyReminder` / `runRevisionReminder`, expéditeur Mailjet, accès Parse/INSEE réels |
 | `lib/periods.js` `lib/amounts.js` `lib/send-status.js` `lib/revision.js` | ports de `src/app/core/{billing,revision,insee}` (lecture des dates en Europe/Paris) |
 | `lib/format.js` `lib/leases.js` `lib/reminders.js` | montants/dates français, lecture des baux Parse, construction des deux e-mails |
-| `main.append.js` | la ligne `require('./jobs');` à ajouter à la fin du `main.js` déployé |
+| `history.js`, `lib/history.js` | déclencheur d'historique des baux et job `backfillLeaseHistory` |
+| `main.append.js` | les lignes `require('./jobs');` et `require('./history');` à ajouter à la fin du `main.js` déployé |
 | `package.json` | `node-mailjet ^3.1.0` (chargé uniquement à l'envoi réel) |
 | `test/` | tests `node --test`, sans Parse, sans Mailjet, sans réseau |
 
@@ -53,7 +67,7 @@ Les jobs sans `dryRun` envoient réellement ; avec `onlyUser:"julien"` ils n'éc
 
 1. Récupérer le `main.js` déployé (version 16) avec le MCP Back4App `get_file_content`, ou depuis le dashboard (Cloud Code → Functions) ; le sauvegarder en `cloud/main.js` **sans le modifier**. Idem pour le `package.json` déployé : y **fusionner** `elease-cloud/package.json` (garder les dépendances existantes, s'assurer que `node-mailjet` y est) plutôt que l'écraser.
 2. Ajouter à la fin de `cloud/main.js` la ligne de `main.append.js` : `require('./jobs');` (`cat main.append.js >> main.js`).
-3. Déployer `main.js`, `jobs.js`, `lib/*.js` et `package.json` à la racine du Cloud Code : MCP `deploy_cloud_code_files`, ou dashboard → Cloud Code → Functions → ajouter les fichiers → Deploy. Si besoin régénérer `package-lock.json` : `cd cloud && npm install`.
+3. Déployer `main.js`, `jobs.js`, `history.js`, `lib/*.js` et `package.json` à la racine du Cloud Code : MCP `deploy_cloud_code_files`, ou dashboard → Cloud Code → Functions → ajouter les fichiers → Deploy. Si besoin régénérer `package-lock.json` : `cd cloud && npm install`.
 4. Vérifier que le déploiement n'a pas d'erreur (logs Back4App) et que `sendEmail` fonctionne toujours.
 
 ## Essai à blanc (dry run, master key, valeurs à remplacer)

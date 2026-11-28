@@ -1,3 +1,4 @@
+import { NextActionHint } from './next-action-hint';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ChangeDetectionStrategy,
@@ -52,7 +53,7 @@ interface NavItem {
 /**
  * The frame of the signed-in app. From 768 px: a 240 px sidebar (logo, « Appels de loyer »,
  * « Locataires », and at the bottom « Réglages », the user and the theme toggle) beside a content area
- * that scrolls on its own. Below 768 px: the content fills the screen and a three-tab bar sits at the
+ * that scrolls on its own. Below 768 px: the content fills the screen and a four-tab bar sits at the
  * bottom, clear of the iPhone home indicator (the theme toggle then lives in Réglages).
  *
  * Only one of the two navigations is displayed at a time (the other is `display: none`, so it is
@@ -61,7 +62,7 @@ interface NavItem {
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon, ThemeToggle],
+  imports: [NextActionHint, RouterOutlet, RouterLink, RouterLinkActive, Icon, ThemeToggle],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
@@ -153,6 +154,9 @@ interface NavItem {
         class="min-h-0 flex-1 overflow-y-auto focus:outline-none focus-visible:outline-none"
       >
         <div [class]="contentClass()">
+          @if (!fullWidth()) {
+            <app-next-action-hint />
+          }
           <router-outlet />
         </div>
       </main>
@@ -161,7 +165,7 @@ interface NavItem {
         aria-label="Navigation principale"
         class="shrink-0 border-t border-border bg-card/85 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_-8px_rgb(15_23_42/0.12)] backdrop-blur-lg md:hidden"
       >
-        <ul class="grid grid-cols-3">
+        <ul class="grid grid-cols-4">
           @for (item of tabs; track item.path) {
             <li>
               <a
@@ -189,7 +193,7 @@ export class Shell {
 
   private readonly router = inject(Router);
   /** The screen asked for the whole width and height (route data `fullWidth`): two-pane screens. */
-  private readonly fullWidth = signal(false);
+  protected readonly fullWidth = signal(false);
   protected readonly contentClass = computed(() =>
     this.fullWidth()
       ? 'h-full w-full px-4 pt-4 pb-3 md:px-6 md:pt-5 md:pb-4'
@@ -217,6 +221,7 @@ export class Shell {
   protected readonly mainItems: readonly NavItem[] = [
     { path: '/appels', label: 'Appels de loyer', icon: 'mail' },
     { path: '/locataires', label: 'Locataires', icon: 'users' },
+    { path: '/statistiques', label: 'Statistiques', icon: 'chart' },
   ];
   protected readonly settings: NavItem = { path: '/reglages', label: 'Réglages', icon: 'sliders' };
   protected readonly tabs: readonly NavItem[] = [...this.mainItems, this.settings];

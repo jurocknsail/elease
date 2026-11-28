@@ -74,7 +74,7 @@ describe('InseeService', () => {
     const map = await TestBed.inject(InseeService).observations('ILAT');
     expect(map.get('2026-Q2')).toBe(138.01);
     expect(urls).toEqual([
-      'https://api.insee.fr/series/BDM/V1/data/SERIES_BDM/001617112?lastNObservations=12',
+      'https://api.insee.fr/series/BDM/V1/data/SERIES_BDM/001617112?lastNObservations=24',
     ]);
     const init = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(JSON.stringify(init[1].headers)).not.toMatch(/key|authorization|bearer/i);
