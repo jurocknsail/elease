@@ -73,7 +73,7 @@ export function lastSendLabel(lease: Lease): string {
   const date = formatDate(lease.lastSendDate);
   const match = lease.lastSentPeriod ? /^(\d{4})-(\d{2})$/.exec(lease.lastSentPeriod) : null;
   if (match && lease.lastSentPeriodAt === lease.lastSendDate) {
-    return `${date} · appel de ${periodLabel({ year: Number(match[1]), month: Number(match[2]) })}`;
+    return `${date} · appel pour ${periodLabel({ year: Number(match[1]), month: Number(match[2]) })}`;
   }
   return date;
 }

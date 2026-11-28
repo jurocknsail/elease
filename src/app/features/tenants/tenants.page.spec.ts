@@ -262,7 +262,7 @@ describe('Locataires', () => {
       expect(studio).toContain("Total de l'appel");
       expect(studio).toContain('01/03/2027');
       expect(studio).toContain('IRL · T2 2025 · 145,47');
-      expect(studio).toContain('25/11/2026 · appel de décembre 2026');
+      expect(studio).toContain('25/11/2026 · appel pour décembre 2026');
 
       const local = text(block(view.root, 'Local commercial'));
       expect(local).toContain('Pro');

@@ -72,7 +72,7 @@ export function nextAction(holders: readonly Leaseholder[], today: Date): NextAc
     return {
       id: `send-now:${period.year}-${period.month}:${todo}`,
       tone: 'todo',
-      text: `À faire : envoyer ${callsLabel(todo)} de ${month}. Un rappel vous est envoyé par e-mail chaque matin tant que ce n'est pas fait.`,
+      text: `À faire : envoyer ${callsLabel(todo)} pour ${month}. Un rappel vous est envoyé par e-mail chaque matin tant que ce n'est pas fait.`,
       link: { label: 'Envoyer', path: '/appels' },
     };
   }
@@ -101,7 +101,7 @@ export function nextAction(holders: readonly Leaseholder[], today: Date): NextAc
     return {
       id: `send-on:${period.year}-${period.month}`,
       tone: 'info',
-      text: `Prochaine étape : envoyer les appels de ${month} le ${DAY_MONTH.format(callDay)}. Un rappel vous sera envoyé par e-mail.`,
+      text: `Prochaine étape : envoyer les appels pour ${month} le ${DAY_MONTH.format(callDay)}. Un rappel vous sera envoyé par e-mail.`,
       link: appels,
     };
   }
@@ -109,6 +109,6 @@ export function nextAction(holders: readonly Leaseholder[], today: Date): NextAc
   return {
     id: `all-sent:${period.year}-${period.month}`,
     tone: 'info',
-    text: `Tous les appels de ${month} sont envoyés. Prochaine étape : les appels de ${following}, le ${DAY_MONTH.format(nextCallDay)}.`,
+    text: `Tous les appels pour ${month} sont envoyés. Prochaine étape : les appels pour ${following}, le ${DAY_MONTH.format(nextCallDay)}.`,
   };
 }

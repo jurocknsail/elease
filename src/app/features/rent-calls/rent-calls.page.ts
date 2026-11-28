@@ -111,7 +111,7 @@ function sendMoment(sent: boolean, at: number | undefined): string {
               } @else {
                 <p class="flex items-center gap-2 font-medium text-ok">
                   <app-icon name="check-circle" class="size-5" />
-                  <span>Tous les appels de {{ monthLabel() }} ont été envoyés.</span>
+                  <span>Tous les appels pour {{ monthLabel() }} ont été envoyés.</span>
                 </p>
               }
             }
@@ -171,7 +171,7 @@ function sendMoment(sent: boolean, at: number | undefined): string {
             class="mt-6 flex items-start gap-3 rounded-xl border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-text"
           >
             <app-icon name="clock" class="mt-0.5 size-5 text-accent" />
-            <p class="font-medium">Les appels de loyer de {{ monthLabel() }} sont à envoyer.</p>
+            <p class="font-medium">Les appels de loyer pour {{ monthLabel() }} sont à envoyer.</p>
           </div>
         }
 

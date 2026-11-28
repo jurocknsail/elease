@@ -155,7 +155,7 @@ function capitalise(text: string): string {
         }
         <div class="card px-4 py-3.5">
           <p class="meta-label truncate">
-            Appel{{ selectedRow() ? '' : 's' }} de {{ periodName() }}
+            Appel{{ selectedRow() ? '' : 's' }} pour {{ periodName() }}
           </p>
           @if (selectedRow()) {
             <p class="mt-1.5 text-xl font-semibold tracking-tight">

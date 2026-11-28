@@ -162,7 +162,7 @@ describe('nextAction', () => {
     const action = nextAction([holder([unsent])], new Date(2026, 10, 10))!;
     expect(action.tone).toBe('info');
     expect(action.text).toBe(
-      'Prochaine étape : envoyer les appels de décembre 2026 le 25 novembre. Un rappel vous sera envoyé par e-mail.',
+      'Prochaine étape : envoyer les appels pour décembre 2026 le 25 novembre. Un rappel vous sera envoyé par e-mail.',
     );
     expect(action.link?.path).toBe('/appels');
   });
@@ -173,13 +173,13 @@ describe('nextAction', () => {
       new Date(2026, 10, 26),
     )!;
     expect(action.tone).toBe('todo');
-    expect(action.text).toContain('envoyer 2 appels de loyer de décembre 2026');
+    expect(action.text).toContain('envoyer 2 appels de loyer pour décembre 2026');
   });
 
   it('all sent: points to the next month', () => {
     const action = nextAction([holder([sentForDec])], new Date(2026, 10, 27))!;
     expect(action.text).toBe(
-      'Tous les appels de décembre 2026 sont envoyés. Prochaine étape : les appels de janvier 2027, le 25 décembre.',
+      'Tous les appels pour décembre 2026 sont envoyés. Prochaine étape : les appels pour janvier 2027, le 25 décembre.',
     );
   });
 

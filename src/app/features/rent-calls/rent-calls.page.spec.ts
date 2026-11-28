@@ -317,7 +317,7 @@ describe('RentCallsPage', () => {
       expect(text(view.root.querySelector('header'))).toContain('2 appels à envoyer sur 3');
     });
 
-    it('reassures when everything is sent: « Tous les appels de décembre 2026 ont été envoyés. »', async () => {
+    it('reassures when everything is sent: « Tous les appels pour décembre 2026 ont été envoyés. »', async () => {
       const view = await setup({
         seed: (fake) => {
           seedStandard(fake);
@@ -328,7 +328,7 @@ describe('RentCallsPage', () => {
       await view.open();
 
       expect(text(view.root.querySelector('header'))).toContain(
-        'Tous les appels de décembre 2026 ont été envoyés.',
+        'Tous les appels pour décembre 2026 ont été envoyés.',
       );
       expect(text(view.root.querySelector('header'))).not.toContain('à envoyer sur');
     });
@@ -348,7 +348,7 @@ describe('RentCallsPage', () => {
 
       const region = banner(view.root);
       expect(region).toBeDefined();
-      expect(text(region)).toBe('Les appels de loyer de décembre 2026 sont à envoyer.');
+      expect(text(region)).toBe('Les appels de loyer pour décembre 2026 sont à envoyer.');
       expect(region?.getAttribute('role')).toBe('status');
     });
 
