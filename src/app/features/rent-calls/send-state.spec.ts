@@ -265,6 +265,22 @@ describe('initialSelection', () => {
     expect(initialSelection(rows)).toEqual(new Set(['l-Studio', 'l-Cave']));
   });
 
+  it('follows isSelected true even for a lease already sent for the period (the confirmation warns)', () => {
+    const sent = { lastSendDate: 1, lastSentPeriod: '2026-12', lastSentPeriodAt: 1 };
+    const rows = buildRows(
+      [
+        holder('Dupont', [
+          lease({ name: 'Studio', isSelected: true, ...sent }),
+          lease({ name: 'Garage', isSelected: false, ...sent }),
+          lease({ name: 'Cave', ...sent }),
+        ]),
+      ],
+      DEC_2026,
+    );
+
+    expect(initialSelection(rows)).toEqual(new Set(['l-Studio']));
+  });
+
   it('uses the key of rowKey, also for a lease without objectId', () => {
     const rows = buildRows(
       [holder('Dupont', [lease({ name: 'Studio', objectId: undefined })])],

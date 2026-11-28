@@ -79,12 +79,18 @@ export function showReminderBanner(today: Date, rows: RentCallRow[]): boolean {
   return today.getDate() >= REMINDER_FROM_DAY && rows.some((row) => row.status === 'todo');
 }
 
-/** The keys (see `rowKey`) of every lease still to send: what the send screen starts with. */
+/**
+ * The keys (see `rowKey`) of the leases the send screen starts ticked: those ticked at the last send
+ * (`isSelected`), or, for a lease without that field, those still to send.
+ */
 export function initialSelection(rows: readonly RentCallRow[]): Set<string> {
   const selected = new Set<string>();
   rows.forEach((row, index) => {
-    // Still to send, and ticked at the last send (a lease never sent has no value: ticked).
-    if (row.status === 'todo' && row.lease.isSelected !== false) {
+    // The ticks of the last send (`isSelected`, shared with the legacy app), even for a lease already
+    // sent for this period: the confirmation then warns about the repeat. A lease without the field
+    // (never sent from a selection) is ticked when it is still to send.
+    const ticked = row.lease.isSelected ?? row.status === 'todo';
+    if (ticked) {
       selected.add(rowKey(row, index));
     }
   });
