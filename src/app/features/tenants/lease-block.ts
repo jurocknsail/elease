@@ -106,9 +106,9 @@ const RADIO =
       [attr.aria-labelledby]="uid + '-title'"
     >
       <header
-        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3 md:px-5"
+        class="flex items-start justify-between gap-3 border-b border-border px-4 py-3 md:px-5"
       >
-        <div class="flex min-w-0 flex-1 basis-48 items-center gap-2">
+        <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5 pt-0.5">
           <h3 [id]="uid + '-title'" class="min-w-0 truncate text-sm font-semibold">
             {{ title() }}
           </h3>
@@ -119,25 +119,25 @@ const RADIO =
           }
         </div>
         @if (!form()) {
-          <div class="flex shrink-0 gap-2">
+          <div class="toolbar">
             <button
               #edit
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-icon"
+              title="Modifier le bail"
               [disabled]="deleting() || applying()"
               (click)="startEdit()"
-            ><app-icon name="pencil" class="size-4" />
-              Modifier
-            </button>
+            ><app-icon name="pencil" class="size-[18px]" /><span class="sr-only">Modifier</span></button>
             <button
               type="button"
-              class="btn btn-secondary text-danger"
+              class="btn btn-icon btn-icon-danger"
+              title="Supprimer le bail"
               [disabled]="blocked()"
               [attr.aria-busy]="deleting()"
               (click)="remove()"
-            ><app-icon name="trash" class="size-4" />
-              {{ deleting() ? 'Suppression…' : 'Supprimer' }}
-            </button>
+            ><app-icon name="trash" class="size-[18px]" /><span class="sr-only">{{
+              deleting() ? 'Suppression…' : 'Supprimer'
+            }}</span></button>
           </div>
         }
       </header>
@@ -252,7 +252,7 @@ const RADIO =
             <legend class="form-section-title float-left mb-1 w-full">Loyer et charges additionnelles</legend>
             @for (row of f.controls.additionalCharges.controls; track row; let i = $index) {
               <div
-                class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3 @md:grid-cols-[minmax(0,1fr)_9rem_auto]"
+                class="grid grid-cols-[minmax(0,1fr)_7rem_auto] items-start gap-x-2 @md:grid-cols-[minmax(0,1fr)_9rem_auto] @md:gap-x-3"
               >
                 <app-text-field
                   [inputId]="uid + '-charge-' + i + '-title'"
@@ -267,16 +267,15 @@ const RADIO =
                 />
                 <button
                   type="button"
-                  class="btn btn-secondary col-start-2 row-start-2 mt-[1.625rem] @md:col-start-3 @md:row-start-1"
+                  class="btn btn-icon btn-icon-danger mt-[1.625rem]"
+                  title="Retirer cette charge"
                   [attr.aria-label]="'Retirer la charge additionnelle ' + (i + 1)"
                   (click)="removeCharge(i)"
-                ><app-icon name="trash" class="size-4" />
-                  Retirer
-                </button>
+                ><app-icon name="trash" class="size-[18px]" /></button>
               </div>
             }
             <div>
-              <button type="button" class="btn btn-secondary" (click)="addCharge()"><app-icon name="plus" class="size-4" />
+              <button type="button" class="btn btn-quiet -ml-2.5" (click)="addCharge()"><app-icon name="plus" class="size-4" />
                 Ajouter une charge
               </button>
             </div>
@@ -349,66 +348,63 @@ const RADIO =
           </div>
         </form>
       } @else if (lease(); as l) {
-        <dl class="grid grid-cols-1 gap-x-8 gap-y-4 px-4 py-4 md:px-5 @lg:grid-cols-2">
-          <div class="min-w-0">
-            <dt class="text-xs font-medium text-muted">Adresse</dt>
-            <dd class="mt-0.5 text-sm break-words">
-              <span class="block">{{ l.streetNumber }} {{ l.streetName }}</span>
-              @if (l.optionalAddressInfo) {
-                <span class="block">{{ l.optionalAddressInfo }}</span>
-              }
-              <span class="block">{{ postalCode(l) }} {{ l.city }}</span>
-              @if (l.lot) {
-                <span class="block text-muted">Lot {{ l.lot }}</span>
-              }
-            </dd>
-          </div>
-          <div class="min-w-0">
-            <dt class="text-xs font-medium text-muted">Loyer hors charges</dt>
-            <dd class="mt-0.5 text-sm font-medium tabular-nums">{{ euro(l.price) }}</dd>
-          </div>
-          <div class="min-w-0">
-            <dt class="text-xs font-medium text-muted">Avance sur charges</dt>
-            <dd class="mt-0.5 text-sm tabular-nums">{{ l.charge ? euro(l.charge) : '—' }}</dd>
-          </div>
-          <div class="min-w-0">
-            <dt class="text-xs font-medium text-muted">Charges additionnelles</dt>
-            <dd class="mt-0.5 text-sm">
-              @for (charge of l.additionalCharges; track $index) {
-                <span class="flex justify-between gap-3">
-                  <span class="min-w-0 truncate" [attr.title]="charge.title">{{
-                    charge.title
-                  }}</span>
-                  <span class="shrink-0 tabular-nums">{{ euro(charge.amount) }}</span>
+        <div
+          class="grid grid-cols-1 gap-x-8 gap-y-4 px-4 py-4 md:px-5 @xl:grid-cols-[minmax(0,1fr)_minmax(0,19rem)]"
+        >
+          <dl class="grid grid-cols-2 content-start gap-x-4 gap-y-4">
+            <div class="col-span-2 min-w-0">
+              <dt class="meta-label">Adresse</dt>
+              <dd class="mt-1 text-sm break-words">
+                {{ l.streetNumber }} {{ l.streetName }}@if (l.optionalAddressInfo) {<span>, {{ l.optionalAddressInfo }}</span>}
+                <span class="block text-muted">
+                  {{ postalCode(l) }} {{ l.city }}@if (l.lot) {<span> · Lot {{ l.lot }}</span>}
                 </span>
-              } @empty {
-                —
-              }
-            </dd>
-          </div>
-          @if (l.isPro) {
-            <div class="min-w-0">
-              <dt class="text-xs font-medium text-muted">TVA (20 % du loyer)</dt>
-              <dd class="mt-0.5 text-sm tabular-nums">{{ euro(tva(l)) }}</dd>
+              </dd>
             </div>
-          }
-          <div class="min-w-0">
-            <dt class="text-xs font-medium text-muted">Total de l'appel</dt>
-            <dd class="mt-0.5 text-sm font-semibold tabular-nums">{{ euro(total(l)) }}</dd>
-          </div>
-          <div class="min-w-0">
-            <dt class="text-xs font-medium text-muted">Date anniversaire</dt>
-            <dd class="mt-0.5 text-sm">{{ l.renewalDate != null ? date(l.renewalDate) : '—' }}</dd>
-          </div>
-          <div class="min-w-0">
-            <dt class="text-xs font-medium text-muted">Indice de référence</dt>
-            <dd class="mt-0.5 text-sm">{{ index() ?? 'Non renseigné' }}</dd>
-          </div>
-          <div class="min-w-0">
-            <dt class="text-xs font-medium text-muted">Dernier envoi</dt>
-            <dd class="mt-0.5 text-sm">{{ lastSend() }}</dd>
-          </div>
-        </dl>
+            <div class="min-w-0">
+              <dt class="meta-label">Date anniversaire</dt>
+              <dd class="mt-1 text-sm tabular-nums">{{ l.renewalDate != null ? date(l.renewalDate) : '—' }}</dd>
+            </div>
+            <div class="min-w-0">
+              <dt class="meta-label">Indice de référence</dt>
+              <dd class="mt-1 text-sm break-words">{{ index() ?? 'Non renseigné' }}</dd>
+            </div>
+            <div class="col-span-2 min-w-0">
+              <dt class="meta-label">Dernier envoi</dt>
+              <dd class="mt-1 text-sm">{{ lastSend() }}</dd>
+            </div>
+          </dl>
+
+          <dl
+            class="self-start rounded-xl border border-border bg-surface/60 px-3.5 py-2.5 text-sm"
+            aria-label="Montant de l'appel"
+          >
+            <div class="flex justify-between gap-3 py-1">
+              <dt class="text-muted">Loyer hors charges</dt>
+              <dd class="shrink-0 tabular-nums">{{ euro(l.price) }}</dd>
+            </div>
+            <div class="flex justify-between gap-3 py-1">
+              <dt class="text-muted">Avance sur charges</dt>
+              <dd class="shrink-0 tabular-nums">{{ l.charge ? euro(l.charge) : '—' }}</dd>
+            </div>
+            @if (l.isPro) {
+              <div class="flex justify-between gap-3 py-1">
+                <dt class="text-muted">TVA (20 % du loyer)</dt>
+                <dd class="shrink-0 tabular-nums">{{ euro(tva(l)) }}</dd>
+              </div>
+            }
+            @for (charge of l.additionalCharges; track $index) {
+              <div class="flex justify-between gap-3 py-1">
+                <dt class="min-w-0 truncate text-muted" [attr.title]="charge.title">{{ charge.title }}</dt>
+                <dd class="shrink-0 tabular-nums">{{ euro(charge.amount) }}</dd>
+              </div>
+            }
+            <div class="mt-1.5 flex items-baseline justify-between gap-3 border-t border-border pt-2.5 pb-0.5">
+              <dt class="font-medium">Total de l'appel</dt>
+              <dd class="shrink-0 text-base font-semibold tabular-nums">{{ euro(total(l)) }}</dd>
+            </div>
+          </dl>
+        </div>
 
         <div data-slot="revision" class="empty:hidden">
           @if (revisionView(); as view) {

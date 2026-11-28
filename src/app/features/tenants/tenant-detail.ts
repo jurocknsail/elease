@@ -43,22 +43,25 @@ const SKELETON = 'animate-pulse rounded-md bg-border/70';
             <app-icon name="arrow-left" class="size-5" />
             Retour
           </a>
-          <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <div class="min-w-0 flex-1 basis-48">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
               <h2 class="truncate text-xl font-semibold tracking-tight" [attr.title]="holder.name">
                 {{ holder.name || 'Locataire sans nom' }}
               </h2>
               <p class="text-sm text-muted">{{ leaseCount(holder) }}</p>
             </div>
-            <button
-              type="button"
-              class="btn btn-secondary shrink-0 text-danger"
-              [disabled]="deleting()"
-              [attr.aria-busy]="deleting()"
-              (click)="removeHolder(holder)"
-            ><app-icon name="trash" class="size-4" />
-              {{ deleting() ? 'Suppression…' : 'Supprimer le locataire' }}
-            </button>
+            <div class="toolbar self-start">
+              <button
+                type="button"
+                class="btn btn-icon btn-icon-danger"
+                title="Supprimer le locataire"
+                [disabled]="deleting()"
+                [attr.aria-busy]="deleting()"
+                (click)="removeHolder(holder)"
+              ><app-icon name="trash" class="size-[18px]" /><span class="sr-only">{{
+                deleting() ? 'Suppression…' : 'Supprimer le locataire'
+              }}</span></button>
+            </div>
           </div>
           @if (deleteError(); as message) {
             <p
@@ -74,10 +77,10 @@ const SKELETON = 'animate-pulse rounded-md bg-border/70';
 
         <section class="flex flex-col gap-3" aria-labelledby="baux-titre">
           <div class="flex items-center justify-between gap-3">
-            <h3 id="baux-titre" class="text-sm font-semibold">Baux</h3>
+            <h3 id="baux-titre" class="meta-label">Baux</h3>
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-quiet -mr-2.5"
               [disabled]="adding()"
               (click)="adding.set(true)"
             ><app-icon name="plus" class="size-4" />

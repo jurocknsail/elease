@@ -83,7 +83,7 @@ interface ThemeOption {
               <div>
                 <button
                   type="button"
-                  class="btn btn-primary w-full sm:w-auto"
+                  class="btn btn-primary self-start"
                   (click)="installApp()"
                 ><app-icon name="download" class="size-4" />
                   Installer l'application
@@ -151,7 +151,7 @@ interface ThemeOption {
             </dl>
           }
           <div>
-            <button type="button" class="btn btn-secondary w-full sm:w-auto" (click)="logout()">
+            <button type="button" class="btn btn-secondary self-start" (click)="logout()">
               <app-icon name="log-out" class="size-5" />
               Se déconnecter
             </button>

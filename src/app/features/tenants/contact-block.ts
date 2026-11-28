@@ -40,9 +40,9 @@ let nextId = 0;
       >
         <h3 [id]="uid + '-title'" class="text-sm font-semibold">Contact</h3>
         @if (!form()) {
-          <button #edit type="button" class="btn btn-secondary" (click)="startEdit()"><app-icon name="pencil" class="size-4" />
-            Modifier
-          </button>
+          <div class="toolbar">
+            <button #edit type="button" class="btn btn-icon" title="Modifier le contact" (click)="startEdit()"><app-icon name="pencil" class="size-[18px]" /><span class="sr-only">Modifier</span></button>
+          </div>
         }
       </header>
 
@@ -105,23 +105,23 @@ let nextId = 0;
           </form>
         } @else {
           <dl
-            class="grid grid-cols-1 gap-x-8 gap-y-3 @md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)_minmax(0,1fr)]"
+            class="grid grid-cols-2 gap-x-4 gap-y-4 @md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)_minmax(0,1fr)] @md:gap-x-8"
           >
             <div class="min-w-0">
-              <dt class="text-xs font-medium text-muted">Nom</dt>
-              <dd class="mt-0.5 truncate text-sm" [attr.title]="holder().name">
+              <dt class="meta-label">Nom</dt>
+              <dd class="mt-1 truncate text-sm" [attr.title]="holder().name">
                 {{ holder().name || '—' }}
               </dd>
             </div>
-            <div class="min-w-0">
-              <dt class="text-xs font-medium text-muted">Adresse e-mail</dt>
-              <dd class="mt-0.5 truncate text-sm" [attr.title]="holder().email">
+            <div class="col-span-2 order-last min-w-0 @md:order-none @md:col-span-1">
+              <dt class="meta-label">Adresse e-mail</dt>
+              <dd class="mt-1 truncate text-sm" [attr.title]="holder().email">
                 {{ holder().email || '—' }}
               </dd>
             </div>
             <div class="min-w-0">
-              <dt class="text-xs font-medium text-muted">Téléphone</dt>
-              <dd class="mt-0.5 truncate text-sm">{{ holder().phone || '—' }}</dd>
+              <dt class="meta-label">Téléphone</dt>
+              <dd class="mt-1 truncate text-sm">{{ holder().phone || '—' }}</dd>
             </div>
           </dl>
         }

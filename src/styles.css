@@ -240,6 +240,44 @@ h1 {
     background-color: color-mix(in srgb, var(--color-text) 7%, transparent);
   }
 
+  /*
+   * Icon-only action (edit, delete) in a card header: invisible frame until hovered. The label sits
+   * in an sr-only span and in `title` (tooltip on a computer).
+   */
+  .btn-icon {
+    @apply bg-transparent px-0 text-muted;
+  }
+
+  .btn-icon:hover:not(:disabled),
+  .btn-icon:focus-visible {
+    @apply text-text;
+    background-color: color-mix(in srgb, var(--color-text) 7%, transparent);
+  }
+
+  .btn-icon-danger:hover:not(:disabled),
+  .btn-icon-danger:focus-visible {
+    @apply bg-danger-soft text-danger;
+  }
+
+  /* A light text action (add a lease, add a charge): accent text, no frame. */
+  .btn-quiet {
+    @apply bg-transparent px-2.5 text-accent;
+  }
+
+  .btn-quiet:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  }
+
+  /* A row of icon actions, pulled right so the icons line up with the card's edge. */
+  .toolbar {
+    @apply -my-1 -mr-2 flex shrink-0 items-center gap-0.5;
+  }
+
+  /* A label above a value, in a read-only detail list. */
+  .meta-label {
+    @apply text-[11px] font-semibold tracking-wider text-muted uppercase;
+  }
+
   .field-input {
     @apply min-h-11 w-full rounded-xl border border-border-strong bg-card px-3.5 text-text placeholder:text-muted;
     box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
@@ -272,6 +310,10 @@ h1 {
 
     .btn-ghost {
       @apply px-3;
+    }
+
+    .btn-icon {
+      @apply min-h-8 min-w-8 px-0;
     }
 
     .field-input {
@@ -320,7 +362,7 @@ h1 {
 
   /* Save / cancel: a bar along the card's bottom edge, kept in view while a long form scrolls. */
   .form-actions {
-    @apply sticky bottom-0 z-10 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-2xl border-t border-border px-4 py-3 sm:flex-row sm:justify-end md:-mx-5 md:px-5;
+    @apply sticky bottom-0 z-10 -mx-4 -mb-4 flex items-center justify-end gap-2 rounded-b-2xl border-t border-border px-4 py-2.5 md:-mx-5 md:px-5;
     background: color-mix(in srgb, var(--color-card) 88%, transparent);
     backdrop-filter: blur(8px);
   }
