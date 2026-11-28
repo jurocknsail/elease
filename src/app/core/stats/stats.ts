@@ -187,3 +187,64 @@ export function historyStart(
   ];
   return times.length ? Math.min(...times) : null;
 }
+
+/** Keeps only the lease `leaseId` (and the holder that has it): the page then shows that lease alone. */
+export function onlyLease(holders: readonly Leaseholder[], leaseId: string): Leaseholder[] {
+  return holders
+    .map((h) => ({ ...h, leases: h.leases.filter((l) => l.objectId === leaseId) }))
+    .filter((h) => h.leases.length > 0);
+}
+
+export interface LeaseRow {
+  leaseId: string;
+  leaseName: string;
+  holderId?: string;
+  holderName: string;
+  monthly: number;
+  annual: number;
+  /** Share of the total called each month, 0-100. */
+  share: number;
+  /** Change of the monthly total since the first amount recorded, in %, or null when unknown. */
+  evolution: number | null;
+  lastSendDate: number;
+  sendCount: number;
+  /** Next anniversary (revision), ms, or null when the lease has none. */
+  nextRevision: number | null;
+}
+
+/** One row per lease, highest monthly amount first. */
+export function leaseRows(
+  holders: readonly Leaseholder[],
+  sends: readonly RentCallLog[],
+  changes: readonly RentChange[],
+  today: Date,
+  anniversary: (renewalDate: number, today: Date) => Date,
+): LeaseRow[] {
+  const all = holders.flatMap((h) => h.leases.map((lease) => ({ holder: h, lease })));
+  const grand = sumAmounts(all.map(({ lease }) => computeTotalPrice(lease)));
+  return all
+    .filter(({ lease }) => typeof lease.objectId === 'string')
+    .map(({ holder, lease }) => {
+      const id = lease.objectId as string;
+      const monthly = computeTotalPrice(lease);
+      const first = changes.filter((c) => c.leaseId === id).sort((a, b) => a.at - b.at)[0];
+      const base = first ? (first.oldTotal ?? first.newTotal) : undefined;
+      return {
+        leaseId: id,
+        leaseName: lease.name,
+        holderId: holder.objectId,
+        holderName: holder.name,
+        monthly,
+        annual: sumAmounts([monthly * 12]),
+        share: grand > 0 ? (monthly / grand) * 100 : 0,
+        evolution: base && base > 0 && base !== monthly ? ((monthly - base) / base) * 100 : null,
+        lastSendDate: lease.lastSendDate,
+        sendCount: latestPerLeaseAndPeriod(sends.filter((s) => s.leaseId === id)).length,
+        nextRevision:
+          lease.renewalDate != null && Number.isFinite(lease.renewalDate)
+            ? anniversary(lease.renewalDate, today).getTime()
+            : null,
+      };
+    })
+    .sort((a, b) => b.monthly - a.monthly);
+}

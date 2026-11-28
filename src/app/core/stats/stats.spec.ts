@@ -6,6 +6,8 @@ import {
   billedByMonth,
   historyStart,
   indexSeries,
+  leaseRows,
+  onlyLease,
   portfolioSummary,
   recentRentChanges,
   sendTimings,
@@ -204,5 +206,60 @@ describe('nextAction', () => {
       new Date(2026, 10, 26),
     )!;
     expect(before.id).not.toBe(after.id);
+  });
+});
+
+describe('per lease', () => {
+  const a = lease({
+    objectId: 'A',
+    name: 'Lot 15',
+    price: 750,
+    renewalDate: new Date(2021, 3, 25).getTime(),
+  });
+  const b = lease({ objectId: 'B', name: 'Garage', price: 250 });
+  const holders = [holder([b, a])];
+  const anniversary = (ms: number, today: Date) =>
+    new Date(today.getFullYear() + 1, new Date(ms).getMonth(), new Date(ms).getDate());
+
+  it('gives each lease its amount, share, evolution and next revision, largest first', () => {
+    const rows = leaseRows(
+      holders,
+      [send({ leaseId: 'A', period: '2026-11' }), send({ leaseId: 'A', period: '2026-12' })],
+      [
+        {
+          leaseId: 'A',
+          leaseName: 'Lot 15',
+          at: 1,
+          reason: 'baseline',
+          newPrice: 700,
+          newTotal: 700,
+        },
+        {
+          leaseId: 'A',
+          leaseName: 'Lot 15',
+          at: 2,
+          reason: 'revision',
+          oldTotal: 700,
+          newPrice: 750,
+          newTotal: 750,
+        },
+      ],
+      new Date(2026, 10, 10),
+      anniversary,
+    );
+    expect(rows.map((r) => [r.leaseId, r.monthly, r.share, r.sendCount])).toEqual([
+      ['A', 750, 75, 2],
+      ['B', 250, 25, 0],
+    ]);
+    expect(rows[0].evolution).toBeCloseTo(7.1429, 3);
+    expect(rows[0].nextRevision).toBe(new Date(2027, 3, 25).getTime());
+    expect(rows[1].evolution).toBeNull();
+    expect(rows[1].nextRevision).toBeNull();
+  });
+
+  it('keeps one lease alone for the figures of the page', () => {
+    const scoped = onlyLease(holders, 'B');
+    expect(scoped.flatMap((h) => h.leases.map((l) => l.objectId))).toEqual(['B']);
+    expect(portfolioSummary(scoped, new Date(2026, 10, 10)).monthly).toBe(250);
   });
 });
