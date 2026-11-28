@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
@@ -26,6 +33,7 @@ import {
   yearOverYear,
 } from '../../core/stats/stats';
 import { ErrorState } from '../../shared/ui/error-state';
+import { Icon } from '../../shared/ui/icon';
 import { Pill } from '../../shared/ui/pill';
 import { MonthBars, Sparkline } from './charts';
 
@@ -70,13 +78,24 @@ function capitalise(text: string): string {
 @Component({
   selector: 'app-stats-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MonthBars, Sparkline, Pill, ErrorState],
+  imports: [MonthBars, Sparkline, Pill, ErrorState, Icon],
   host: { class: 'block @container' },
   template: `
-    <header class="mb-6 flex flex-col gap-4 @2xl:flex-row @2xl:items-end @2xl:justify-between">
+    <header class="mb-5 flex flex-col gap-3 @2xl:flex-row @2xl:items-end @2xl:justify-between">
       <div class="min-w-0">
-        <h1 class="text-2xl font-semibold tracking-tight md:text-[1.75rem]">Statistiques</h1>
-        <p class="mt-1 text-sm text-muted">{{ subtitle() }}</p>
+        @if (selectedRow()) {
+          <button
+            type="button"
+            class="btn btn-quiet -ml-2.5 mb-1 min-h-8 text-sm"
+            (click)="select('')"
+          >
+            <app-icon name="arrow-left" class="size-4" />Tous les baux
+          </button>
+        }
+        <h1 class="truncate text-2xl font-semibold tracking-tight md:text-[1.75rem]">
+          {{ heading() }}
+        </h1>
+        <p class="mt-1 truncate text-sm text-muted">{{ subtitle() }}</p>
       </div>
       @if (leaseOptions().length > 1) {
         <div class="w-full @2xl:w-72">
@@ -87,7 +106,7 @@ function capitalise(text: string): string {
             [value]="selectedId() ?? ''"
             (change)="select($any($event.target).value)"
           >
-            <option value="">Tous les baux</option>
+            <option value="" [selected]="!selectedId()">Tous les baux</option>
             @for (group of leaseOptions(); track group.holder) {
               <optgroup [label]="group.holder">
                 @for (option of group.leases; track option.id) {
@@ -154,75 +173,9 @@ function capitalise(text: string): string {
         </div>
       </section>
 
-      @if (!selectedRow() && rows().length > 1) {
-        <section class="card mt-4 overflow-hidden" aria-labelledby="stats-leases">
-          <div class="flex items-baseline justify-between gap-3 px-4 pt-4 pb-2 md:px-5">
-            <h2 id="stats-leases" class="text-sm font-semibold">Par bail</h2>
-            <span class="text-xs text-muted">Touchez un bail pour le détail</span>
-          </div>
-          <div
-            class="hidden grid-cols-[minmax(0,1.6fr)_7rem_minmax(0,1fr)_6rem_6.5rem] gap-4 border-b border-border px-5 pb-2 @3xl:grid"
-            aria-hidden="true"
-          >
-            <span class="meta-label">Bail</span>
-            <span class="meta-label text-right">Par mois</span>
-            <span class="meta-label">Part</span>
-            <span class="meta-label text-right">Évolution</span>
-            <span class="meta-label text-right">Révision</span>
-          </div>
-          <ul class="divide-y divide-border">
-            @for (r of rows(); track r.leaseId) {
-              <li>
-                <button
-                  type="button"
-                  class="grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-3 text-left text-sm transition-colors hover:bg-surface md:px-5 @3xl:grid-cols-[minmax(0,1.6fr)_7rem_minmax(0,1fr)_6rem_6.5rem] @3xl:gap-x-4"
-                  (click)="select(r.leaseId)"
-                >
-                  <span class="min-w-0">
-                    <span class="block truncate font-medium">{{
-                      r.leaseName || 'Bail sans nom'
-                    }}</span>
-                    <span class="block truncate text-xs text-muted">{{ r.holderName }}</span>
-                  </span>
-                  <span class="text-right font-semibold tabular-nums">{{ euro(r.monthly) }}</span>
-                  <span class="col-span-2 flex items-center gap-2 @3xl:col-span-1">
-                    <span class="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
-                      <span
-                        class="block h-full rounded-full bg-accent/70"
-                        [style.width.%]="r.share"
-                      ></span>
-                    </span>
-                    <span class="w-10 text-right text-xs text-muted tabular-nums"
-                      >{{ round(r.share) }} %</span
-                    >
-                  </span>
-                  <span
-                    class="text-xs tabular-nums @3xl:text-right @3xl:text-sm"
-                    [class]="
-                      r.evolution === null
-                        ? 'text-muted'
-                        : r.evolution > 0
-                          ? 'text-ok'
-                          : 'text-danger'
-                    "
-                  >
-                    <span class="@3xl:hidden">Évolution </span
-                    >{{ r.evolution === null ? '—' : percent(r.evolution) }}
-                  </span>
-                  <span class="text-right text-xs text-muted tabular-nums @3xl:text-sm">
-                    <span class="@3xl:hidden">Révision </span
-                    >{{ r.nextRevision ? shortDate(r.nextRevision) : '—' }}
-                  </span>
-                </button>
-              </li>
-            }
-          </ul>
-        </section>
-      }
-
-      <section class="card mt-4 px-4 py-4 md:px-5" aria-labelledby="stats-billed">
-        <div class="mb-5 flex items-baseline justify-between gap-3">
-          <h2 id="stats-billed" class="text-sm font-semibold">Montant appelé par mois</h2>
+      <section class="card mt-4 px-4 pt-4 pb-3 md:px-5" aria-labelledby="stats-billed">
+        <div class="mb-3 flex items-baseline justify-between gap-3">
+          <h2 id="stats-billed" class="text-sm font-semibold">Appels de loyer</h2>
           <span class="text-xs text-muted">12 derniers mois</span>
         </div>
         @if (hasSends()) {
@@ -237,58 +190,121 @@ function capitalise(text: string): string {
         }
       </section>
 
-      <div class="mt-4 grid grid-cols-1 gap-4 @4xl:grid-cols-2">
-        <section class="card px-4 py-4 md:px-5" aria-labelledby="stats-sends">
-          <h2 id="stats-sends" class="mb-3 text-sm font-semibold">Envois</h2>
-          @if (timings().length) {
-            <ul class="divide-y divide-border">
-              @for (t of timings(); track t.period) {
-                <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
-                  <div class="min-w-0">
-                    <p class="font-medium">{{ t.label }}</p>
-                    <p class="text-xs text-muted">
-                      {{ t.count }} {{ t.count === 1 ? 'appel' : 'appels' }} · {{ t.when }}
-                    </p>
-                  </div>
-                  <app-pill [tone]="t.onTime ? 'ok' : 'warn'">{{
-                    t.onTime ? 'À temps' : 'En retard'
-                  }}</app-pill>
+      <div
+        class="mt-4 grid grid-cols-1 items-start gap-4"
+        [class.@4xl:grid-cols-2]="showLeaseList()"
+      >
+        @if (showLeaseList()) {
+          <section class="card overflow-hidden" aria-labelledby="stats-leases">
+            <div class="flex items-baseline justify-between gap-3 px-4 pt-4 pb-1 md:px-5">
+              <h2 id="stats-leases" class="text-sm font-semibold">Par bail</h2>
+              <span class="text-xs text-muted">par mois · part</span>
+            </div>
+            <ul class="pb-1.5">
+              @for (r of shownRows(); track r.leaseId) {
+                <li>
+                  <button
+                    type="button"
+                    class="group block w-full cursor-pointer px-4 py-2 text-left transition-colors hover:bg-surface md:px-5"
+                    [attr.aria-label]="
+                      (r.leaseName || 'Bail sans nom') +
+                      ', ' +
+                      r.holderName +
+                      ' : ' +
+                      euro(r.monthly) +
+                      ' par mois, ' +
+                      round(r.share) +
+                      ' %'
+                    "
+                    (click)="select(r.leaseId)"
+                  >
+                    <span class="flex items-baseline gap-3 text-sm">
+                      <span class="min-w-0 flex-1 truncate">
+                        <span class="font-medium">{{ r.leaseName || 'Bail sans nom' }}</span>
+                        <span class="text-muted"> · {{ r.holderName }}</span>
+                      </span>
+                      <span class="shrink-0 font-semibold tabular-nums">{{ euro(r.monthly) }}</span>
+                      <span class="w-9 shrink-0 text-right text-xs text-muted tabular-nums"
+                        >{{ round(r.share) }} %</span
+                      >
+                    </span>
+                    <span class="mt-1.5 block h-1 overflow-hidden rounded-full bg-border/70">
+                      <span
+                        class="block h-full rounded-full bg-accent/60 transition-colors group-hover:bg-accent"
+                        [style.width.%]="r.share"
+                      ></span>
+                    </span>
+                  </button>
                 </li>
               }
             </ul>
-          } @else {
-            <p class="text-sm text-muted">Aucun envoi enregistré pour l’instant.</p>
-          }
-        </section>
+            @if (rows().length > collapsedCount) {
+              <button
+                type="button"
+                class="w-full cursor-pointer border-t border-border px-4 py-2.5 text-sm font-semibold text-accent hover:bg-surface"
+                (click)="allRows.set(!allRows())"
+              >
+                {{ allRows() ? 'Réduire' : 'Voir les ' + rows().length + ' baux' }}
+              </button>
+            }
+          </section>
+        }
 
-        <section class="card px-4 py-4 md:px-5" aria-labelledby="stats-changes">
-          <h2 id="stats-changes" class="mb-3 text-sm font-semibold">Évolution des loyers</h2>
-          @if (changes().length) {
-            <ul class="divide-y divide-border">
-              @for (c of changes(); track $index) {
-                <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
-                  <div class="min-w-0">
-                    <p class="truncate font-medium" [attr.title]="c.name">{{ c.name }}</p>
-                    <p class="text-xs text-muted">{{ c.date }}</p>
-                  </div>
-                  <div class="shrink-0 text-right">
-                    <p class="tabular-nums">
-                      <span class="text-muted line-through decoration-muted/50">{{ c.from }}</span>
-                      <span class="font-semibold"> {{ c.to }}</span>
-                    </p>
-                    <p class="text-xs" [class]="c.up ? 'text-ok' : 'text-muted'">
-                      {{ c.reason }} · {{ c.delta }}
-                    </p>
-                  </div>
-                </li>
-              }
-            </ul>
-          } @else {
-            <p class="text-sm text-muted">
-              Les révisions et modifications de loyer apparaîtront ici à partir de maintenant.
-            </p>
-          }
-        </section>
+        <div class="grid grid-cols-1 items-start gap-4" [class.@4xl:grid-cols-2]="!showLeaseList()">
+          <section class="card px-4 py-4 md:px-5" aria-labelledby="stats-sends">
+            <h2 id="stats-sends" class="mb-1 text-sm font-semibold">Envois</h2>
+            @if (timings().length) {
+              <ul class="divide-y divide-border">
+                @for (t of timings(); track t.period) {
+                  <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                    <div class="min-w-0">
+                      <p class="font-medium">{{ t.label }}</p>
+                      <p class="text-xs text-muted">
+                        {{ t.count }} {{ t.count === 1 ? 'appel' : 'appels' }} · {{ t.when }}
+                      </p>
+                    </div>
+                    <app-pill [tone]="t.onTime ? 'ok' : 'warn'">{{
+                      t.onTime ? 'À temps' : 'En retard'
+                    }}</app-pill>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="mt-2 text-sm text-muted">Aucun envoi enregistré pour l’instant.</p>
+            }
+          </section>
+
+          <section class="card px-4 py-4 md:px-5" aria-labelledby="stats-changes">
+            <h2 id="stats-changes" class="mb-1 text-sm font-semibold">Évolution des loyers</h2>
+            @if (changes().length) {
+              <ul class="divide-y divide-border">
+                @for (c of changes(); track $index) {
+                  <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                    <div class="min-w-0">
+                      <p class="truncate font-medium" [attr.title]="c.name">{{ c.name }}</p>
+                      <p class="text-xs text-muted">{{ c.date }}</p>
+                    </div>
+                    <div class="shrink-0 text-right">
+                      <p class="tabular-nums">
+                        <span class="text-muted line-through decoration-muted/50">{{
+                          c.from
+                        }}</span>
+                        <span class="font-semibold"> {{ c.to }}</span>
+                      </p>
+                      <p class="text-xs" [class]="c.up ? 'text-ok' : 'text-muted'">
+                        {{ c.reason }} · {{ c.delta }}
+                      </p>
+                    </div>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="mt-2 text-sm text-muted">
+                Les révisions et modifications de loyer apparaîtront ici à partir de maintenant.
+              </p>
+            }
+          </section>
+        </div>
       </div>
 
       <section class="mt-4" aria-labelledby="stats-indices">
@@ -360,10 +376,12 @@ export class StatsPage {
   protected readonly failure = signal<unknown>(null);
   private readonly series = signal<Partial<Record<IndexType, IndexPoint[] | 'error'>>>({});
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   /** The lease shown alone (`?bail=<id>`, so that the view can be reloaded or shared), or null. */
   private readonly queryLease = toSignal(
-    inject(ActivatedRoute).queryParamMap.pipe(map((params) => params.get('bail'))),
+    this.route.queryParamMap.pipe(map((params) => params.get('bail'))),
     { initialValue: null },
   );
   protected readonly rows = computed(() =>
@@ -379,6 +397,15 @@ export class StatsPage {
     const id = this.queryLease();
     return id ? (this.rows().find((r) => r.leaseId === id) ?? null) : null;
   });
+  protected readonly heading = computed(() =>
+    this.selectedRow() ? this.selectedRow()!.leaseName || 'Bail sans nom' : 'Statistiques',
+  );
+  protected readonly showLeaseList = computed(() => !this.selectedRow() && this.rows().length > 1);
+  protected readonly collapsedCount = 5;
+  protected readonly allRows = signal(false);
+  protected readonly shownRows = computed(() =>
+    this.allRows() ? this.rows() : this.rows().slice(0, this.collapsedCount),
+  );
   protected readonly selectedId = computed(() => this.selectedRow()?.leaseId ?? null);
   private readonly selectedLease = computed(() => {
     const id = this.selectedId();
@@ -430,7 +457,7 @@ export class StatsPage {
   protected readonly subtitle = computed(() => {
     const row = this.selectedRow();
     if (row) {
-      return `${row.holderName || 'Locataire sans nom'} · ${row.leaseName || 'Bail sans nom'}`;
+      return `${row.holderName || 'Locataire sans nom'} · ${this.euro(row.monthly)} par mois · ${this.round(row.share)} % du total`;
     }
     const start = historyStart(this.history.sends(), this.history.changes());
     return start === null
@@ -510,7 +537,20 @@ export class StatsPage {
   }
 
   protected select(id: string): void {
-    void this.router.navigate([], { queryParams: { bail: id || null }, replaceUrl: true });
+    // A new history entry: the back button (Android, browser) returns to the global view.
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { bail: id || null },
+    });
+    this.scrollTop();
+  }
+
+  /** The shell's `main` is the scroller: a new view starts at its top. */
+  private scrollTop(): void {
+    const main = (this.host.nativeElement as HTMLElement).closest('main');
+    if (main) {
+      main.scrollTop = 0;
+    }
   }
 
   constructor() {
