@@ -49,6 +49,7 @@ import {
   RentCallRow,
   buildRows,
   canSend,
+  confirmDetails,
   confirmMessage,
   dueDateLabel,
   initialSelection,
@@ -1481,16 +1482,11 @@ export class SendPage {
         .filter(({ row }) => recipientKey(row.holder) === '')
         .map(({ row }) => row.holder.objectId ?? row.holder),
     ).size;
+    const facts = { emails, holders, total, testMode: this.testMode, repeats, withoutAddress };
     const confirmed = await this.dialog.open({
       title: 'Envoyer les appels de loyer ?',
-      message: confirmMessage({
-        emails,
-        holders,
-        total,
-        testMode: this.testMode,
-        repeats,
-        withoutAddress,
-      }),
+      message: confirmMessage(facts),
+      details: confirmDetails(facts),
       confirmLabel: repeats > 0 ? 'Envoyer quand même' : 'Envoyer',
     });
     if (!confirmed) {

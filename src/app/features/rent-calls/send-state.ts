@@ -220,3 +220,34 @@ export function confirmMessage(facts: ConfirmFacts): string {
   }
   return parts.join(' ');
 }
+
+/** The same facts as `confirmMessage`, laid out for the dialog: figures one per line, then notes. */
+export function confirmDetails(facts: ConfirmFacts): {
+  summary: { label: string; value: string; strong?: boolean }[];
+  notes: { tone: 'warn' | 'info'; text: string }[];
+} {
+  const notes: { tone: 'warn' | 'info'; text: string }[] = [];
+  if (facts.repeats > 0) {
+    notes.push({
+      tone: 'warn',
+      text: `${plural(facts.repeats, 'appel déjà envoyé ou peut-être envoyé', 'appels déjà envoyés ou peut-être envoyés')} pour cette période.`,
+    });
+  }
+  if (facts.withoutAddress > 0) {
+    notes.push({
+      tone: 'warn',
+      text: `${plural(facts.withoutAddress, 'locataire sans adresse e-mail ne recevra', 'locataires sans adresse e-mail ne recevront')} rien.`,
+    });
+  }
+  if (facts.testMode) {
+    notes.push({ tone: 'info', text: 'Mode test : aucun e-mail ne sera livré aux locataires.' });
+  }
+  return {
+    summary: [
+      { label: 'E-mails', value: String(facts.emails) },
+      { label: 'Locataires', value: String(facts.holders) },
+      { label: 'Total', value: formatEuro(facts.total), strong: true },
+    ],
+    notes,
+  };
+}

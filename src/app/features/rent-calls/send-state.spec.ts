@@ -8,6 +8,7 @@ import {
   RentCallRow,
   buildRows,
   canSend,
+  confirmDetails,
   confirmMessage,
   dueDateLabel,
   initialSelection,
@@ -419,5 +420,24 @@ describe('confirmMessage', () => {
       'Attention : 2 appels déjà envoyés ou peut-être envoyés pour cette période.',
     );
     expect(message).toContain('1 locataire sans adresse e-mail ne recevra rien.');
+  });
+});
+
+describe('confirmDetails', () => {
+  it('lays the figures out one per line, the total in bold, then the warnings and the test mode', () => {
+    const details = confirmDetails({
+      emails: 1,
+      holders: 1,
+      total: 2003.8,
+      testMode: true,
+      repeats: 1,
+      withoutAddress: 0,
+    });
+    expect(details.summary.map((row) => row.label)).toEqual(['E-mails', 'Locataires', 'Total']);
+    expect(details.summary[2]).toMatchObject({ strong: true });
+    expect(details.notes.map((note) => note.tone)).toEqual(['warn', 'info']);
+    expect(details.notes[0].text).toBe(
+      '1 appel déjà envoyé ou peut-être envoyé pour cette période.',
+    );
   });
 });
