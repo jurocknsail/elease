@@ -84,6 +84,17 @@ body {
   min-height: 100dvh;
 }
 
+/*
+ * Signed in, the app is a fixed frame whose content area is the only scroller: the page itself never
+ * scrolls nor bounces, so the bottom tab bar stays put on phones (iOS rubber band, Android overscroll).
+ */
+html:has(.app-frame),
+html:has(.app-frame) body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 /* iOS zooms into any field below 16 px. */
 input,
 select,

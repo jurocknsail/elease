@@ -305,7 +305,7 @@ export class TenantsPage {
   );
   protected readonly detailClass = computed(
     () =>
-      `min-w-0 lg:block lg:min-h-0 lg:overflow-y-auto ${this.hasDetail() ? '' : 'max-lg:hidden'}`,
+      `min-w-0 lg:block lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto ${this.hasDetail() ? '' : 'max-lg:hidden'}`,
   );
 
   constructor() {

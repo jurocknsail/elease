@@ -84,7 +84,7 @@ interface NavItem {
     </a>
 
     <div
-      class="flex h-dvh flex-col bg-canvas pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] md:flex-row"
+      class="app-frame fixed inset-0 flex flex-col bg-canvas pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] md:flex-row"
     >
       <aside class="sidebar-scope hidden w-64 shrink-0 flex-col md:flex">
         <a
@@ -180,7 +180,7 @@ interface NavItem {
         #contenu
         id="contenu"
         tabindex="-1"
-        class="min-h-0 flex-1 overflow-y-auto focus:outline-none focus-visible:outline-none"
+        class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain focus:outline-none focus-visible:outline-none"
       >
         <div [class]="contentClass()">
           <app-update-banner />
@@ -193,7 +193,7 @@ interface NavItem {
 
       <nav
         aria-label="Navigation principale"
-        class="shrink-0 border-t border-border bg-card/85 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_-8px_rgb(15_23_42/0.12)] backdrop-blur-lg md:hidden"
+        class="shrink-0 border-t border-border bg-canvas pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <ul class="grid grid-cols-4">
           @for (item of tabs; track item.path) {

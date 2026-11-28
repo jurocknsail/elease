@@ -50,7 +50,7 @@ const SKELETON = 'animate-pulse rounded-md bg-border/70';
               </h2>
               <p class="text-sm text-muted">{{ leaseCount(holder) }}</p>
             </div>
-            <div class="toolbar self-start">
+            <div class="flex shrink-0 items-center self-start">
               <button
                 type="button"
                 class="btn btn-icon btn-icon-danger"
@@ -80,7 +80,7 @@ const SKELETON = 'animate-pulse rounded-md bg-border/70';
             <h3 id="baux-titre" class="meta-label">Baux</h3>
             <button
               type="button"
-              class="btn btn-quiet -mr-2.5"
+              class="btn btn-quiet"
               [disabled]="adding()"
               (click)="adding.set(true)"
             ><app-icon name="plus" class="size-4" />
