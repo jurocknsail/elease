@@ -1,4 +1,5 @@
 import { NextActionHint } from './next-action-hint';
+import { UpdateBanner } from './update-banner';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ChangeDetectionStrategy,
@@ -62,7 +63,15 @@ interface NavItem {
  */
 @Component({
   selector: 'app-shell',
-  imports: [NextActionHint, RouterOutlet, RouterLink, RouterLinkActive, Icon, ThemeToggle],
+  imports: [
+    NextActionHint,
+    UpdateBanner,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    Icon,
+    ThemeToggle,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
@@ -139,13 +148,33 @@ interface NavItem {
               >
               <p class="min-w-0 text-xs leading-tight text-muted">
                 Connecté en tant que
-                <span class="block truncate text-sm font-semibold text-text">{{ user.username }}</span>
+                <span class="block truncate text-sm font-semibold text-text">{{
+                  user.username
+                }}</span>
               </p>
             </div>
           }
           <app-theme-toggle variant="ghost" />
         </div>
       </aside>
+
+      <!-- Phones: a slim brand bar (the sidebar with the logo is hidden below 768 px). -->
+      <div class="flex h-12 shrink-0 items-center px-4 md:hidden">
+        <a
+          routerLink="/appels"
+          class="-ml-1 flex min-h-11 items-center gap-2 rounded-lg px-1"
+          aria-label="E-Lease, Appels de loyer"
+        >
+          <img
+            src="logos/e-lease-symbol.png"
+            alt=""
+            width="28"
+            height="28"
+            class="size-7 rounded-lg bg-white p-[3px] shadow-sm ring-1 ring-border"
+          />
+          <span class="text-[15px] font-bold tracking-tight">E-Lease</span>
+        </a>
+      </div>
 
       <main
         #contenu
@@ -154,6 +183,7 @@ interface NavItem {
         class="min-h-0 flex-1 overflow-y-auto focus:outline-none focus-visible:outline-none"
       >
         <div [class]="contentClass()">
+          <app-update-banner />
           @if (!fullWidth()) {
             <app-next-action-hint />
           }

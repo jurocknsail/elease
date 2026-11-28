@@ -116,6 +116,10 @@ Si la planification devenait indisponible, le crontab de l'Odroid peut déclench
 
 **Ne jamais lancer un job sans `onlyUser` pendant le développement** : sans lui, tous les propriétaires reçoivent leur mail. Seules les exécutions planifiées (`{}`) tournent sans `onlyUser`, une fois les essais terminés.
 
+## État du déploiement (2026-11-28)
+
+Cloud code `v21` : `main.js` (v17 inchangé + `require('./history');`), `history.js`, `lib/history.js`. Vérifié : un client sans master key ne peut ni écrire (`Historique en lecture seule.`) ni lire l'historique d'un autre. `backfillLeaseHistory` exécuté (dry run puis réel pour `Julien` — le nom d'utilisateur Back4App prend une majuscule —, puis `{}`) : 9 baux, 9 `RentCallLog` et 9 `RentChange` de départ. Une relance ne crée rien (idempotent).
+
 ## État du déploiement (2026-11-27)
 
 Cloud code déployé (version `v20`) sur `elease-be` (`sendEmail` inchangé ; sauvegarde du `main.js` v16 conservée hors dépôt). Essais faits uniquement avec `onlyUser:"julien"` : dry runs, sandbox, puis un envoi réel de chaque job vers l'adresse de julien (bail de test restauré ensuite). **Le job combiné `sendReminders` est planifié** : voir « Planification ».
